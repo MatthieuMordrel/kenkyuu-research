@@ -13,7 +13,10 @@
     "no-debugger": "error",
     "no-console": "warn",
     "react/react-in-jsx-scope": "off",
-    "max-lines": ["warn", { "max": 300, "skipBlankLines": true, "skipComments": true }],  
+    "max-lines": [
+      "warn",
+      { "max": 300, "skipBlankLines": true, "skipComments": true }
+    ],
     "typescript/no-explicit-any": "warn",
     "typescript/no-unused-vars": [
       "warn",

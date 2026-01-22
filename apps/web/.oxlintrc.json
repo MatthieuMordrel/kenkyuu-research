@@ -32,5 +32,11 @@
     "react/no-danger": "warn",
     "unicorn/no-instanceof-builtins": "off"
   },
-  "ignorePatterns": ["node_modules", "dist", ".output", "*.gen.ts", "routeTree.gen.ts"]
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    ".output",
+    "*.gen.ts",
+    "routeTree.gen.ts"
+  ]
 }
