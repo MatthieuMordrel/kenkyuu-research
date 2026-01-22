@@ -1,10 +1,14 @@
 {
   "name": "base-repo",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "setup": "./scripts/setup.sh",
-    "dev:elysia": "bun run --filter elysia dev",
+    "dev": "bun run --filter '*' dev",
+    "dev:elysia": "bun run --filter @repo/elysia dev",
     "dev:web": "bun run --filter web dev",
     "dev:convex": "bun run --filter @repo/convex dev",
     "build:web": "bun run --filter web build",
