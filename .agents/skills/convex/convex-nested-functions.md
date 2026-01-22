@@ -36,12 +36,12 @@ For **public** queries, mutations, and actions accessed from the client:
 
 ```typescript
 // ✅ CORRECT: Double-name pattern
-api.queries.jobs.list.list
-api.queries.jobs.getByBullhornId.getByBullhornId
-api.queries.openAiDeepResearch.listRecent.listRecent
+api.queries.jobs.list.list;
+api.queries.jobs.getByBullhornId.getByBullhornId;
+api.queries.openAiDeepResearch.listRecent.listRecent;
 
-api.mutations.someModule.someMutation.someMutation
-api.actions.someModule.someAction.someAction
+api.mutations.someModule.someMutation.someMutation;
+api.actions.someModule.someAction.someAction;
 ```
 
 **Pattern**: `api.[type].[directory].[filename].[exportName]`
@@ -54,9 +54,9 @@ For **internal** queries, mutations, and actions accessed from other Convex func
 
 ```typescript
 // ✅ CORRECT: Double-name pattern with dot notation
-internal.mutations.openAiDeepResearch.create.create
-internal.mutations.openAiDeepResearch.updateOnWebhook.updateOnWebhook
-internal.actions.openAiDeepResearch.processWebhook.processWebhook
+internal.mutations.openAiDeepResearch.create.create;
+internal.mutations.openAiDeepResearch.updateOnWebhook.updateOnWebhook;
+internal.actions.openAiDeepResearch.processWebhook.processWebhook;
 ```
 
 **Pattern**: `internal.[type].[directory].[filename].[exportName]`
@@ -65,8 +65,8 @@ internal.actions.openAiDeepResearch.processWebhook.processWebhook
 
 ```typescript
 // ✅ CORRECT: Double-name pattern with BRACKET notation for directory
-internal.queries['openAiDeepResearch'].getById.getById
-internal.queries['openAiDeepResearch'].getByResponseId.getByResponseId
+internal.queries["openAiDeepResearch"].getById.getById;
+internal.queries["openAiDeepResearch"].getByResponseId.getByResponseId;
 ```
 
 **Pattern**: `internal.queries['directory'].[filename].[exportName]`
@@ -93,29 +93,29 @@ This is why you need to repeat the export name twice.
 
 ```typescript
 // This will cause TypeScript errors
-api.queries.jobs.list
-internal.mutations.openAiDeepResearch.create
+api.queries.jobs.list;
+internal.mutations.openAiDeepResearch.create;
 ```
 
 ### ❌ Wrong: Missing bracket notation for internal queries
 
 ```typescript
 // This will cause TypeScript error TS4111
-internal.queries.openAiDeepResearch.getById.getById
+internal.queries.openAiDeepResearch.getById.getById;
 ```
 
 ### ✅ Correct: Full pattern
 
 ```typescript
 // Public queries
-api.queries.jobs.list.list
+api.queries.jobs.list.list;
 
 // Internal queries (note bracket notation)
-internal.queries['openAiDeepResearch'].getById.getById
+internal.queries["openAiDeepResearch"].getById.getById;
 
 // Internal mutations/actions
-internal.mutations.openAiDeepResearch.create.create
-internal.actions.openAiDeepResearch.processWebhook.processWebhook
+internal.mutations.openAiDeepResearch.create.create;
+internal.actions.openAiDeepResearch.processWebhook.processWebhook;
 ```
 
 ## Examples
@@ -205,10 +205,10 @@ await ctx.scheduler.runAfter(0,
 
 ```typescript
 // ❌ Wrong
-internal.queries.openAiDeepResearch.getById.getById
+internal.queries.openAiDeepResearch.getById.getById;
 
 // ✅ Correct
-internal.queries['openAiDeepResearch'].getById.getById
+internal.queries["openAiDeepResearch"].getById.getById;
 ```
 
 ### TypeScript Error: "Argument of type '{ X: FunctionReference... }' is not assignable"
@@ -219,25 +219,22 @@ internal.queries['openAiDeepResearch'].getById.getById
 
 ```typescript
 // ❌ Wrong
-internal.mutations.openAiDeepResearch.create
+internal.mutations.openAiDeepResearch.create;
 
 // ✅ Correct
-internal.mutations.openAiDeepResearch.create.create
+internal.mutations.openAiDeepResearch.create.create;
 ```
 
 ## Best Practices
 
 1. **Consistent Naming**: Keep filename and export name the same for clarity
-
    - File: `create.ts` → Export: `export const create = ...`
 
 2. **Directory Organization**: Group related functions in subdirectories
-
    - `queries/jobs/` for all job-related queries
    - `mutations/openAiDeepResearch/` for all deep research mutations
 
 3. **Type Safety**: Always use the generated `internal` and `api` from `_generated/api`
-
    - Never manually construct function references
    - Let TypeScript guide you with autocomplete
 

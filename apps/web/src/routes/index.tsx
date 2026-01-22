@@ -1,10 +1,10 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import logo from '../logo.svg'
-import '../App.css'
+import { createFileRoute, Link } from "@tanstack/react-router";
+import logo from "../logo.svg";
+import "../App.css";
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: App,
-})
+});
 
 function App() {
   return (
@@ -14,10 +14,7 @@ function App() {
         <p>
           Edit <code>src/routes/index.tsx</code> and save to reload.
         </p>
-        <Link
-          to="/api-example"
-          className="App-link"
-        >
+        <Link to="/api-example" className="App-link">
           API Example (Eden + Elysia)
         </Link>
         <a
@@ -38,5 +35,5 @@ function App() {
         </a>
       </header>
     </div>
-  )
+  );
 }

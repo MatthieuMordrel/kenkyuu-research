@@ -55,7 +55,9 @@ function ApiExample() {
               <CardTitle className="text-destructive">Error</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>{error instanceof Error ? error.message : "Failed to fetch"}</p>
+              <p>
+                {error instanceof Error ? error.message : "Failed to fetch"}
+              </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 Make sure the Elysia server is running:{" "}
                 <code>bun run dev:elysia</code>
@@ -71,10 +73,7 @@ function ApiExample() {
               <CardDescription>Fetch the hello message</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button
-                onClick={() => helloQuery.refetch()}
-                disabled={isLoading}
-              >
+              <Button onClick={() => helloQuery.refetch()} disabled={isLoading}>
                 {helloQuery.isFetching ? "Loading..." : "Fetch Hello"}
               </Button>
               {helloQuery.data && (

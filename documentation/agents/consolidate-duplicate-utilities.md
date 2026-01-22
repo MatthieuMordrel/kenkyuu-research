@@ -106,20 +106,20 @@ The consolidation target location depends on your project structure:
 ```typescript
 // File 1: src/services/cache.ts
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 // File 2: src/services/logging.ts
 function formatBytes(bytes: number): string {
   if (bytes < 1024) {
-    return `${bytes} B`
+    return `${bytes} B`;
   }
   if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / 1024).toFixed(1)} KB`;
   }
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 ```
 
@@ -135,19 +135,19 @@ function formatBytes(bytes: number): string {
  */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) {
-    return `${bytes} B`
+    return `${bytes} B`;
   }
   if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / 1024).toFixed(1)} KB`;
   }
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 // utils/index.ts (or src/utils/index.ts)
-export { formatBytes } from './formatBytes.js'
+export { formatBytes } from "./formatBytes.js";
 
 // File 1 & 2: Import and use
-import { formatBytes } from '@/utils' // or './utils' or '@project/utils' depending on setup
+import { formatBytes } from "@/utils"; // or './utils' or '@project/utils' depending on setup
 ```
 
 ## Common Patterns Found

@@ -7,7 +7,7 @@ description: >
 license: MIT
 metadata:
   author: Matthieu Mordrel
-  version: '1.0.0'
+  version: "1.0.0"
 ---
 
 # Zustand Best Practices
@@ -35,12 +35,15 @@ Always use atomic selectors (one value per hook) to get fine-grained subscriptio
 
 ```tsx
 // ✅ Good - atomic selectors via custom hooks (preferred)
-const count = useCount()
-const total = useTotal()
-const actions = useStoreActions()
+const count = useCount();
+const total = useTotal();
+const actions = useStoreActions();
 
 // ❌ Avoid - bundling multiple values requires useShallow to prevent re-renders
-const { count, total } = useMyStore(state => ({ count: state.count, total: state.total }))
+const { count, total } = useMyStore((state) => ({
+  count: state.count,
+  total: state.total,
+}));
 ```
 
 ## Best Practices (from tkdodo)
@@ -53,15 +56,15 @@ Keep actions separate from state to improve readability and maintainability.
 
 ```tsx
 interface StoreState {
-  count: number
+  count: number;
 }
 
 interface StoreActions {
-  increment: () => void
-  reset: () => void
+  increment: () => void;
+  reset: () => void;
 }
 
-type Store = StoreState & StoreActions
+type Store = StoreState & StoreActions;
 ```
 
 ### 2. Only Export Custom Hooks
@@ -87,11 +90,11 @@ Use one selector per state. This prevents components from re-rendering when unre
 
 ```tsx
 // ✅ Good - atomic selectors
-const count = useCount()
-const total = useTotal()
+const count = useCount();
+const total = useTotal();
 
 // ❌ Bad - selecting large state objects
-const { count, total, items, filters } = useStore(state => state)
+const { count, total, items, filters } = useStore((state) => state);
 ```
 
 ### 4. Model Actions as Events, Not Setters
@@ -102,18 +105,18 @@ Keep business logic inside the store by creating descriptive action names that r
 // ✅ Good - event-based actions
 const actions = {
   itemAdded: (item: Item) =>
-    set(state => ({
+    set((state) => ({
       items: [...state.items, item],
-      total: state.total + item.price
+      total: state.total + item.price,
     })),
-  orderCompleted: () => set({ items: [], total: 0 })
-}
+  orderCompleted: () => set({ items: [], total: 0 }),
+};
 
 // ❌ Bad - setter-based actions
 const actions = {
   setItems: (items: Item[]) => set({ items }),
-  setTotal: (total: number) => set({ total })
-}
+  setTotal: (total: number) => set({ total }),
+};
 ```
 
 ### 5. Keep the Scope of Your Store Small
@@ -131,27 +134,27 @@ Use custom hooks to combine Zustand with other libraries like React Query when n
 If persisting state in localStorage, ensure to provide a loading state until the state is loaded from localStorage to avoid flickering.
 
 ```tsx
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist, createJSONStorage } from "zustand/middleware";
 
 const useStore = create(
   persist<Store>(
-    set => ({
+    (set) => ({
       // ... state and actions
       _hasHydrated: false,
-      setHasHydrated: (state: boolean) => set({ _hasHydrated: state })
+      setHasHydrated: (state: boolean) => set({ _hasHydrated: state }),
     }),
     {
-      name: 'my-store',
+      name: "my-store",
       storage: createJSONStorage(() => localStorage),
-      onRehydrateStorage: () => state => {
-        state?.setHasHydrated(true)
-      }
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
-)
+);
 
 // Export a hook to check hydration status
-export const useHasHydrated = () => useStore(state => state._hasHydrated)
+export const useHasHydrated = () => useStore((state) => state._hasHydrated);
 ```
 
 ### Never Store Actions in Storage
@@ -160,18 +163,18 @@ Actions cannot be serialized and will cause hydration issues. Use `partialize` t
 
 ```tsx
 persist<Store>(
-  set => ({
+  (set) => ({
     /* ... */
   }),
   {
-    name: 'my-store',
-    partialize: state => ({
+    name: "my-store",
+    partialize: (state) => ({
       // Only include state, not actions
       count: state.count,
-      items: state.items
-    })
+      items: state.items,
+    }),
   }
-)
+);
 ```
 
 ### Split Stores into Slices
@@ -179,23 +182,23 @@ persist<Store>(
 Zustand recommends having a single store and composing it from slices for larger applications.
 
 ```tsx
-import { StateCreator } from 'zustand'
+import { StateCreator } from "zustand";
 
 interface CountSlice {
-  count: number
-  increment: () => void
+  count: number;
+  increment: () => void;
 }
 
-const createCountSlice: StateCreator<Store, [], [], CountSlice> = set => ({
+const createCountSlice: StateCreator<Store, [], [], CountSlice> = (set) => ({
   count: 0,
-  increment: () => set(state => ({ count: state.count + 1 }))
-})
+  increment: () => set((state) => ({ count: state.count + 1 })),
+});
 
 // Compose slices in the main store
 const useStore = create<Store>((...args) => ({
   ...createCountSlice(...args),
-  ...createOtherSlice(...args)
-}))
+  ...createOtherSlice(...args),
+}));
 ```
 
 ## Anti-Patterns to Avoid

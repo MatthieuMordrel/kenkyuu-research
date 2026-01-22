@@ -41,10 +41,13 @@ const all = await queryAll<T>({...})
 For wrapping higher-level APIs:
 
 ```typescript
-import { paginateWith } from '../../sdk/bullhorn/pagination.js'
+import { paginateWith } from "../../sdk/bullhorn/pagination.js";
 
-for await (const batch of paginateWith((start, count) => getConsultantCandidates(0, { start, count }), { pageSize: 500 })) {
-  results.push(...batch)
+for await (const batch of paginateWith(
+  (start, count) => getConsultantCandidates(0, { start, count }),
+  { pageSize: 500 }
+)) {
+  results.push(...batch);
 }
 ```
 
@@ -53,10 +56,12 @@ for await (const batch of paginateWith((start, count) => getConsultantCandidates
 For processing arrays in concurrent batches:
 
 ```typescript
-import { processChunks } from '../../sdk/bullhorn/pagination.js'
+import { processChunks } from "../../sdk/bullhorn/pagination.js";
 
-for await (const results of processChunks(entries, 10, async chunk => Promise.all(chunk.map(([id]) => validateCandidate(id))))) {
-  allResults.push(...results)
+for await (const results of processChunks(entries, 10, async (chunk) =>
+  Promise.all(chunk.map(([id]) => validateCandidate(id)))
+)) {
+  allResults.push(...results);
 }
 ```
 

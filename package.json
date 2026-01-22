@@ -12,9 +12,17 @@
     "dev:web": "bun run --filter web dev",
     "dev:convex": "bun run --filter @repo/convex dev",
     "build:web": "bun run --filter web build",
-    "typecheck": "bun run --filter '*' typecheck"
+    "typecheck": "bun run --filter '*' typecheck",
+    "typecheck:build": "tsc --build",
+    "typecheck-go": "tsgo --build",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix ."
   },
   "devDependencies": {
+    "oxfmt": "^0.26.0",
+    "oxlint": "^1.41.0",
     "typescript": "^5.0.0"
   }
 }

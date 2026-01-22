@@ -37,11 +37,11 @@ base-repo/
 
 ## Default Ports
 
-| Service | Port | Description |
-|---------|------|-------------|
+| Service | Port | Description              |
+| ------- | ---- | ------------------------ |
 | Web     | 3000 | TanStack Router frontend |
-| Elysia  | 3001 | API server |
-| Convex  | 3210 | Convex dev server |
+| Elysia  | 3001 | API server               |
+| Convex  | 3210 | Convex dev server        |
 
 ## Getting Started
 
@@ -107,8 +107,8 @@ The web app has a pre-configured Eden client for type-safe API calls to the Elys
 import { api } from "@/lib/api";
 
 // Fully type-safe API calls
-const { data } = await api.get();           // GET /
-const { data } = await api.health.get();    // GET /health
+const { data } = await api.get(); // GET /
+const { data } = await api.health.get(); // GET /health
 ```
 
 ## Data Fetching (TanStack Query)
@@ -258,6 +258,7 @@ CORS_ORIGIN=http://localhost:3000
 ```
 
 For multiple CORS origins, use comma-separated values:
+
 ```env
 CORS_ORIGIN=http://localhost:3000,https://myapp.com
 ```
