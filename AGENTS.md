@@ -13,6 +13,15 @@
 
 We use TanStack Router for routing. Refer to the rules in the .cursor folder for more details.
 
+## Documentation
+
+**Skill Documentation**: Detailed guides for specific technologies are located in `.agents/skills/`:
+
+- [TanStack Query](./.agents/skills/tanstack-query/SKILL.md) - Server state management patterns
+- [Zustand](./.agents/skills/zustand/SKILL.md) - Client state management patterns
+- [Elysia](./.agents/skills/elysia/SKILL.md) - Backend API development patterns
+- [Convex](./.agents/skills/convex/SKILL.md) - Database and backend functions patterns
+
 ## Rules
 
 ### General
@@ -57,33 +66,16 @@ Use TanStack Router's URL search params for state that should be shareable, book
 
 ### Tanstack Query
 
-Always create a queryOptions object and pass it to the useQuery or useSuspenseQuery hook. This will allow to reuse the queryOptions object in the loader of the route.
+Always study and follow the [TanStack Query Skill](./.agents/skills/tanstack-query/SKILL.md) if working with TanStack Query.
 
 ### Zustand
 
-Always study and follow the [Zustand Skill](./.cursor/skills/zustand/SKILL.md) if working with Zustand.
+Always study and follow the [Zustand Skill](./.agents/skills/zustand/SKILL.md) if working with Zustand.
 
 ### Elysia
 
-- Use Convex by default and Elysia for the backend.
-- When creating routes, always use the zod validator to validate the request body and query parameters and export its type.
-- On the client use the existing Eden client that is already created and use it to make the requests.
-- You can always use Tanstack Query on the client but wrapping the Eden methods instead of fetch.
-
-**Important:** Always use method chaining when defining routes to ensure proper Eden type generation:
-
-```typescript
-// ✅ Correct - generates Eden types
-export const myRoute = new Elysia()
-  .get('/path', async ({ query }) => { ... })
-
-// ❌ Wrong - breaks Eden type inference
-export const myRoute = new Elysia()
-myRoute.get('/path', async ({ query }) => { ... })
-```
+Always study and follow the [Elysia Skill](./.agents/skills/elysia/SKILL.md) if working with Elysia.
 
 ### Convex
 
-For Convex-specific patterns and best practices, see [documentation/convex/](./documentation/convex/):
-
-- [Convex Nested Functions Access Patterns](./documentation/convex/convex-nested-functions.md) - Correct patterns for accessing nested Convex functions (queries, mutations, actions) with proper TypeScript type resolution
+Always study and follow the [Convex Skill](./.agents/skills/convex/SKILL.md) if working with Convex.
