@@ -1,5 +1,5 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "react", "react-perf", "import", "oxc"],
   "categories": {
     "correctness": "error",
@@ -12,8 +12,6 @@
   "rules": {
     "no-debugger": "error",
     "no-console": "warn",
-    "react/react-in-jsx-scope": "off",
-    "max-lines": ["warn", { "max": 300, "skipBlankLines": true, "skipComments": true }],  
     "typescript/no-explicit-any": "warn",
     "typescript/no-unused-vars": [
       "warn",
@@ -29,17 +27,10 @@
         "allow": ["**/*.css", "**/*.scss"]
       }
     ],
+    "react/react-in-jsx-scope": "off",
     "react/jsx-no-target-blank": "error",
     "react/no-danger": "warn",
     "unicorn/no-instanceof-builtins": "off"
   },
-  "ignorePatterns": [
-    "node_modules",
-    "dist",
-    "build",
-    ".output",
-    "*.min.js",
-    "*.gen.ts",
-    "routeTree.gen.ts"
-  ]
+  "ignorePatterns": ["node_modules", "dist", ".output", "*.gen.ts", "routeTree.gen.ts"]
 }

@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -40,6 +41,14 @@ function ApiExample() {
   const error = helloQuery.error || healthQuery.error;
   const isLoading = helloQuery.isFetching || healthQuery.isFetching;
 
+  const handleHelloRefetch = useCallback(() => {
+    helloQuery.refetch();
+  }, [helloQuery]);
+
+  const handleHealthRefetch = useCallback(() => {
+    healthQuery.refetch();
+  }, [healthQuery]);
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="mx-auto max-w-2xl space-y-6">
@@ -73,7 +82,7 @@ function ApiExample() {
               <CardDescription>Fetch the hello message</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button onClick={() => helloQuery.refetch()} disabled={isLoading}>
+              <Button onClick={handleHelloRefetch} disabled={isLoading}>
                 {helloQuery.isFetching ? "Loading..." : "Fetch Hello"}
               </Button>
               {helloQuery.data && (
@@ -91,7 +100,7 @@ function ApiExample() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Button
-                onClick={() => healthQuery.refetch()}
+                onClick={handleHealthRefetch}
                 disabled={isLoading}
                 variant="secondary"
               >
