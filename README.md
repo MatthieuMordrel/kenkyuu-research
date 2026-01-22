@@ -7,7 +7,31 @@ A monorepo template with Elysia, Convex, and TanStack Router.
 - **Elysia** - Bun-first web framework for the API
 - **Convex** - Real-time backend-as-a-service
 - **TanStack Router** - Type-safe React router
+- **shadcn/ui + Base UI** - Accessible UI components
+- **Tailwind CSS v4** - Utility-first CSS
 - **Bun** - Package manager and runtime
+
+## Structure
+
+```
+base-repo/
+├── apps/
+│   ├── elysia/           # @repo/elysia - API server
+│   │   └── src/
+│   └── web/              # TanStack Router frontend
+│       ├── src/
+│       │   ├── components/ui/  # shadcn/ui components
+│       │   ├── lib/            # Utilities (api client, cn)
+│       │   └── routes/         # File-based routes
+│       └── components.json     # shadcn config
+├── packages/
+│   ├── convex/           # @repo/convex - Convex backend
+│   ├── utils/            # @repo/utils - Shared utilities
+│   └── brand-colors/     # @repo/brand-colors - Brand colors
+└── scripts/
+    ├── setup.sh          # Initial setup
+    └── kill-dev-ports.sh # Kill zombie processes
+```
 
 ## Default Ports
 
@@ -84,6 +108,51 @@ import { api } from "@/lib/api";
 const { data } = await api.index.get();    // GET /
 const { data } = await api.health.get();   // GET /health
 ```
+
+## UI Components (shadcn + Base UI)
+
+The web app uses [shadcn/ui](https://ui.shadcn.com) with [Base UI](https://base-ui.com) primitives via the [@basecn](https://basecn.dev) registry.
+
+### Add components
+
+```bash
+cd apps/web
+
+# Add from Base UI registry
+bunx shadcn@latest add @basecn/button
+bunx shadcn@latest add @basecn/dialog
+bunx shadcn@latest add @basecn/input
+
+# Or use the direct URL
+bunx shadcn@latest add https://basecn.dev/r/card.json
+```
+
+### Use components
+
+```tsx
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
+export function Example() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Hello</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button>Click me</Button>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+### Pre-installed components
+
+- `button` - Button with variants
+- `input` - Text input
+- `dialog` - Modal dialog
+- `card` - Card container
 
 ## Convex
 
