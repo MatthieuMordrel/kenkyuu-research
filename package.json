@@ -1,0 +1,16 @@
+{
+  "name": "base-repo",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "setup": "./scripts/setup.sh",
+    "dev:elysia": "bun run --filter elysia dev",
+    "dev:web": "bun run --filter web dev",
+    "dev:convex": "bun run --filter @repo/convex dev",
+    "build:web": "bun run --filter web build",
+    "typecheck": "bun run --filter '*' typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
