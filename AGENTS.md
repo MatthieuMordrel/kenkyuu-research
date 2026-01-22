@@ -6,14 +6,12 @@
 
 - Generally: Typescript
 - Frontend: React, Tailwind CSS, shadcn/ui (Base UI), TanStack Router, TanStack Query, Lucide React, Zustand
-- Backend: Bun, Elysia
 - Database: Convex
-
-### Routing
-
-We use TanStack Router for routing. Refer to the rules in the .cursor folder for more details.
+- Backend: Convex, Bun, Elysia
 
 ## Documentation
+
+CRITICAL: ALWAYS REFER TO THE DOCUMENTATION OF THE LIBRARY IF WORKING WITH IT.
 
 **Skill Documentation**: Detailed guides for specific technologies are located in `.agents/skills/`:
 
@@ -21,6 +19,13 @@ We use TanStack Router for routing. Refer to the rules in the .cursor folder for
 - [Zustand](./.agents/skills/zustand/SKILL.md) - Client state management patterns
 - [Elysia](./.agents/skills/elysia/SKILL.md) - Backend API development patterns
 - [Convex](./.agents/skills/convex/SKILL.md) - Database and backend functions patterns
+
+
+**Project Documentation**: Additional project-specific documentation is in `documentation/`:
+
+- [Development](./documentation/development/) - Development setup and workflows
+- [Linting](./documentation/linting/) - Linting rules and patterns
+- [Agents](./documentation/agents/) - Agent-specific documentation
 
 ## Rules
 
@@ -30,8 +35,7 @@ We use TanStack Router for routing. Refer to the rules in the .cursor folder for
 - Follow the single responsibility principle and provide functions with their own file grouped logically in folders.
 - Always provide detailed JSDOC for types, functions, components, etc.
 - Be generous with comments and documentation.
-- We do not use SSR in this project.
-- Always run `bun run typecheck` after refactoring to ensure type safety and code quality.
+- Always run `bun run typecheck` and `bun run lint` after refactoring to ensure type safety and code quality.
 
 ### Typescript
 
@@ -49,20 +53,25 @@ We use TanStack Router for routing. Refer to the rules in the .cursor folder for
 - No need to bother with SSR hydration error as we don't use SSR in this project. Optimize for SPA using tanstack router.
 - Avoid memoization as we are using the React Compiler to automatically optimize the code (no need for useMemo or useCallback).
 
-### Tanstack Router & Data Fetching
+### TanStack Router & Data Fetching
 
-Components should be split into:
+#### Component Structure
 
-- main: Main component that renders the UI
-- stateful: Fetching component using react query/zustand custom hooks that fetches the data and passes it to the UI component
-- ui: Component receiving props from the stateful component
+- **main** – Renders the overall UI and layout.
+- **stateful** – Uses React Query/Zustand via custom hooks to fetch data and passes results to the UI layer.
+- **ui** – Receives props from the stateful component and renders presentational elements.
 
-Fetch at the lowest level possible and use the stateful component to fetch the data and pass it to the UI component.
-This allows to avoid rerendering the whole component when only a part of it changes.
+**Best Practices:**
 
-#### URL State Management
+- **Fetch at the lowest level:** Place data fetching in the stateful component, then pass data down to the UI component. This minimizes unnecessary rerenders when only a subset of the UI updates.
+- **Component isolation:** Avoid having multiple major components per file for maintainability and to optimize rendering.
 
-Use TanStack Router's URL search params for state that should be shareable, bookmarkable, or persist across navigation (tabs, filters, pagination, selected items). Use `validateSearch` to parse/validate params and `useNavigate` + `Route.useSearch()` to read/update. Keep ephemeral UI state (popover open, search terms) as local state.
+#### URL State Management with TanStack Router
+
+- Manage shareable or persistent state (such as tabs, filters, pagination, selected items) with TanStack Router’s URL search params.
+- Use `validateSearch` for parsing and validation.
+- Access and update with `useNavigate` and `Route.useSearch()`.
+- Keep ephemeral/local UI state (e.g., open popovers, input search terms) in local component state.
 
 ### Tanstack Query
 
@@ -79,3 +88,8 @@ Always study and follow the [Elysia Skill](./.agents/skills/elysia/SKILL.md) if 
 ### Convex
 
 Always study and follow the [Convex Skill](./.agents/skills/convex/SKILL.md) if working with Convex.
+
+### Linting
+
+Always run `bun run lint` after refactoring to ensure code quality.
+When linting for a specific linting rule, refer to the documentation in `documentation/linting/` for more information.
