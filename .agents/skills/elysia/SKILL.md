@@ -104,5 +104,5 @@ export const userRoutes = new Elysia()
         includeDeleted: t.Optional(t.Boolean()),
       }),
     }
-  );
+  )
 ```
