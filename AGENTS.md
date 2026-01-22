@@ -20,7 +20,6 @@ CRITICAL: ALWAYS REFER TO THE DOCUMENTATION OF THE LIBRARY IF WORKING WITH IT.
 - [Elysia](./.agents/skills/elysia/SKILL.md) - Backend API development patterns
 - [Convex](./.agents/skills/convex/SKILL.md) - Database and backend functions patterns
 
-
 **Project Documentation**: Additional project-specific documentation is in `documentation/`:
 
 - [Development](./documentation/development/) - Development setup and workflows
