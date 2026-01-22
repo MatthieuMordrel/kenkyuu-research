@@ -194,4 +194,16 @@ bun run build:web
 VITE_API_URL=localhost:3001
 ```
 
-See `apps/web/.env.example` for reference.
+### Elysia API (`apps/elysia/.env`)
+
+```env
+PORT=3001
+CORS_ORIGIN=http://localhost:3000
+```
+
+For multiple CORS origins, use comma-separated values:
+```env
+CORS_ORIGIN=http://localhost:3000,https://myapp.com
+```
+
+See `.env.example` files in each app for reference.
