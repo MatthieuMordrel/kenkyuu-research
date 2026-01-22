@@ -2,7 +2,11 @@
 # Kill zombie processes on dev ports
 # Run this before starting dev servers if you encounter EADDRINUSE errors
 
-PORTS=(3000 3210 3333 4000 4321 5173 8080 8787)
+# Default ports:
+# - 3000: Web (TanStack Router)
+# - 3001: Elysia API
+# - 3210: Convex
+PORTS=(3000 3001 3210 )
 
 echo "🔍 Checking for processes on dev ports..."
 
