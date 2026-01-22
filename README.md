@@ -7,6 +7,8 @@ A monorepo template with Elysia, Convex, and TanStack Router.
 - **Elysia** - Bun-first web framework for the API
 - **Convex** - Real-time backend-as-a-service
 - **TanStack Router** - Type-safe React router
+- **TanStack Query** - Async state management
+- **Zustand** - Client state management
 - **shadcn/ui + Base UI** - Accessible UI components
 - **Tailwind CSS v4** - Utility-first CSS
 - **Bun** - Package manager and runtime
@@ -105,8 +107,62 @@ The web app has a pre-configured Eden client for type-safe API calls to the Elys
 import { api } from "@/lib/api";
 
 // Fully type-safe API calls
-const { data } = await api.index.get();    // GET /
-const { data } = await api.health.get();   // GET /health
+const { data } = await api.get();           // GET /
+const { data } = await api.health.get();    // GET /health
+```
+
+## Data Fetching (TanStack Query)
+
+Use TanStack Query for server state management:
+
+```typescript
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+
+function MyComponent() {
+  const { data, error, isLoading } = useQuery({
+    queryKey: ["health"],
+    queryFn: async () => {
+      const { data, error } = await api.health.get();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  return <div>Status: {data.status}</div>;
+}
+```
+
+## Client State (Zustand)
+
+Use Zustand for client-side state management:
+
+```typescript
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+interface CounterState {
+  count: number;
+  increment: () => void;
+}
+
+export const useCounterStore = create<CounterState>()(
+  persist(
+    (set) => ({
+      count: 0,
+      increment: () => set((state) => ({ count: state.count + 1 })),
+    }),
+    { name: "counter-store" }
+  )
+);
+
+// In a component
+function Counter() {
+  const { count, increment } = useCounterStore();
+  return <button onClick={increment}>{count}</button>;
+}
 ```
 
 ## UI Components (shadcn + Base UI)

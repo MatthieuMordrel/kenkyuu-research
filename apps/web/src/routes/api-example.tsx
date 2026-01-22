@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,46 +15,38 @@ export const Route = createFileRoute("/api-example")({
 });
 
 function ApiExample() {
-  const [response, setResponse] = useState<string | null>(null);
-  const [health, setHealth] = useState<{ status: string } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchHello = async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  // Query for the root endpoint
+  const helloQuery = useQuery({
+    queryKey: ["hello"],
+    queryFn: async () => {
       const { data, error } = await api.get();
       if (error) throw error;
-      setResponse(data as string);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to fetch");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data as string;
+    },
+    enabled: false, // Don't fetch automatically
+  });
 
-  const fetchHealth = async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  // Query for the health endpoint
+  const healthQuery = useQuery({
+    queryKey: ["health"],
+    queryFn: async () => {
       const { data, error } = await api.health.get();
       if (error) throw error;
-      setHealth(data as { status: string });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to fetch");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data as { status: string };
+    },
+    enabled: false, // Don't fetch automatically
+  });
+
+  const error = helloQuery.error || healthQuery.error;
+  const isLoading = helloQuery.isFetching || healthQuery.isFetching;
 
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="mx-auto max-w-2xl space-y-6">
         <h1 className="text-3xl font-bold">Eden API Example</h1>
         <p className="text-muted-foreground">
-          This page demonstrates calling the Elysia API using the type-safe Eden
-          client.
+          This page demonstrates calling the Elysia API using TanStack Query
+          with the type-safe Eden client.
         </p>
 
         {error && (
@@ -63,9 +55,10 @@ function ApiExample() {
               <CardTitle className="text-destructive">Error</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>{error}</p>
+              <p>{error instanceof Error ? error.message : "Failed to fetch"}</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Make sure the Elysia server is running: <code>bun run dev:elysia</code>
+                Make sure the Elysia server is running:{" "}
+                <code>bun run dev:elysia</code>
               </p>
             </CardContent>
           </Card>
@@ -78,12 +71,15 @@ function ApiExample() {
               <CardDescription>Fetch the hello message</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button onClick={fetchHello} disabled={loading}>
-                {loading ? "Loading..." : "Fetch Hello"}
+              <Button
+                onClick={() => helloQuery.refetch()}
+                disabled={isLoading}
+              >
+                {helloQuery.isFetching ? "Loading..." : "Fetch Hello"}
               </Button>
-              {response && (
+              {helloQuery.data && (
                 <div className="rounded-md bg-muted p-4">
-                  <code>{response}</code>
+                  <code>{helloQuery.data}</code>
                 </div>
               )}
             </CardContent>
@@ -95,12 +91,16 @@ function ApiExample() {
               <CardDescription>Check API health status</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button onClick={fetchHealth} disabled={loading} variant="secondary">
-                {loading ? "Loading..." : "Check Health"}
+              <Button
+                onClick={() => healthQuery.refetch()}
+                disabled={isLoading}
+                variant="secondary"
+              >
+                {healthQuery.isFetching ? "Loading..." : "Check Health"}
               </Button>
-              {health && (
+              {healthQuery.data && (
                 <div className="rounded-md bg-muted p-4">
-                  <code>{JSON.stringify(health, null, 2)}</code>
+                  <code>{JSON.stringify(healthQuery.data, null, 2)}</code>
                 </div>
               )}
             </CardContent>
@@ -110,20 +110,38 @@ function ApiExample() {
         <Card>
           <CardHeader>
             <CardTitle>Code Example</CardTitle>
-            <CardDescription>How to use the Eden client</CardDescription>
+            <CardDescription>
+              How to use TanStack Query with Eden
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <pre className="overflow-x-auto rounded-md bg-muted p-4 text-sm">
-              <code>{`import { api } from "@/lib/api";
+              <code>{`import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
-// GET / (root)
-const { data, error } = await api.get();
+// Query that fetches on mount
+const { data, error, isLoading } = useQuery({
+  queryKey: ["health"],
+  queryFn: async () => {
+    const { data, error } = await api.health.get();
+    if (error) throw error;
+    return data;
+  },
+});
 
-// GET /health
-const { data } = await api.health.get();
+// Query that fetches on demand
+const query = useQuery({
+  queryKey: ["hello"],
+  queryFn: async () => {
+    const { data, error } = await api.get();
+    if (error) throw error;
+    return data;
+  },
+  enabled: false, // Don't auto-fetch
+});
 
-// The client is fully type-safe!
-// TypeScript knows the response types.`}</code>
+// Trigger fetch manually
+query.refetch();`}</code>
             </pre>
           </CardContent>
         </Card>
