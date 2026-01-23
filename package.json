@@ -13,8 +13,6 @@
     "dev:convex": "bun run --filter @repo/convex dev",
     "build:web": "bun run --filter web build",
     "typecheck": "bun run --filter '*' typecheck",
-    "typecheck:build": "tsc --build",
-    "typecheck-go": "tsgo --build",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
