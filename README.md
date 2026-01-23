@@ -65,17 +65,9 @@ import { colors } from "@repo/brand-colors";
 import "@repo/brand-colors/css";
 ```
 
-### Eden Client (Type-safe API calls)
+## Convex
 
-The web app has a pre-configured Eden client for type-safe API calls to the Elysia server:
-
-```typescript
-import { api } from "@/lib/api";
-
-// Fully type-safe API calls
-const { data } = await api.get(); // GET /
-const { data } = await api.health.get(); // GET /health
-```
+Convex is the main database and backend functions provider. It is set up but not initialized. The schema should be defined and updated in `packages/convex/convex/schema.ts`.
 
 ## Data Fetching (TanStack Query)
 
@@ -84,6 +76,18 @@ Use TanStack Query for server state management:
 ## Client State (Zustand)
 
 Use Zustand for client-side state management:
+
+## Elysia and Eden Treaty (Type-safe API calls)
+
+Elysia is the fallback API provider for the web app. It has a pre-configured Eden client for type-safe API calls to the Elysia server:
+
+```typescript
+import { api } from "@/lib/api";
+
+// Fully type-safe API calls
+const { data } = await api.get(); // GET /
+const { data } = await api.health.get(); // GET /health
+```
 
 ## UI Components (shadcn + Base UI)
 
@@ -109,10 +113,6 @@ bunx shadcn@latest add https://basecn.dev/r/card.json
 - `input` - Text input
 - `dialog` - Modal dialog
 - `card` - Card container
-
-## Convex
-
-Convex is set up but not initialized. The schema is at `packages/convex/convex/schema.ts`.
 
 ## Environment Variables
 
