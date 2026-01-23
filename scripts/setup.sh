@@ -81,7 +81,26 @@ echo "Initializing Convex..."
 echo "This will open a browser for authentication if needed."
 cd packages/convex
 bunx convex dev --once
-cd ../..
+
+# Copy Convex URL to web app
+if [ -f ".env.local" ]; then
+  CONVEX_URL=$(grep "^CONVEX_URL=" .env.local | cut -d'=' -f2)
+  if [ -n "$CONVEX_URL" ]; then
+    cd ../../apps/web
+    # Add or update VITE_CONVEX_URL in .env
+    if grep -q "^VITE_CONVEX_URL=" .env 2>/dev/null; then
+      sed -i "s|^VITE_CONVEX_URL=.*|VITE_CONVEX_URL=$CONVEX_URL|" .env
+    else
+      echo "VITE_CONVEX_URL=$CONVEX_URL" >> .env
+    fi
+    echo "  Added VITE_CONVEX_URL to apps/web/.env"
+    cd ../..
+  else
+    cd ../..
+  fi
+else
+  cd ../..
+fi
 
 # Reset git history to start fresh
 echo ""
@@ -108,7 +127,9 @@ fi
 echo ""
 echo "Setup complete!"
 echo ""
-echo "Convex deployment URL is automatically configured in packages/convex/.env.local"
+echo "Convex is configured:"
+echo "  - Deployment config: packages/convex/.env.local"
+echo "  - Web app URL: apps/web/.env (VITE_CONVEX_URL)"
 echo ""
 echo "Next step:"
 echo "  Link your remote repository:"

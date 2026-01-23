@@ -81,7 +81,20 @@ import "@repo/brand-colors/css";
 
 ## Convex Backend & Database
 
-Convex is the main database and backend functions provider. It is set up but not initialized. The schema should be defined and updated in `packages/convex/convex/schema.ts`.
+Convex is the main database and backend functions provider. The schema should be defined in `packages/convex/convex/schema.ts`.
+
+```typescript
+// Import the generated API
+import { api } from "@repo/convex";
+
+// Use Convex hooks in your components
+import { useQuery, useMutation } from "convex/react";
+
+function MyComponent() {
+  const data = useQuery(api.myModule.myQuery);
+  const doSomething = useMutation(api.myModule.myMutation);
+}
+```
 
 ## Data Fetching (TanStack Query)
 
