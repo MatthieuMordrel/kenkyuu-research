@@ -1,7 +1,12 @@
 import { useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useHello,
+  useHealth,
+  helloOptions,
+  healthOptions,
+} from "@/examples/elysia-tanstack-query-example";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,38 +21,34 @@ export const Route = createFileRoute("/api-example")({
 });
 
 function ApiExample() {
-  // Query for the root endpoint
-  const helloQuery = useQuery({
-    queryKey: ["hello"],
-    queryFn: async () => {
-      const { data, error } = await api.get();
-      if (error) throw error;
-      return data as string;
-    },
-    enabled: false, // Don't fetch automatically
-  });
+  const queryClient = useQueryClient();
 
-  // Query for the health endpoint
-  const healthQuery = useQuery({
-    queryKey: ["health"],
-    queryFn: async () => {
-      const { data, error } = await api.health.get();
-      if (error) throw error;
-      return data as { status: string };
-    },
-    enabled: false, // Don't fetch automatically
-  });
+  // Using custom hooks from our example (auto-fetch on mount)
+  const { data: helloData, error: helloError, isPending: helloPending, isFetching: helloFetching } = useHello();
+  const { data: healthData, error: healthError, isPending: healthPending, isFetching: healthFetching } = useHealth();
 
-  const error = helloQuery.error || healthQuery.error;
-  const isLoading = helloQuery.isFetching || healthQuery.isFetching;
+  const error = helloError || healthError;
+  const isPending = helloPending || healthPending;
 
-  const handleHelloRefetch = useCallback(() => {
-    helloQuery.refetch();
-  }, [helloQuery]);
+  // Prefetch handlers for hover optimization
+  const prefetchHello = useCallback(
+    () => queryClient.prefetchQuery(helloOptions()),
+    [queryClient]
+  );
+  const prefetchHealth = useCallback(
+    () => queryClient.prefetchQuery(healthOptions()),
+    [queryClient]
+  );
 
-  const handleHealthRefetch = useCallback(() => {
-    healthQuery.refetch();
-  }, [healthQuery]);
+  // Invalidate to trigger refetch
+  const invalidateHello = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: helloOptions().queryKey }),
+    [queryClient]
+  );
+  const invalidateHealth = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: healthOptions().queryKey }),
+    [queryClient]
+  );
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -55,7 +56,7 @@ function ApiExample() {
         <h1 className="text-3xl font-bold">Eden API Example</h1>
         <p className="text-muted-foreground">
           This page demonstrates calling the Elysia API using TanStack Query
-          with the type-safe Eden client.
+          with the type-safe Eden client, following best practices.
         </p>
 
         {error && (
@@ -75,81 +76,105 @@ function ApiExample() {
           </Card>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
+        {isPending && !error && (
           <Card>
-            <CardHeader>
-              <CardTitle>GET /</CardTitle>
-              <CardDescription>Fetch the hello message</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button onClick={handleHelloRefetch} disabled={isLoading}>
-                {helloQuery.isFetching ? "Loading..." : "Fetch Hello"}
-              </Button>
-              {helloQuery.data && (
-                <div className="rounded-md bg-muted p-4">
-                  <code>{helloQuery.data}</code>
-                </div>
-              )}
+            <CardContent className="py-8 text-center text-muted-foreground">
+              Loading...
             </CardContent>
           </Card>
+        )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>GET /health</CardTitle>
-              <CardDescription>Check API health status</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button
-                onClick={handleHealthRefetch}
-                disabled={isLoading}
-                variant="secondary"
-              >
-                {healthQuery.isFetching ? "Loading..." : "Check Health"}
-              </Button>
-              {healthQuery.data && (
-                <div className="rounded-md bg-muted p-4">
-                  <code>{JSON.stringify(healthQuery.data, null, 2)}</code>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {!isPending && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>GET /</CardTitle>
+                <CardDescription>Hello message (auto-fetched)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={invalidateHello}
+                  onMouseEnter={prefetchHello}
+                  disabled={helloFetching}
+                >
+                  {helloFetching ? "Refreshing..." : "Refresh"}
+                </Button>
+                {helloData && (
+                  <div className="rounded-md bg-muted p-4">
+                    <code>{helloData}</code>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>GET /health</CardTitle>
+                <CardDescription>Health status (auto-fetched)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={invalidateHealth}
+                  onMouseEnter={prefetchHealth}
+                  disabled={healthFetching}
+                  variant="secondary"
+                >
+                  {healthFetching ? "Refreshing..." : "Refresh"}
+                </Button>
+                {healthData && (
+                  <div className="rounded-md bg-muted p-4">
+                    <code>{JSON.stringify(healthData, null, 2)}</code>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <Card>
           <CardHeader>
-            <CardTitle>Code Example</CardTitle>
+            <CardTitle>Best Practices Pattern</CardTitle>
             <CardDescription>
-              How to use TanStack Query with Eden
+              Query keys, options, and hooks in a separate file
             </CardDescription>
           </CardHeader>
           <CardContent>
             <pre className="overflow-x-auto rounded-md bg-muted p-4 text-sm">
-              <code>{`import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+              <code>{`// examples/elysia-tanstack-query-example.ts
 
-// Query that fetches on mount
-const { data, error, isLoading } = useQuery({
-  queryKey: ["health"],
-  queryFn: async () => {
-    const { data, error } = await api.health.get();
-    if (error) throw error;
-    return data;
-  },
-});
+// 1. Query Key Factory (hierarchical)
+const apiKeys = {
+  all: ["api"] as const,
+  hello: () => [...apiKeys.all, "hello"] as const,
+  health: () => [...apiKeys.all, "health"] as const,
+};
 
-// Query that fetches on demand
-const query = useQuery({
-  queryKey: ["hello"],
-  queryFn: async () => {
-    const { data, error } = await api.get();
-    if (error) throw error;
-    return data;
-  },
-  enabled: false, // Don't auto-fetch
-});
+// 2. Private Query Functions
+const fetchHello = async (): Promise<string> => {
+  const { data, error } = await api.index.get();
+  if (error) throw error;
+  return data as string;
+};
 
-// Trigger fetch manually
-query.refetch();`}</code>
+// 3. Query Options (for type-safe imperative access)
+export const helloOptions = () =>
+  queryOptions({
+    queryKey: apiKeys.hello(),
+    queryFn: fetchHello,
+    staleTime: 30_000,
+  });
+
+// 4. Custom Hooks (public API)
+export const useHello = () => useQuery(helloOptions());
+
+// Usage in component:
+const { data, isPending, error } = useHello();
+
+// Prefetch on hover:
+queryClient.prefetchQuery(helloOptions());
+
+// Invalidate to refetch:
+queryClient.invalidateQueries({ queryKey: helloOptions().queryKey });`}</code>
             </pre>
           </CardContent>
         </Card>
