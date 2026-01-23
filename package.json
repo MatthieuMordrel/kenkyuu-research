@@ -18,7 +18,9 @@
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
-    "lint:fix": "oxlint --fix ."
+    "lint:fix": "oxlint --fix .",
+    "deps:check": "bun outdated",
+    "deps:update": "bun update"
   },
   "devDependencies": {
     "@typescript/native-preview": "^7.0.0-dev.20260122.4",
