@@ -30,7 +30,8 @@
     "react/react-in-jsx-scope": "off",
     "react/jsx-no-target-blank": "error",
     "react/no-danger": "warn",
-    "unicorn/no-instanceof-builtins": "off"
+    "unicorn/no-instanceof-builtins": "off",
+    "react-perf/jsx-no-new-function-as-prop": "off"
   },
   "ignorePatterns": [
     "node_modules",
