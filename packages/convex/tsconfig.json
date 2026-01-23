@@ -6,11 +6,9 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "paths": {
-      "convex/_generated/*": ["./_generated/*"]
-    }
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["./**/*"],
-  "exclude": ["./_generated"]
+  "include": ["convex/**/*"],
+  "exclude": ["convex/_generated"]
 }
