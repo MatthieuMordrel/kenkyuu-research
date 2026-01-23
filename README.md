@@ -4,7 +4,6 @@ A monorepo template with Elysia, Convex, and TanStack Router.
 
 ## Tech Stack
 
-- **Elysia** - Bun-first web framework for the API
 - **Convex** - Real-time backend-as-a-service
 - **TanStack Router** - Type-safe React router
 - **TanStack Query** - Async state management
@@ -12,28 +11,7 @@ A monorepo template with Elysia, Convex, and TanStack Router.
 - **shadcn/ui + Base UI** - Accessible UI components
 - **Tailwind CSS v4** - Utility-first CSS
 - **Bun** - Package manager and runtime
-
-## Structure
-
-```
-base-repo/
-├── apps/
-│   ├── elysia/           # @repo/elysia - API server
-│   │   └── src/
-│   └── web/              # TanStack Router frontend
-│       ├── src/
-│       │   ├── components/ui/  # shadcn/ui components
-│       │   ├── lib/            # Utilities (api client, cn)
-│       │   └── routes/         # File-based routes
-│       └── components.json     # shadcn config
-├── packages/
-│   ├── convex/           # @repo/convex - Convex backend
-│   ├── utils/            # @repo/utils - Shared utilities
-│   └── brand-colors/     # @repo/brand-colors - Brand colors
-└── scripts/
-    ├── setup.sh          # Initial setup
-    └── kill-dev-ports.sh # Kill zombie processes
-```
+- **Elysia** - Bun-first web framework for the API
 
 ## Default Ports
 
@@ -115,55 +93,9 @@ const { data } = await api.health.get(); // GET /health
 
 Use TanStack Query for server state management:
 
-```typescript
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-
-function MyComponent() {
-  const { data, error, isLoading } = useQuery({
-    queryKey: ["health"],
-    queryFn: async () => {
-      const { data, error } = await api.health.get();
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-  return <div>Status: {data.status}</div>;
-}
-```
-
 ## Client State (Zustand)
 
 Use Zustand for client-side state management:
-
-```typescript
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-
-interface CounterState {
-  count: number;
-  increment: () => void;
-}
-
-export const useCounterStore = create<CounterState>()(
-  persist(
-    (set) => ({
-      count: 0,
-      increment: () => set((state) => ({ count: state.count + 1 })),
-    }),
-    { name: "counter-store" }
-  )
-);
-
-// In a component
-function Counter() {
-  const { count, increment } = useCounterStore();
-  return <button onClick={increment}>{count}</button>;
-}
-```
 
 ## UI Components (shadcn + Base UI)
 
@@ -183,26 +115,6 @@ bunx shadcn@latest add @basecn/input
 bunx shadcn@latest add https://basecn.dev/r/card.json
 ```
 
-### Use components
-
-```tsx
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-
-export function Example() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Hello</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Button>Click me</Button>
-      </CardContent>
-    </Card>
-  );
-}
-```
-
 ### Pre-installed components
 
 - `button` - Button with variants
@@ -213,34 +125,6 @@ export function Example() {
 ## Convex
 
 Convex is set up but not initialized. The schema is at `packages/convex/convex/schema.ts`.
-
-### Define your schema
-
-```typescript
-// packages/convex/convex/schema.ts
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
-
-export default defineSchema({
-  users: defineTable({
-    name: v.string(),
-    email: v.string(),
-  }).index("by_email", ["email"]),
-});
-```
-
-### Start the Convex dev server
-
-```bash
-bun run dev:convex
-```
-
-## Build
-
-```bash
-# Build web app
-bun run build:web
-```
 
 ## Environment Variables
 

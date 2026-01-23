@@ -5,9 +5,9 @@
 ### Stack
 
 - Generally: Typescript
-- Frontend: React, Tailwind CSS, shadcn/ui (Base UI), TanStack Router, TanStack Query, Lucide React, Zustand
+- Frontend: React, Tailwind CSS, shadcn/ui (Base UI), TanStack Router, TanStack Query, Zustand, Lucide React
 - Database: Convex
-- Backend: Convex, Bun, Elysia
+- Backend: Convex by default, Elysia with Bun as fallback (public API)
 
 ## Documentation
 
@@ -80,13 +80,13 @@ Always study and follow the [TanStack Query Skill](./.agents/skills/tanstack-que
 
 Always study and follow the [Zustand Skill](./.agents/skills/zustand/SKILL.md) if working with Zustand.
 
-### Elysia
-
-Always study and follow the [Elysia Skill](./.agents/skills/elysia/SKILL.md) if working with Elysia.
-
 ### Convex
 
 Always study and follow the [Convex Skill](./.agents/skills/convex/SKILL.md) if working with Convex.
+
+### Elysia
+
+Always study and follow the [Elysia Skill](./.agents/skills/elysia/SKILL.md) if working with Elysia.
 
 ### Linting
 
