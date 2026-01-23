@@ -78,17 +78,17 @@ import { colors } from "@repo/brand-colors";
 import "@repo/brand-colors/css";
 ```
 
-## Convex
+## Convex Backend & Database
 
 Convex is the main database and backend functions provider. It is set up but not initialized. The schema should be defined and updated in `packages/convex/convex/schema.ts`.
 
 ## Data Fetching (TanStack Query)
 
-Use TanStack Query for server state management:
+When data doesn't live in Convex, use TanStack Query for server state management
 
 ## Client State (Zustand)
 
-Use Zustand for client-side state management:
+Use Zustand for all client-side state management
 
 ## Elysia and Eden Treaty (Type-safe API calls)
 
@@ -133,6 +133,7 @@ bunx shadcn@latest add https://basecn.dev/r/card.json
 
 ```env
 VITE_API_URL=localhost:3001
+VITE_CONVEX_URL=https://your-project-123.convex.cloud
 ```
 
 ### Elysia API (`apps/elysia/.env`)
@@ -148,4 +149,13 @@ For multiple CORS origins, use comma-separated values:
 CORS_ORIGIN=http://localhost:3000,https://myapp.com
 ```
 
-See `.env.example` files in each app for reference.
+### Convex
+
+To set environment variables for your Convex functions (secrets, API keys, etc.):
+
+```bash
+cd packages/convex
+bunx convex env set MY_SECRET "secret-value"
+```
+
+Or via the [Convex Dashboard](https://dashboard.convex.dev) → Your project → Settings → Environment Variables.
