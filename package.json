@@ -14,13 +14,14 @@
     "dev:convex": "bun run --filter @repo/convex dev",
     "build:web": "bun run --filter @repo/web build",
     "typecheck": "bun run --filter '*' typecheck",
-    "typecheck-go": "tsgo --build",
+    "typecheck-go": "bun run --filter '*' typecheck-go",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix ."
   },
   "devDependencies": {
+    "@typescript/native-preview": "^7.0.0-dev.20260122.4",
     "oxfmt": "^0.26.0",
     "oxlint": "^1.41.0",
     "typescript": "^5.0.0"

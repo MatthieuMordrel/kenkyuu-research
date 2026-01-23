@@ -7,7 +7,8 @@
     "build": "vite build && tsc",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck-go": "tsgo --noEmit"
   },
   "dependencies": {
     "@base-ui/react": "^1.1.0",

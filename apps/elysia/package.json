@@ -10,7 +10,8 @@
   },
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck-go": "tsgo --noEmit"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.1",
