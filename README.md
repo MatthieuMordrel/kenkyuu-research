@@ -21,6 +21,7 @@ This will:
 - Install all dependencies
 - Initialize Convex (opens browser for authentication)
 - Optionally reset git history to a fresh "Initial commit"
+- Rename the folder to match the project name
 
 ```bash
 bun run dev

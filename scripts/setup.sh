@@ -17,6 +17,12 @@ fi
 # Ask for project name
 read -p "Enter project name (leave empty to keep 'base-repo'): " PROJECT_NAME
 
+# Store current folder info for later renaming
+CURRENT_DIR=$(pwd)
+CURRENT_FOLDER=$(basename "$CURRENT_DIR")
+PARENT_DIR=$(dirname "$CURRENT_DIR")
+SHOULD_RENAME_FOLDER=false
+
 if [ -n "$PROJECT_NAME" ]; then
   # Convert to lowercase and replace spaces with hyphens
   PROJECT_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
@@ -41,6 +47,11 @@ if [ -n "$PROJECT_NAME" ]; then
 
   # Update all @repo/ scoped package names and dependencies
   find . -name "package.json" -not -path "./node_modules/*" -exec sed -i "s/@repo\//$SCOPE\//g" {} \;
+
+  # Check if we should rename the folder
+  if [ "$CURRENT_FOLDER" != "$PROJECT_NAME" ]; then
+    SHOULD_RENAME_FOLDER=true
+  fi
 
   echo "Project renamed successfully!"
 fi
@@ -84,6 +95,16 @@ if [[ "$RESET_GIT" =~ ^[Yy]$ ]]; then
   echo "Git history reset. You have a fresh start!"
 fi
 
+# Rename folder if needed (do this last)
+if [ "$SHOULD_RENAME_FOLDER" = true ]; then
+  echo ""
+  echo "Renaming folder from '$CURRENT_FOLDER' to '$PROJECT_NAME'..."
+  cd "$PARENT_DIR"
+  mv "$CURRENT_FOLDER" "$PROJECT_NAME"
+  cd "$PROJECT_NAME"
+  echo "Folder renamed successfully!"
+fi
+
 echo ""
 echo "Setup complete!"
 echo ""
@@ -99,3 +120,9 @@ echo "  bun run dev:elysia - Start the Elysia API server"
 echo "  bun run dev:web    - Start the TanStack Router web app"
 echo "  bun run dev:convex - Start Convex development server"
 echo ""
+
+# Remind user if folder was renamed
+if [ "$SHOULD_RENAME_FOLDER" = true ]; then
+  echo "Note: Folder was renamed. Run 'cd $PARENT_DIR/$PROJECT_NAME' if your shell lost track."
+  echo ""
+fi
