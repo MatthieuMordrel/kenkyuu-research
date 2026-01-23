@@ -133,7 +133,6 @@ bunx shadcn@latest add https://basecn.dev/r/card.json
 
 ```env
 VITE_API_URL=localhost:3001
-VITE_CONVEX_URL=https://your-project-123.convex.cloud
 ```
 
 ### Elysia API (`apps/elysia/.env`)
@@ -150,6 +149,8 @@ CORS_ORIGIN=http://localhost:3000,https://myapp.com
 ```
 
 ### Convex
+
+The deployment URL (`CONVEX_URL`) is automatically configured in `packages/convex/.env.local` when you run setup or `bun run dev:convex`.
 
 To set environment variables for your Convex functions (secrets, API keys, etc.):
 
