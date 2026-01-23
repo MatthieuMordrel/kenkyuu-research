@@ -16,7 +16,8 @@
   "scripts": {
     "dev": "convex dev",
     "deploy": "convex deploy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck-go": "tsgo --noEmit"
   },
   "dependencies": {
     "convex": "^1.31.6"
