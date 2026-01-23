@@ -32,23 +32,11 @@ A monorepo template with Elysia, Convex, and TanStack Router.
 
 ```bash
 # Clone the repo
-git clone <your-repo-url>
+git clone <your-repo-url> or gh repo clone <your-repo-url>
 cd base-repo
 
 # Run the setup script (installs deps + initializes Convex)
 ./scripts/setup.sh
-```
-
-### Manual Setup
-
-```bash
-# Install dependencies
-bun install
-
-# Initialize Convex (will prompt for authentication)
-cd packages/convex
-bunx convex dev --once
-cd ../..
 ```
 
 ### Kill zombie processes
