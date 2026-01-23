@@ -7,7 +7,9 @@
   ],
   "scripts": {
     "setup": "./scripts/setup.sh",
-    "dev": "bun run --filter '*' dev",
+    "kill-ports": "./scripts/kill-dev-ports.sh",
+    "dev": "bun run --filter 'web' --filter '@repo/elysia' dev",
+    "dev:all": "bun run --filter '*' dev",
     "dev:elysia": "bun run --filter @repo/elysia dev",
     "dev:web": "bun run --filter web dev",
     "dev:convex": "bun run --filter @repo/convex dev",
