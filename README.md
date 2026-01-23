@@ -2,6 +2,19 @@
 
 A monorepo template with Elysia, Convex, and TanStack Router.
 
+## Quick Install
+
+```bash
+gh repo clone "https://github.com/MatthieuMordrel/base-repo"
+cd base-repo
+bun install
+bun run setup
+```
+
+```bash
+bun run dev
+```
+
 ## Tech Stack
 
 - **Convex** - Real-time backend-as-a-service
@@ -27,17 +40,6 @@ A monorepo template with Elysia, Convex, and TanStack Router.
 
 - [Bun](https://bun.sh) (v1.0+)
 - [Node.js](https://nodejs.org) (v18+ for Convex CLI)
-
-### Quick Setup
-
-```bash
-# Clone the repo
-git clone <your-repo-url> or gh repo clone <your-repo-url>
-cd base-repo
-
-# Run the setup script (installs deps + initializes Convex)
-./scripts/setup.sh
-```
 
 ### Kill zombie processes
 
