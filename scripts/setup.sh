@@ -5,6 +5,15 @@ set -e
 echo "Setting up the monorepo..."
 echo ""
 
+# Remove the template remote so user can link their own repo
+if git remote get-url origin &>/dev/null; then
+  echo "Unlinking template remote repository..."
+  git remote remove origin
+  echo "Remote 'origin' removed. You can now link your own repo with:"
+  echo "  git remote add origin <your-repo-url>"
+  echo ""
+fi
+
 # Ask for project name
 read -p "Enter project name (leave empty to keep 'base-repo'): " PROJECT_NAME
 

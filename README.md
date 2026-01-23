@@ -7,9 +7,18 @@ A monorepo template with Elysia, Convex, and TanStack Router.
 ```bash
 gh repo clone "https://github.com/MatthieuMordrel/base-repo"
 cd base-repo
-bun install
+```
+
+```bash
 bun run setup
 ```
+
+This will:
+
+- Unlink the template remote (so you can create your own remote repository)
+- Prompt for a new project name and package scope
+- Install all dependencies
+- Initialize Convex (opens browser for authentication)
 
 ```bash
 bun run dev
