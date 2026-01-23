@@ -9,7 +9,7 @@
 - Database: Convex
 - Backend: Convex by default, Elysia with Bun as fallback (public API)
 
-Except if explicitly stated otherwise, favor using Convex without tanstack query for as many things as possible and store the data there. In case where that is not possible or for public APIs, use Elysia with Bun as fallback. You may use tanstack query for async state management when not storing the data in Convex.
+Except if explicitly stated otherwise, favor using Convex without Tanstack Query for as many things as possible and store the data there. In case where that is not possible or for public APIs, use Elysia with Bun as fallback. You may use Tanstack Query for async state management when not storing the data in Convex.
 
 ## Documentation
 
