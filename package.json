@@ -8,7 +8,7 @@
   "scripts": {
     "setup": "./scripts/setup.sh",
     "kill-ports": "./scripts/kill-dev-ports.sh",
-    "dev": "bun run dev:elysia & bun run dev:web",
+    "dev": "concurrently --kill-others-on-fail --names 'WEB,CONVEX,ELYSIA' --prefix-colors 'blue,magenta,yellow' 'bun run dev:web' 'bun run dev:convex' 'bun run dev:elysia'",
     "dev:elysia": "bun run --filter @repo/elysia dev",
     "dev:web": "bun run --filter @repo/web dev",
     "dev:convex": "bun run --filter @repo/convex dev",
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@typescript/native-preview": "^7.0.0-dev.20260122.4",
+    "concurrently": "^9.2.1",
     "oxfmt": "^0.26.0",
     "oxlint": "^1.41.0",
     "typescript": "^5.0.0"
