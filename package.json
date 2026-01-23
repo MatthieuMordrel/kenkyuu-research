@@ -8,6 +8,7 @@
   "scripts": {
     "setup": "./scripts/setup.sh",
     "kill-ports": "./scripts/kill-dev-ports.sh",
+    "dev:test": "bun run --filter @repo/web dev & bun run --filter @repo/elysia dev",
     "dev": "concurrently --kill-others-on-fail --names 'WEB,CONVEX,ELYSIA' --prefix-colors 'blue,magenta,yellow' 'bun run dev:web' 'bun run dev:convex' 'bun run dev:elysia'",
     "dev:elysia": "bun run --filter @repo/elysia dev",
     "dev:web": "bun run --filter @repo/web dev",
