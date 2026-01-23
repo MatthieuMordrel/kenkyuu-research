@@ -47,6 +47,19 @@ fi
 
 echo ""
 
+# Copy .env.example files to .env
+echo "Creating environment files from examples..."
+if [ -f "apps/web/.env.example" ] && [ ! -f "apps/web/.env" ]; then
+  cp apps/web/.env.example apps/web/.env
+  echo "  Created apps/web/.env"
+fi
+if [ -f "apps/elysia/.env.example" ] && [ ! -f "apps/elysia/.env" ]; then
+  cp apps/elysia/.env.example apps/elysia/.env
+  echo "  Created apps/elysia/.env"
+fi
+
+echo ""
+
 # Install dependencies
 echo "Installing dependencies..."
 bun install
@@ -58,6 +71,18 @@ echo "This will open a browser for authentication if needed."
 cd packages/convex
 bunx convex dev --once
 cd ../..
+
+# Reset git history to start fresh
+echo ""
+read -p "Reset git history to a fresh 'Initial commit'? (y/N): " RESET_GIT
+if [[ "$RESET_GIT" =~ ^[Yy]$ ]]; then
+  echo "Resetting git history..."
+  rm -rf .git
+  git init
+  git add -A
+  git commit -m "Initial commit"
+  echo "Git history reset. You have a fresh start!"
+fi
 
 echo ""
 echo "Setup complete!"

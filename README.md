@@ -17,8 +17,10 @@ This will:
 
 - Unlink the template remote (so you can create your own remote repository)
 - Prompt for a new project name and package scope
+- Create `.env` files from `.env.example` templates
 - Install all dependencies
 - Initialize Convex (opens browser for authentication)
+- Optionally reset git history to a fresh "Initial commit"
 
 ```bash
 bun run dev
