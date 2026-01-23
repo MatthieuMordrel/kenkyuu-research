@@ -9,16 +9,18 @@
 - Database: Convex
 - Backend: Convex by default, Elysia with Bun as fallback (public API)
 
+Except if explicitly stated otherwise, favor using Convex without tanstack query for as many things as possible and store the data there. In case where that is not possible or for public APIs, use Elysia with Bun as fallback. You may use tanstack query for async state management when not storing the data in Convex.
+
 ## Documentation
 
 CRITICAL: ALWAYS REFER TO THE DOCUMENTATION OF THE LIBRARY IF WORKING WITH IT.
 
 **Skill Documentation**: Detailed guides for specific technologies are located in `.agents/skills/`:
 
-- [TanStack Query](./.agents/skills/tanstack-query/SKILL.md) - Server state management patterns
-- [Zustand](./.agents/skills/zustand/SKILL.md) - Client state management patterns
-- [Elysia](./.agents/skills/elysia/SKILL.md) - Backend API development patterns
 - [Convex](./.agents/skills/convex/SKILL.md) - Database and backend functions patterns
+- [Zustand](./.agents/skills/zustand/SKILL.md) - Client state management patterns
+- [TanStack Query](./.agents/skills/tanstack-query/SKILL.md) - Server state management patterns
+- [Elysia](./.agents/skills/elysia/SKILL.md) - Backend API development patterns
 
 **Project Documentation**: Additional project-specific documentation is in `documentation/`:
 
@@ -72,6 +74,10 @@ CRITICAL: ALWAYS REFER TO THE DOCUMENTATION OF THE LIBRARY IF WORKING WITH IT.
 - Access and update with `useNavigate` and `Route.useSearch()`.
 - Keep ephemeral/local UI state (e.g., open popovers, input search terms) in local component state.
 
+### Convex
+
+Always study and follow the [Convex Skill](./.agents/skills/convex/SKILL.md) if working with Convex.
+
 ### Tanstack Query
 
 Always study and follow the [TanStack Query Skill](./.agents/skills/tanstack-query/SKILL.md) if working with TanStack Query.
@@ -79,10 +85,6 @@ Always study and follow the [TanStack Query Skill](./.agents/skills/tanstack-que
 ### Zustand
 
 Always study and follow the [Zustand Skill](./.agents/skills/zustand/SKILL.md) if working with Zustand.
-
-### Convex
-
-Always study and follow the [Convex Skill](./.agents/skills/convex/SKILL.md) if working with Convex.
 
 ### Elysia
 

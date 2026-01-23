@@ -15,6 +15,10 @@ keywords: convex, database, queries, mutations, actions, nested-functions, type-
 
 Key topics: await all promises, avoid `.filter` (use indexes), use `.collect` only with small result sets, argument validation, access control, helper functions, avoiding sequential `ctx.runMutation`/`ctx.runQuery` in actions.
 
+## Data Fetching
+
+**Use Convex's native hooks (`useQuery`, `useMutation`) by default** - don't add TanStack Query unless explicitly required. Convex's real-time subscriptions already handle caching, invalidation, and refetching automatically. TanStack Query only adds value when mixing Convex with other data sources (REST, GraphQL).
+
 ## Nested Functions Access Patterns
 
 **Critical**: When organizing Convex functions into subdirectories, you must follow specific access patterns to ensure TypeScript types resolve correctly.
@@ -159,3 +163,4 @@ export const requestTask = mutation({
 - **Validate all inputs** in public functions; internal functions can trust their callers.
 - **Use `ctx.runMutation`/`ctx.runQuery`** inside actions to call internal functions safely.
 - **HTTP endpoints** should validate auth/signatures before calling internal functions.
+- **Avoid optimistic updates** - Convex is fast enough by default; optimistic updates add complexity without meaningful UX gains.
