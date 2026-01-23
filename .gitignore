@@ -5,6 +5,12 @@ node_modules/
 dist/
 build/
 .output/
+*.tsbuildinfo
+
+# Generated JS files (TypeScript source only)
+apps/**/*.js
+packages/**/*.js
+!packages/convex/convex/_generated/**
 
 # Environment files
 .env
