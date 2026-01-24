@@ -11,8 +11,7 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "typecheck-go": "tsgo --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

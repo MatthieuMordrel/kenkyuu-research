@@ -15,7 +15,6 @@
     "dev:convex": "bun run --filter @repo/convex dev",
     "build:web": "bun run --filter @repo/web build",
     "typecheck": "bun run --filter '*' typecheck",
-    "typecheck-go": "bun run --filter '*' typecheck-go",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
