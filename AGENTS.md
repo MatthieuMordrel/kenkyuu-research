@@ -74,22 +74,6 @@ CRITICAL: ALWAYS REFER TO THE DOCUMENTATION OF THE LIBRARY IF WORKING WITH IT.
 - Access and update with `useNavigate` and `Route.useSearch()`.
 - Keep ephemeral/local UI state (e.g., open popovers, input search terms) in local component state.
 
-### Convex
-
-Always study and follow the [Convex Skill](./.agents/skills/convex/SKILL.md) if working with Convex.
-
-### Tanstack Query
-
-Always study and follow the [TanStack Query Skill](./.agents/skills/tanstack-query/SKILL.md) if working with TanStack Query.
-
-### Zustand
-
-Always study and follow the [Zustand Skill](./.agents/skills/zustand/SKILL.md) if working with Zustand.
-
-### Elysia
-
-Always study and follow the [Elysia Skill](./.agents/skills/elysia/SKILL.md) if working with Elysia.
-
 ### Linting
 
 Always run `bun run lint` after refactoring to ensure code quality.
