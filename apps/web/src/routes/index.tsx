@@ -15,7 +15,7 @@ function App() {
           Edit <code>src/routes/index.tsx</code> and save to reload.
         </p>
         <Link to="/api-example" className="App-link">
-          API Example (Eden + Elysia)
+          API Example
         </Link>
         <a
           className="App-link"

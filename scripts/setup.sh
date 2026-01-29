@@ -64,10 +64,6 @@ if [ -f "apps/web/.env.example" ] && [ ! -f "apps/web/.env" ]; then
   cp apps/web/.env.example apps/web/.env
   echo "  Created apps/web/.env"
 fi
-if [ -f "apps/elysia/.env.example" ] && [ ! -f "apps/elysia/.env" ]; then
-  cp apps/elysia/.env.example apps/elysia/.env
-  echo "  Created apps/elysia/.env"
-fi
 
 echo ""
 
@@ -137,7 +133,6 @@ echo "  git remote add origin <your-repo-url>"
 echo ""
 echo "Available commands:"
 echo "  bun run dev        - Start all services"
-echo "  bun run dev:elysia - Start the Elysia API server"
 echo "  bun run dev:web    - Start the TanStack Router web app"
 echo "  bun run dev:convex - Start Convex development server"
 echo ""

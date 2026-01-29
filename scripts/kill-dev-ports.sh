@@ -4,9 +4,8 @@
 
 # Default ports:
 # - 3000: Web (TanStack Router)
-# - 3001: Elysia API
 # - 3210: Convex
-PORTS=(3000 3001 3210 )
+PORTS=(3000 3210)
 
 echo "🔍 Checking for processes on dev ports..."
 

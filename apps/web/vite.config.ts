@@ -23,9 +23,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
-      "@repo/elysia": fileURLToPath(
-        new URL("../elysia/src/index.ts", import.meta.url)
-      ),
     },
   },
 });

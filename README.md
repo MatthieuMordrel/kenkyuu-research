@@ -1,6 +1,6 @@
 # Base Repo
 
-A monorepo template with Elysia, Convex, and TanStack Router.
+A monorepo template with Convex and TanStack Router.
 
 ## Quick Install
 
@@ -36,14 +36,12 @@ bun run dev
 - **shadcn/ui + Base UI** - Accessible UI components
 - **Tailwind CSS v4** - Utility-first CSS
 - **Bun** - Package manager and runtime
-- **Elysia** - Bun-first web framework for the API
 
 ## Default Ports
 
 | Service | Port | Description              |
 | ------- | ---- | ------------------------ |
 | Web     | 3000 | TanStack Router frontend |
-| Elysia  | 3001 | API server               |
 | Convex  | 3210 | Convex dev server        |
 
 ## Getting Started
@@ -104,18 +102,6 @@ When data doesn't live in Convex, use TanStack Query for server state management
 
 Use Zustand for all client-side state management
 
-## Elysia and Eden Treaty (Type-safe API calls)
-
-Elysia is the fallback API provider for the web app. It has a pre-configured Eden client for type-safe API calls to the Elysia server:
-
-```typescript
-import { api } from "@/lib/api";
-
-// Fully type-safe API calls
-const { data } = await api.get(); // GET /
-const { data } = await api.health.get(); // GET /health
-```
-
 ## UI Components (shadcn + Base UI)
 
 The web app uses [shadcn/ui](https://ui.shadcn.com) with [Base UI](https://base-ui.com) primitives via the [@basecn](https://basecn.dev) registry.
@@ -142,25 +128,6 @@ bunx shadcn@latest add https://basecn.dev/r/card.json
 - `card` - Card container
 
 ## Environment Variables
-
-### Web App (`apps/web/.env`)
-
-```env
-VITE_API_URL=localhost:3001
-```
-
-### Elysia API (`apps/elysia/.env`)
-
-```env
-PORT=3001
-CORS_ORIGIN=http://localhost:3000
-```
-
-For multiple CORS origins, use comma-separated values:
-
-```env
-CORS_ORIGIN=http://localhost:3000,https://myapp.com
-```
 
 ### Convex
 

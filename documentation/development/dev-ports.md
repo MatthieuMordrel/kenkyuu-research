@@ -37,7 +37,7 @@ When you `Ctrl+C` to stop the dev server, sometimes processes don't terminate pr
 | **marketing** | 3000 | TanStack Start marketing site (Vite + Nitro) |
 | **convex**    | 3210 | Convex dev server (default)                  |
 | **sanity**    | 3333 | Sanity Studio (default)                      |
-| **elysia**    | 4000 | Elysia API server (Bun)                      |
+
 | **email**     | 4321 | React Email preview server                   |
 | **frontend**  | 5173 | Main React SPA (Vite)                        |
 | **trigger**   | 8080 | Trigger.dev dev server                       |
@@ -53,11 +53,10 @@ When you `Ctrl+C` to stop the dev server, sometimes processes don't terminate pr
 - frontend: 5173
 - marketing: 3000
 - convex: 3210
-- elysia: 4000
 
 ### `pnpm run dev:mail`
 
-Same as `dev` but replaces `elysia` with `email`:
+Same as `dev` but adds `email`:
 
 - backend: 8787
 - frontend: 5173

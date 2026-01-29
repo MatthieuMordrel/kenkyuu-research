@@ -7,9 +7,9 @@
 - Generally: Typescript
 - Frontend: React, Tailwind CSS, shadcn/ui (Base UI), TanStack Router, TanStack Query, Zustand, Lucide React
 - Database: Convex
-- Backend: Convex by default, Elysia with Bun as fallback (public API)
+- Backend: Convex
 
-Except if explicitly stated otherwise, favor using Convex without Tanstack Query for as many things as possible and store the data there. In case where that is not possible or for public APIs, use Elysia with Bun as fallback. You may use Tanstack Query for async state management when not storing the data in Convex.
+Except if explicitly stated otherwise, favor using Convex without Tanstack Query for as many things as possible and store the data there. You may use Tanstack Query for async state management when not storing the data in Convex.
 
 ## Documentation
 
@@ -20,7 +20,6 @@ CRITICAL: ALWAYS REFER TO THE DOCUMENTATION OF THE LIBRARY IF WORKING WITH IT.
 - [Convex](./.agents/skills/convex/SKILL.md) - Database and backend functions patterns
 - [Zustand](./.agents/skills/zustand/SKILL.md) - Client state management patterns
 - [TanStack Query](./.agents/skills/tanstack-query/SKILL.md) - Server state management patterns
-- [Elysia](./.agents/skills/elysia/SKILL.md) - Backend API development patterns
 
 **Project Documentation**: Additional project-specific documentation is in `documentation/`:
 
