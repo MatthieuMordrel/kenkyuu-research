@@ -17,7 +17,7 @@
   "scripts": {
     "setup": "./scripts/setup.sh",
     "kill-ports": "./scripts/kill-dev-ports.sh",
-    "dev": "concurrently --kill-others-on-fail --names 'WEB,CONVEX' --prefix-colors 'blue,magenta' 'bun run dev:web' 'bun run dev:convex'",
+    "dev": "bun run kill-ports && concurrently --kill-others-on-fail --names 'WEB,CONVEX' --prefix-colors 'blue,magenta' 'bun run dev:web' 'bun run dev:convex'",
     "dev:web": "bun run --filter @repo/web dev",
     "dev:convex": "bun run --filter @repo/convex dev",
     "build:web": "bun run --filter @repo/web build",
