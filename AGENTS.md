@@ -11,22 +11,6 @@
 
 Except if explicitly stated otherwise, favor using Convex without Tanstack Query for as many things as possible and store the data there. You may use Tanstack Query for async state management when not storing the data in Convex.
 
-## Documentation
-
-CRITICAL: ALWAYS REFER TO THE DOCUMENTATION OF THE LIBRARY IF WORKING WITH IT.
-
-**Skill Documentation**: Detailed guides for specific technologies are located in `.agents/skills/`:
-
-- [Convex](./.agents/skills/convex/SKILL.md) - Database and backend functions patterns
-- [Zustand](./.agents/skills/zustand/SKILL.md) - Client state management patterns
-- [TanStack Query](./.agents/skills/tanstack-query/SKILL.md) - Server state management patterns
-
-**Project Documentation**: Additional project-specific documentation is in `documentation/`:
-
-- [Development](./documentation/development/) - Development setup and workflows
-- [Linting](./documentation/linting/) - Linting rules and patterns
-- [Agents](./documentation/agents/) - Agent-specific documentation
-
 ## Rules
 
 ### General
@@ -42,6 +26,10 @@ CRITICAL: ALWAYS REFER TO THE DOCUMENTATION OF THE LIBRARY IF WORKING WITH IT.
 - Never cast to 'any'
 - Do not add extra defensive check or try/catch blocks unless absolutely necessary
 - When defining interfaces, put JSDoc comments above the interface definition using @property tags, instead of above each individual property
+- Always run `bun run typecheck` after coding.
+- Fix type errors in the best effort way, don't use any @ts-ignore or @ts-expect-error comments, avoid "any" types.
+- Favor using type-safe solutions with type safe SDK, libraries and tools.
+- Fetch types from @types if needed if the library doesn't provide types by default.
 
 ### React
 
