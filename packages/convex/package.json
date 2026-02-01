@@ -19,6 +19,10 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "convex": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0"
   }
 }
