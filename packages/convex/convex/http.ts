@@ -101,6 +101,22 @@ async function handleWebhookPayload(
         costUsd,
       });
     }
+
+    // Dispatch notifications for completed job
+    await ctx.scheduler.runAfter(
+      0,
+      internal.notifications.dispatchJobNotification,
+      { jobId: job._id },
+    );
+
+    // Check budget alert
+    if (costUsd !== undefined) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.budgetAlert.checkBudgetAlert,
+        { currentCostUsd: costUsd },
+      );
+    }
   } else if (status === "failed" || status === "cancelled") {
     const error =
       payload.response?.status_details?.error?.message ??
@@ -118,6 +134,13 @@ async function handleWebhookPayload(
       await ctx.scheduler.runAfter(
         Math.pow(2, job.attempts) * 5000,
         internal.researchActions.startResearch,
+        { jobId: job._id },
+      );
+    } else {
+      // Only notify on final failure (no more retries)
+      await ctx.scheduler.runAfter(
+        0,
+        internal.notifications.dispatchJobNotification,
         { jobId: job._id },
       );
     }

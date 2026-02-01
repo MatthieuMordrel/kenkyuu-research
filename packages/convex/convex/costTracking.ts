@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 
 // --- Mutations ---
 
@@ -24,12 +24,66 @@ export const logCost = internalMutation({
   },
 });
 
+/** Mark that a budget alert has been sent for a given month. */
+export const markBudgetAlertSent = internalMutation({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { value: "true" });
+    } else {
+      await ctx.db.insert("settings", { key: args.key, value: "true" });
+    }
+  },
+});
+
 // --- Queries ---
 
 /** Get total cost for the current calendar month. */
 export const getMonthlyCost = query({
   args: {
     /** Optional: override the month to query (unix ms of any moment in the desired month). Defaults to now. */
+    monthTimestamp: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const target = new Date(args.monthTimestamp ?? Date.now());
+    const startOfMonth = new Date(
+      target.getFullYear(),
+      target.getMonth(),
+      1,
+    ).getTime();
+    const startOfNextMonth = new Date(
+      target.getFullYear(),
+      target.getMonth() + 1,
+      1,
+    ).getTime();
+
+    const logs = await ctx.db
+      .query("costLogs")
+      .withIndex("by_timestamp", (q) =>
+        q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth),
+      )
+      .collect();
+
+    const totalCost = logs.reduce((sum, log) => sum + log.costUsd, 0);
+    const jobCount = logs.length;
+
+    return {
+      totalCost: Math.round(totalCost * 100) / 100,
+      jobCount,
+      monthStart: startOfMonth,
+      monthEnd: startOfNextMonth,
+    };
+  },
+});
+
+/** Internal version of getMonthlyCost for use by actions (e.g., budget alerts). */
+export const getMonthlyCostInternal = internalQuery({
+  args: {
     monthTimestamp: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
