@@ -242,6 +242,22 @@ export const retryJob = mutation({
   },
 });
 
+export const toggleFavorite = mutation({
+  args: {
+    id: v.id("researchJobs"),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    const newValue = !job.isFavorited;
+    await ctx.db.patch(args.id, { isFavorited: newValue });
+    return { id: args.id, isFavorited: newValue };
+  },
+});
+
 // --- Queries ---
 
 export const listJobs = query({
@@ -406,6 +422,14 @@ export const searchResults = query({
     }
 
     return matches;
+  },
+});
+
+export const listFavorites = query({
+  args: {},
+  handler: async (ctx) => {
+    const allJobs = await ctx.db.query("researchJobs").order("desc").collect();
+    return allJobs.filter((j) => j.isFavorited === true);
   },
 });
 
