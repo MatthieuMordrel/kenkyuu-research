@@ -16,6 +16,7 @@ import type {
 import type * as auth from "../auth.js";
 import type * as authHelpers from "../authHelpers.js";
 import type * as settings from "../settings.js";
+import type * as stocks from "../stocks.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authHelpers: typeof authHelpers;
   settings: typeof settings;
+  stocks: typeof stocks;
 }>;
 
 export declare const api: FilterApi<
