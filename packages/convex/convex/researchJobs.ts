@@ -206,6 +206,42 @@ export const cancelJob = mutation({
   },
 });
 
+export const retryJob = mutation({
+  args: {
+    id: v.id("researchJobs"),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    if (job.status !== "failed") {
+      throw new Error("Can only retry failed jobs");
+    }
+
+    if (job.attempts >= 3) {
+      // Reset attempts to allow manual retry
+      await ctx.db.patch(args.id, { attempts: 0 });
+    }
+
+    // Reset status and schedule retry
+    await ctx.db.patch(args.id, {
+      status: "pending",
+      error: undefined,
+      completedAt: undefined,
+    });
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.researchActions.startResearch,
+      { jobId: args.id },
+    );
+
+    return args.id;
+  },
+});
+
 // --- Queries ---
 
 export const listJobs = query({
