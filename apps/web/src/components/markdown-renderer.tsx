@@ -131,7 +131,7 @@ interface MarkdownRendererProps {
 
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   return (
-    <div className={cn("text-foreground text-sm leading-relaxed", className)}>
+    <div className={cn("text-foreground text-sm leading-relaxed break-words overflow-hidden", className)}>
       <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
         {content}
       </ReactMarkdown>

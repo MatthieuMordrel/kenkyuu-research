@@ -125,12 +125,12 @@ function SchedulesPage() {
             {upcomingRuns.map((run) => (
               <div
                 key={`${run.scheduleId}-${run.nextRunAt}`}
-                className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm min-w-0"
               >
                 <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="font-medium">{run.scheduleName}</span>
-                <span className="text-muted-foreground">—</span>
-                <span className="text-muted-foreground">
+                <span className="font-medium truncate">{run.scheduleName}</span>
+                <span className="shrink-0 text-muted-foreground">—</span>
+                <span className="shrink-0 text-muted-foreground">
                   {formatRelativeTime(run.nextRunAt)}
                 </span>
               </div>

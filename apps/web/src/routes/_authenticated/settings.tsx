@@ -464,7 +464,7 @@ function ThemeSection() {
         <CardDescription>Choose your preferred appearance</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(
             [
               { value: "light", label: "Light", icon: Sun },
