@@ -8,6 +8,7 @@ import {
   Clock,
   Settings,
   LogOut,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ const navItems = [
   { to: "/stocks", label: "Stocks", icon: TrendingUp },
   { to: "/prompts", label: "Prompts", icon: FileText },
   { to: "/research", label: "Research", icon: FlaskConical },
+  { to: "/history", label: "History", icon: History },
   { to: "/schedules", label: "Schedules", icon: Clock },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
