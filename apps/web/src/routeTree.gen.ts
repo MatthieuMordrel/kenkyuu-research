@@ -10,52 +10,62 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as ApiExampleRouteImport } from './routes/api-example'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedApiExampleRouteImport } from './routes/_authenticated/api-example'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiExampleRoute = ApiExampleRouteImport.update({
-  id: '/api-example',
-  path: '/api-example',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedApiExampleRoute = AuthenticatedApiExampleRouteImport.update({
+  id: '/api-example',
+  path: '/api-example',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/api-example': typeof ApiExampleRoute
+  '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/api-example': typeof AuthenticatedApiExampleRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/api-example': typeof ApiExampleRoute
   '/login': typeof LoginRoute
+  '/api-example': typeof AuthenticatedApiExampleRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/api-example': typeof ApiExampleRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/api-example': typeof AuthenticatedApiExampleRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api-example' | '/login'
+  fullPaths: '/' | '/login' | '/api-example'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api-example' | '/login'
-  id: '__root__' | '/' | '/api-example' | '/login'
+  to: '/login' | '/api-example' | '/'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/api-example'
+    | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  ApiExampleRoute: typeof ApiExampleRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
 }
 
@@ -68,26 +78,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api-example': {
-      id: '/api-example'
-      path: '/api-example'
-      fullPath: '/api-example'
-      preLoaderRoute: typeof ApiExampleRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/api-example': {
+      id: '/_authenticated/api-example'
+      path: '/api-example'
+      fullPath: '/api-example'
+      preLoaderRoute: typeof AuthenticatedApiExampleRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedApiExampleRoute: typeof AuthenticatedApiExampleRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedApiExampleRoute: AuthenticatedApiExampleRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  ApiExampleRoute: ApiExampleRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
