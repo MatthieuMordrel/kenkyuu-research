@@ -15,6 +15,8 @@ import type {
 } from "convex/server";
 import type * as auth from "../auth.js";
 import type * as authHelpers from "../authHelpers.js";
+import type * as prompts from "../prompts.js";
+import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
 import type * as stocks from "../stocks.js";
 
@@ -29,6 +31,8 @@ import type * as stocks from "../stocks.js";
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authHelpers: typeof authHelpers;
+  prompts: typeof prompts;
+  seed: typeof seed;
   settings: typeof settings;
   stocks: typeof stocks;
 }>;
