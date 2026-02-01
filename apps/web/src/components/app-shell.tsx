@@ -1,5 +1,6 @@
-import { Link, Outlet, useMatchRoute } from "@tanstack/react-router";
+import { Link, Outlet, useLocation, useMatchRoute } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
+import { ErrorBoundary } from "@/components/error-boundary";
 import {
   LayoutDashboard,
   TrendingUp,
@@ -25,11 +26,15 @@ const navItems = [
 const mobileNavItems = navItems.slice(0, 5);
 
 export function AppShell() {
+  const location = useLocation();
+
   return (
     <div className="flex min-h-svh flex-col md:flex-row">
       <Sidebar />
       <main className="flex-1 pb-16 md:pb-0">
-        <Outlet />
+        <ErrorBoundary key={location.pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <BottomNav />
     </div>

@@ -44,8 +44,12 @@ function StockDetailPage() {
 
   async function handleDelete() {
     if (!stock) return;
-    await deleteStock({ id: stock._id });
-    navigate({ to: "/stocks" });
+    try {
+      await deleteStock({ id: stock._id });
+      navigate({ to: "/stocks" });
+    } catch {
+      setDeleteOpen(false);
+    }
   }
 
   if (stock === undefined) {
