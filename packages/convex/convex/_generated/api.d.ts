@@ -18,6 +18,8 @@ import type * as authHelpers from "../authHelpers.js";
 import type * as prompts from "../prompts.js";
 import type * as researchActions from "../researchActions.js";
 import type * as researchJobs from "../researchJobs.js";
+import type * as scheduleActions from "../scheduleActions.js";
+import type * as schedules from "../schedules.js";
 import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
 import type * as stocks from "../stocks.js";
@@ -36,6 +38,8 @@ declare const fullApi: ApiFromModules<{
   prompts: typeof prompts;
   researchActions: typeof researchActions;
   researchJobs: typeof researchJobs;
+  scheduleActions: typeof scheduleActions;
+  schedules: typeof schedules;
   seed: typeof seed;
   settings: typeof settings;
   stocks: typeof stocks;
