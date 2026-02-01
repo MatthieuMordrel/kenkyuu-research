@@ -319,6 +319,96 @@ export const getStockInternal = internalQuery({
   },
 });
 
+export const listResults = query({
+  args: {
+    status: v.optional(jobStatus),
+    stockId: v.optional(v.id("stocks")),
+    promptId: v.optional(v.id("prompts")),
+    dateFrom: v.optional(v.number()),
+    dateTo: v.optional(v.number()),
+    cursor: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const pageSize = Math.min(args.limit ?? 20, 100);
+
+    let jobsQuery;
+
+    if (args.status) {
+      jobsQuery = ctx.db
+        .query("researchJobs")
+        .withIndex("by_status", (q) => q.eq("status", args.status!));
+    } else if (args.promptId) {
+      jobsQuery = ctx.db
+        .query("researchJobs")
+        .withIndex("by_promptId", (q) => q.eq("promptId", args.promptId!));
+    } else {
+      jobsQuery = ctx.db.query("researchJobs");
+    }
+
+    const paginatedResult = await jobsQuery.order("desc").paginate({
+      numItems: pageSize,
+      cursor: args.cursor ?? null,
+    });
+
+    let results = paginatedResult.page;
+
+    // Filter by stockId in memory (stockIds is an array field)
+    if (args.stockId) {
+      results = results.filter((j) => j.stockIds.includes(args.stockId!));
+    }
+
+    // Filter by date range
+    if (args.dateFrom) {
+      results = results.filter((j) => j.createdAt >= args.dateFrom!);
+    }
+    if (args.dateTo) {
+      results = results.filter((j) => j.createdAt <= args.dateTo!);
+    }
+
+    return {
+      results,
+      cursor: paginatedResult.continueCursor,
+      isDone: paginatedResult.isDone,
+    };
+  },
+});
+
+export const searchResults = query({
+  args: {
+    searchTerm: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const maxResults = Math.min(args.limit ?? 50, 100);
+    const term = args.searchTerm.toLowerCase();
+
+    if (term.length === 0) {
+      return [];
+    }
+
+    // Search through completed jobs that have results
+    const completedJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "completed"))
+      .order("desc")
+      .collect();
+
+    const matches = [];
+    for (const job of completedJobs) {
+      if (matches.length >= maxResults) break;
+
+      if (job.result && job.result.toLowerCase().includes(term)) {
+        matches.push(job);
+      } else if (job.promptSnapshot.toLowerCase().includes(term)) {
+        matches.push(job);
+      }
+    }
+
+    return matches;
+  },
+});
+
 export const getJobByExternalId = internalQuery({
   args: { externalJobId: v.string() },
   handler: async (ctx, args) => {

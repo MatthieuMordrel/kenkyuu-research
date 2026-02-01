@@ -50,11 +50,13 @@ export default defineSchema({
     scheduleId: v.optional(v.id("schedules")),
     createdAt: v.number(),
     completedAt: v.optional(v.number()),
+    isFavorited: v.optional(v.boolean()),
   })
     .index("by_status", ["status"])
     .index("by_promptId", ["promptId"])
     .index("by_scheduleId", ["scheduleId"])
-    .index("by_externalJobId", ["externalJobId"]),
+    .index("by_externalJobId", ["externalJobId"])
+    .index("by_createdAt", ["createdAt"]),
 
   schedules: defineTable({
     name: v.string(),
