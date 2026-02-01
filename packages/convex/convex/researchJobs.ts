@@ -5,6 +5,7 @@ import {
   mutation,
   query,
 } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 const MAX_CONCURRENT_JOBS = 5;
 
@@ -58,6 +59,59 @@ export const createResearchJob = mutation({
       scheduleId: args.scheduleId,
       createdAt: now,
     });
+  },
+});
+
+export const createAndStartResearch = mutation({
+  args: {
+    promptId: v.id("prompts"),
+    stockIds: v.array(v.id("stocks")),
+    provider: v.literal("openai"),
+    scheduleId: v.optional(v.id("schedules")),
+  },
+  handler: async (ctx, args) => {
+    // Validate prompt exists and snapshot it
+    const prompt = await ctx.db.get(args.promptId);
+    if (!prompt) {
+      throw new Error("Prompt not found");
+    }
+
+    // Enforce concurrent job limit
+    const activeJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    const runningJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+
+    if (activeJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
+      throw new Error(
+        `Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed`,
+      );
+    }
+
+    const now = Date.now();
+    const jobId = await ctx.db.insert("researchJobs", {
+      promptId: args.promptId,
+      promptSnapshot: prompt.template,
+      stockIds: args.stockIds,
+      provider: args.provider,
+      status: "pending",
+      attempts: 0,
+      scheduleId: args.scheduleId,
+      createdAt: now,
+    });
+
+    // Schedule the action to start immediately
+    await ctx.scheduler.runAfter(
+      0,
+      internal.researchActions.startResearch,
+      { jobId },
+    );
+
+    return jobId;
   },
 });
 
@@ -196,6 +250,20 @@ export const getActiveJobs = query({
       count: pendingJobs.length + runningJobs.length,
       limit: MAX_CONCURRENT_JOBS,
     };
+  },
+});
+
+export const getJobInternal = internalQuery({
+  args: { id: v.id("researchJobs") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const getStockInternal = internalQuery({
+  args: { id: v.id("stocks") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
   },
 });
 
