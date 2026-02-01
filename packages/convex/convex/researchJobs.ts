@@ -166,6 +166,22 @@ export const incrementAttempts = internalMutation({
   },
 });
 
+export const logCost = internalMutation({
+  args: {
+    jobId: v.id("researchJobs"),
+    provider: v.literal("openai"),
+    costUsd: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("costLogs", {
+      jobId: args.jobId,
+      provider: args.provider,
+      costUsd: args.costUsd,
+      timestamp: Date.now(),
+    });
+  },
+});
+
 export const cancelJob = mutation({
   args: {
     id: v.id("researchJobs"),
