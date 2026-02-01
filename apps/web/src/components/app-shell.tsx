@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation, useMatchRoute } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/hooks/use-theme";
 import { ErrorBoundary } from "@/components/error-boundary";
 import {
   LayoutDashboard,
@@ -10,6 +11,8 @@ import {
   Settings,
   LogOut,
   History,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +30,8 @@ const mobileNavItems = navItems.slice(0, 5);
 
 export function AppShell() {
   const location = useLocation();
+  // Initialize theme on mount and listen for system preference changes
+  useTheme();
 
   return (
     <div className="flex min-h-svh flex-col md:flex-row">
@@ -44,6 +49,7 @@ export function AppShell() {
 function Sidebar() {
   const { logout } = useAuth();
   const matchRoute = useMatchRoute();
+  const { resolvedTheme, toggle } = useTheme();
 
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-r bg-sidebar text-sidebar-foreground">
@@ -73,7 +79,19 @@ function Sidebar() {
           );
         })}
       </nav>
-      <div className="border-t p-2">
+      <div className="flex flex-col gap-1 border-t p-2">
+        <button
+          type="button"
+          onClick={toggle}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+        >
+          {resolvedTheme === "dark" ? (
+            <Sun className="size-4" />
+          ) : (
+            <Moon className="size-4" />
+          )}
+          {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
         <button
           type="button"
           onClick={() => logout()}

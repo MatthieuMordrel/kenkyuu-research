@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAction } from "convex/react";
 import { api } from "@repo/convex";
 import { useSettings, useUpdateSetting } from "@/hooks/use-settings";
+import { useTheme } from "@/hooks/use-theme";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/loading-skeleton";
 import { Button } from "@/components/ui/button";
@@ -429,30 +430,7 @@ function PasswordSection() {
 }
 
 function ThemeSection() {
-  const currentTheme = useSettings("theme");
-  const updateSetting = useUpdateSetting();
-  const [saving, setSaving] = useState(false);
-
-  const theme = currentTheme ?? "system";
-
-  async function setTheme(value: string) {
-    setSaving(true);
-    try {
-      await updateSetting({ key: "theme", value });
-      // Apply theme to document
-      if (value === "dark") {
-        document.documentElement.classList.add("dark");
-        document.documentElement.classList.remove("light");
-      } else if (value === "light") {
-        document.documentElement.classList.remove("dark");
-        document.documentElement.classList.add("light");
-      } else {
-        document.documentElement.classList.remove("dark", "light");
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
+  const { theme, setTheme, isLoading } = useTheme();
 
   return (
     <Card className="py-4">
@@ -461,21 +439,23 @@ function ThemeSection() {
           <Sun className="size-4 text-muted-foreground" />
           <CardTitle className="text-base">Theme</CardTitle>
         </div>
-        <CardDescription>Choose your preferred appearance</CardDescription>
+        <CardDescription>
+          Choose your preferred appearance. &quot;System&quot; follows your device settings.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-2">
           {(
             [
-              { value: "light", label: "Light", icon: Sun },
-              { value: "dark", label: "Dark", icon: Moon },
-              { value: "system", label: "System", icon: Sun },
-            ] as const
+              { value: "light" as const, label: "Light", icon: Sun },
+              { value: "dark" as const, label: "Dark", icon: Moon },
+              { value: "system" as const, label: "System", icon: Sun },
+            ]
           ).map(({ value, label, icon: Icon }) => (
             <button
               key={value}
               type="button"
-              disabled={saving}
+              disabled={isLoading}
               onClick={() => setTheme(value)}
               className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 theme === value
