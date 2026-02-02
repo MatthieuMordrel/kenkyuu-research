@@ -93,6 +93,7 @@ export const startResearch = internalAction({
         body: JSON.stringify({
           model: "o3-deep-research",
           input: resolvedPrompt,
+          tools: [{ type: "web_search_preview" }],
           background: true,
         }),
       });
