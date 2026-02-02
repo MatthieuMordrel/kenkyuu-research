@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import type { GenericId } from "convex/values";
 
 export type ResearchFlowStep =
@@ -117,13 +118,15 @@ export const useResearchFlowProvider = () =>
 
 // Actions hook
 export const useResearchFlowActions = () =>
-  useResearchFlowStore((s) => ({
-    open: s.open,
-    close: s.close,
-    selectPrompt: s.selectPrompt,
-    selectStocks: s.selectStocks,
-    confirmProvider: s.confirmProvider,
-    markExecuting: s.markExecuting,
-    back: s.back,
-    reset: s.reset,
-  }));
+  useResearchFlowStore(
+    useShallow((s) => ({
+      open: s.open,
+      close: s.close,
+      selectPrompt: s.selectPrompt,
+      selectStocks: s.selectStocks,
+      confirmProvider: s.confirmProvider,
+      markExecuting: s.markExecuting,
+      back: s.back,
+      reset: s.reset,
+    })),
+  );

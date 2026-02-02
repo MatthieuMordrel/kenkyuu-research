@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation, useMatchRoute } from "@tanstack/react-router";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -48,7 +48,7 @@ export function AppShell() {
 
 function Sidebar() {
   const { logout } = useAuth();
-  const matchRoute = useMatchRoute();
+  const location = useLocation();
   const { resolvedTheme, toggle } = useTheme();
 
   return (
@@ -60,8 +60,8 @@ function Sidebar() {
       <nav className="flex flex-1 flex-col gap-1 p-2">
         {navItems.map((item) => {
           const isActive = item.to === "/"
-            ? matchRoute({ to: "/", fuzzy: false })
-            : matchRoute({ to: item.to, fuzzy: true });
+            ? location.pathname === "/"
+            : location.pathname.startsWith(item.to);
           return (
             <Link
               key={item.to}
@@ -106,15 +106,15 @@ function Sidebar() {
 }
 
 function BottomNav() {
-  const matchRoute = useMatchRoute();
+  const location = useLocation();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="flex items-center justify-around">
         {mobileNavItems.map((item) => {
           const isActive = item.to === "/"
-            ? matchRoute({ to: "/", fuzzy: false })
-            : matchRoute({ to: item.to, fuzzy: true });
+            ? location.pathname === "/"
+            : location.pathname.startsWith(item.to);
           return (
             <Link
               key={item.to}

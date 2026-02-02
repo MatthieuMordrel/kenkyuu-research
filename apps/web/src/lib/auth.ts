@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 const TOKEN_STORAGE_KEY = "kenkyustock-auth";
@@ -62,10 +63,12 @@ export const useAuthHasHydrated = () => useAuthStore((s) => s._hasHydrated);
 
 // Actions hook
 export const useAuthActions = () =>
-  useAuthStore((s) => ({
-    loggedIn: s.loggedIn,
-    loggedOut: s.loggedOut,
-  }));
+  useAuthStore(
+    useShallow((s) => ({
+      loggedIn: s.loggedIn,
+      loggedOut: s.loggedOut,
+    })),
+  );
 
 // Direct store access for non-React contexts (e.g., router beforeLoad)
 export const getAuthState = () => useAuthStore.getState();
