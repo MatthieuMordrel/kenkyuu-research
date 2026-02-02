@@ -433,13 +433,17 @@ export function ScheduleModal({
               value={form.timezone}
               onChange={(e) => updateField("timezone", e.target.value)}
               className={cn(
-                "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors",
+                "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-xs transition-colors",
                 "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                 errors.timezone && "border-destructive",
               )}
             >
               {COMMON_TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>
+                <option
+                  key={tz}
+                  value={tz}
+                  className="bg-background text-foreground"
+                >
                   {tz}
                 </option>
               ))}

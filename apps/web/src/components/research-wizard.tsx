@@ -240,10 +240,31 @@ function StockSelectionStep() {
         </div>
       )}
 
-      {/* Selected count */}
-      <div className="text-xs text-muted-foreground">
-        {selected.size} stock{selected.size !== 1 ? "s" : ""} selected
-        {flow.promptType === "single-stock" && " (max 1)"}
+      {/* Selected count + Select all */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {selected.size} stock{selected.size !== 1 ? "s" : ""} selected
+          {flow.promptType === "single-stock" && " (max 1)"}
+        </span>
+        {flow.promptType !== "single-stock" && stocks && stocks.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              const allIds = stocks.map((s) => s._id);
+              const allSelected = allIds.every((id) => selected.has(id));
+              if (allSelected) {
+                setSelected(new Set());
+              } else {
+                setSelected(new Set(allIds));
+              }
+            }}
+            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            {stocks.every((s) => selected.has(s._id))
+              ? "Deselect all"
+              : `Select all (${stocks.length})`}
+          </button>
+        )}
       </div>
 
       {/* Stock list */}
