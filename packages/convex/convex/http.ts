@@ -8,20 +8,30 @@ http.route({
   path: "/api/research-callback",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    // Validate webhook signature
     const webhookSecret = process.env.WEBHOOK_SECRET;
+    const body = await request.text();
+
+    // Validate webhook signature using Standard Webhooks spec
     if (webhookSecret) {
-      const signature = request.headers.get("x-webhook-signature");
-      if (!signature) {
-        return new Response("Missing webhook signature", { status: 401 });
+      const msgId = request.headers.get("webhook-id");
+      const timestamp = request.headers.get("webhook-timestamp");
+      const signature = request.headers.get("webhook-signature");
+
+      if (!msgId || !timestamp || !signature) {
+        return new Response("Missing webhook verification headers", {
+          status: 401,
+        });
       }
 
-      // Compute HMAC-SHA256 signature
-      const body = await request.text();
+      // Standard Webhooks: sign "msgId.timestamp.body"
+      const signedContent = `${msgId}.${timestamp}.${body}`;
       const encoder = new TextEncoder();
+
+      // The secret from OpenAI is base64-encoded, prefixed with "whsec_"
+      const secretBytes = base64Decode(webhookSecret.replace("whsec_", ""));
       const key = await crypto.subtle.importKey(
         "raw",
-        encoder.encode(webhookSecret),
+        secretBytes,
         { name: "HMAC", hash: "SHA-256" },
         false,
         ["sign"],
@@ -29,38 +39,56 @@ http.route({
       const signatureBytes = await crypto.subtle.sign(
         "HMAC",
         key,
-        encoder.encode(body),
+        encoder.encode(signedContent),
       );
-      const expectedSignature = Array.from(new Uint8Array(signatureBytes))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
+      const expectedSignature =
+        "v1," + uint8ArrayToBase64(new Uint8Array(signatureBytes));
 
-      if (signature !== expectedSignature) {
+      // OpenAI may send multiple signatures separated by spaces
+      const signatures = signature.split(" ");
+      if (!signatures.includes(expectedSignature)) {
         return new Response("Invalid webhook signature", { status: 401 });
       }
-
-      // Parse the body we already read
-      return await handleWebhookPayload(ctx, body);
     }
 
-    // No webhook secret configured — parse body directly
-    const body = await request.text();
     return await handleWebhookPayload(ctx, body);
   }),
 });
+
+function base64Decode(str: string): Uint8Array {
+  const binaryStr = atob(str);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
 
 async function handleWebhookPayload(
   ctx: Parameters<Parameters<typeof httpAction>[0]>[0],
   body: string,
 ): Promise<Response> {
-  let payload: WebhookPayload;
+  let event: WebhookEvent;
   try {
-    payload = JSON.parse(body) as WebhookPayload;
+    event = JSON.parse(body) as WebhookEvent;
   } catch {
     return new Response("Invalid JSON payload", { status: 400 });
   }
 
-  const responseId = payload.response?.id ?? payload.id;
+  // OpenAI sends an event envelope: { type, data }
+  // The response object is inside event.data
+  // Also handle legacy/direct payload format for backwards compatibility
+  const responseData = event.data ?? event;
+
+  const responseId = responseData.id;
   if (!responseId) {
     return new Response("Missing response ID in payload", { status: 400 });
   }
@@ -74,15 +102,13 @@ async function handleWebhookPayload(
     return new Response("No matching research job found", { status: 404 });
   }
 
-  // Extract result content
-  const status = payload.response?.status ?? payload.status;
+  const status = responseData.status;
   if (status === "completed") {
-    const outputContent = extractOutputContent(payload);
+    const outputContent = extractOutputContent(responseData);
     const completedAt = Date.now();
     const durationMs = completedAt - job.createdAt;
 
-    // Extract usage/cost if available
-    const usage = payload.response?.usage ?? payload.usage;
+    const usage = responseData.usage;
     const costUsd = estimateCost(usage);
 
     await ctx.runMutation(internal.researchJobs.updateJobStatus, {
@@ -119,8 +145,8 @@ async function handleWebhookPayload(
     }
   } else if (status === "failed" || status === "cancelled") {
     const error =
-      payload.response?.status_details?.error?.message ??
-      payload.error?.message ??
+      responseData.status_details?.error?.message ??
+      responseData.error?.message ??
       `Research ${status}`;
 
     await ctx.runMutation(internal.researchJobs.updateJobStatus, {
@@ -149,9 +175,8 @@ async function handleWebhookPayload(
   return new Response("OK", { status: 200 });
 }
 
-function extractOutputContent(payload: WebhookPayload): string {
-  // Try to extract text from the response output array
-  const output = payload.response?.output ?? payload.output;
+function extractOutputContent(responseData: ResponseData): string {
+  const output = responseData.output;
   if (Array.isArray(output)) {
     const textParts = output
       .filter(
@@ -168,11 +193,11 @@ function extractOutputContent(payload: WebhookPayload): string {
   }
 
   // Fallback: return raw stringified output
-  return JSON.stringify(output ?? payload);
+  return JSON.stringify(output ?? responseData);
 }
 
 function estimateCost(
-  usage: WebhookPayload["usage"],
+  usage: ResponseData["usage"],
 ): number | undefined {
   if (!usage) return undefined;
 
@@ -183,7 +208,8 @@ function estimateCost(
   return (inputTokens * 2 + outputTokens * 8) / 1_000_000;
 }
 
-// Type definitions for the webhook payload
+// Type definitions
+
 interface ContentItem {
   type: string;
   text?: string;
@@ -194,7 +220,7 @@ interface OutputItem {
   content?: ContentItem[];
 }
 
-interface WebhookPayload {
+interface ResponseData {
   id?: string;
   status?: string;
   output?: OutputItem[];
@@ -205,18 +231,30 @@ interface WebhookPayload {
   error?: {
     message?: string;
   };
-  response?: {
-    id?: string;
-    status?: string;
-    output?: OutputItem[];
-    usage?: {
-      input_tokens?: number;
-      output_tokens?: number;
+  status_details?: {
+    error?: {
+      message?: string;
     };
-    status_details?: {
-      error?: {
-        message?: string;
-      };
+  };
+}
+
+interface WebhookEvent {
+  type?: string;
+  data?: ResponseData;
+  // Backwards compatibility: allow direct response fields
+  id?: string;
+  status?: string;
+  output?: OutputItem[];
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+  };
+  error?: {
+    message?: string;
+  };
+  status_details?: {
+    error?: {
+      message?: string;
     };
   };
 }

@@ -19,6 +19,7 @@ import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPromptsRouteImport } from './routes/_authenticated/prompts'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedApiExampleRouteImport } from './routes/_authenticated/api-example'
+import { Route as AuthenticatedHistoryIndexRouteImport } from './routes/_authenticated/history.index'
 import { Route as AuthenticatedStocksStockIdRouteImport } from './routes/_authenticated/stocks.$stockId'
 import { Route as AuthenticatedHistoryJobIdRouteImport } from './routes/_authenticated/history.$jobId'
 
@@ -71,6 +72,12 @@ const AuthenticatedApiExampleRoute = AuthenticatedApiExampleRouteImport.update({
   path: '/api-example',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedHistoryIndexRoute =
+  AuthenticatedHistoryIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedHistoryRoute,
+  } as any)
 const AuthenticatedStocksStockIdRoute =
   AuthenticatedStocksStockIdRouteImport.update({
     id: '/$stockId',
@@ -96,11 +103,11 @@ export interface FileRoutesByFullPath {
   '/stocks': typeof AuthenticatedStocksRouteWithChildren
   '/history/$jobId': typeof AuthenticatedHistoryJobIdRoute
   '/stocks/$stockId': typeof AuthenticatedStocksStockIdRoute
+  '/history/': typeof AuthenticatedHistoryIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/api-example': typeof AuthenticatedApiExampleRoute
-  '/history': typeof AuthenticatedHistoryRouteWithChildren
   '/prompts': typeof AuthenticatedPromptsRoute
   '/research': typeof AuthenticatedResearchRoute
   '/schedules': typeof AuthenticatedSchedulesRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/history/$jobId': typeof AuthenticatedHistoryJobIdRoute
   '/stocks/$stockId': typeof AuthenticatedStocksStockIdRoute
+  '/history': typeof AuthenticatedHistoryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/history/$jobId': typeof AuthenticatedHistoryJobIdRoute
   '/_authenticated/stocks/$stockId': typeof AuthenticatedStocksStockIdRoute
+  '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -139,11 +148,11 @@ export interface FileRouteTypes {
     | '/stocks'
     | '/history/$jobId'
     | '/stocks/$stockId'
+    | '/history/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/api-example'
-    | '/history'
     | '/prompts'
     | '/research'
     | '/schedules'
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/'
     | '/history/$jobId'
     | '/stocks/$stockId'
+    | '/history'
   id:
     | '__root__'
     | '/_authenticated'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/history/$jobId'
     | '/_authenticated/stocks/$stockId'
+    | '/_authenticated/history/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -245,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedApiExampleRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/history/': {
+      id: '/_authenticated/history/'
+      path: '/'
+      fullPath: '/history/'
+      preLoaderRoute: typeof AuthenticatedHistoryIndexRouteImport
+      parentRoute: typeof AuthenticatedHistoryRoute
+    }
     '/_authenticated/stocks/$stockId': {
       id: '/_authenticated/stocks/$stockId'
       path: '/$stockId'
@@ -264,10 +282,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedHistoryRouteChildren {
   AuthenticatedHistoryJobIdRoute: typeof AuthenticatedHistoryJobIdRoute
+  AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
 }
 
 const AuthenticatedHistoryRouteChildren: AuthenticatedHistoryRouteChildren = {
   AuthenticatedHistoryJobIdRoute: AuthenticatedHistoryJobIdRoute,
+  AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
 }
 
 const AuthenticatedHistoryRouteWithChildren =
