@@ -144,3 +144,16 @@ code {
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes skeleton-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.skeleton-container {
+  animation: skeleton-fade-in 200ms ease 150ms both;
+}
