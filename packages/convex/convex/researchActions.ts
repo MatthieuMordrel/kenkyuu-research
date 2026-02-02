@@ -70,12 +70,15 @@ export const startResearch = internalAction({
     );
 
     // Call OpenAI Deep Research API in background mode
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey: string | null = await ctx.runQuery(
+      internal.authHelpers.getSettingValue,
+      { key: "openai_api_key" },
+    );
     if (!apiKey) {
       await ctx.runMutation(internal.researchJobs.updateJobStatus, {
         id: args.jobId,
         status: "failed",
-        error: "OPENAI_API_KEY environment variable not set",
+        error: "OpenAI API key not configured. Set it in Settings.",
       });
       return;
     }
