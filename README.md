@@ -227,7 +227,3 @@ bun run deps:update      # Update all dependencies
 3. Write detailed JSDoc comments for all functions and components
 4. Keep components small and focused on a single responsibility
 5. Use custom hooks for data fetching and state management
-
-## License
-
-[Add your license here]
