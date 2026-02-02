@@ -16,8 +16,9 @@ async function validateSession(
 }
 
 export const getSetting = query({
-  args: { key: v.string(), token: v.string() },
+  args: { key: v.string(), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    if (!args.token) return null;
     await validateSession(ctx, args.token);
 
     const setting = await ctx.db
@@ -32,9 +33,10 @@ export const upsertSetting = mutation({
   args: {
     key: v.string(),
     value: v.string(),
-    token: v.string(),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (!args.token) throw new Error("Unauthorized");
     await validateSession(ctx, args.token);
 
     const existing = await ctx.db
