@@ -20,6 +20,7 @@ import {
   Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNow } from "@/hooks/use-now";
 import type { Doc } from "@repo/convex/dataModel";
 
 const STATUS_CONFIG: Record<
@@ -32,8 +33,8 @@ const STATUS_CONFIG: Record<
   failed: { label: "Failed", variant: "destructive", icon: XCircle },
 };
 
-function formatRelativeTime(timestamp: number): string {
-  const diff = Date.now() - timestamp;
+function formatRelativeTime(timestamp: number, now: number): string {
+  const diff = now - timestamp;
   const seconds = Math.floor(diff / 1000);
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
@@ -122,6 +123,7 @@ function JobCard({
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const now = useNow();
 
   const config = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = config.icon;
@@ -177,7 +179,7 @@ function JobCard({
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{job.stockIds.length} stock{job.stockIds.length !== 1 ? "s" : ""}</span>
             <span>·</span>
-            <span>{formatRelativeTime(job.createdAt)}</span>
+            <span>{formatRelativeTime(job.createdAt, now)}</span>
             {job.attempts > 0 && (
               <>
                 <span>·</span>

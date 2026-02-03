@@ -1,6 +1,8 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
+import { useActiveJobs } from "@/hooks/use-research";
+import { usePrompts } from "@/hooks/use-prompts";
 import { ErrorBoundary } from "@/components/error-boundary";
 import {
   LayoutDashboard,
@@ -13,8 +15,11 @@ import {
   History,
   Sun,
   Moon,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNow } from "@/hooks/use-now";
+import { useMemo } from "react";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -79,6 +84,7 @@ function Sidebar() {
           );
         })}
       </nav>
+      <SidebarActiveJobs />
       <div className="flex flex-col gap-1 border-t p-2">
         <button
           type="button"
@@ -102,6 +108,83 @@ function Sidebar() {
         </button>
       </div>
     </aside>
+  );
+}
+
+function formatRelativeTime(timestamp: number, now: number) {
+  const seconds = Math.floor((now - timestamp) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
+function SidebarActiveJobs() {
+  const activeJobs = useActiveJobs();
+  const prompts = usePrompts();
+  const now = useNow();
+
+  const promptMap = useMemo(() => {
+    if (!prompts) return new Map<string, string>();
+    return new Map(prompts.map((p) => [p._id, p.name]));
+  }, [prompts]);
+
+  if (!activeJobs || activeJobs.count === 0) return null;
+
+  return (
+    <div className="border-t px-2 py-2">
+      <div className="mb-1.5 flex items-center justify-between px-2">
+        <span className="text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">
+          Active Jobs
+        </span>
+        <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary tabular-nums">
+          {activeJobs.count}/{activeJobs.limit}
+        </span>
+      </div>
+      <div className="max-h-48 space-y-0.5 overflow-y-auto">
+        {activeJobs.jobs.map((job) => {
+          const isRunning = job.status === "running";
+          return (
+            <Link
+              key={job._id}
+              to="/research"
+              className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-sidebar-accent/50"
+            >
+              <div
+                className={cn(
+                  "flex size-6 shrink-0 items-center justify-center rounded-full",
+                  isRunning
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground",
+                )}
+              >
+                {isRunning ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Clock className="size-3.5" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium text-sidebar-foreground">
+                  {promptMap.get(job.promptId) ?? "Research Job"}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {job.stockIds.length} stock{job.stockIds.length !== 1 ? "s" : ""}{" "}
+                  · {formatRelativeTime(job.createdAt, now)}
+                </p>
+              </div>
+              <span
+                className={cn(
+                  "size-1.5 shrink-0 rounded-full",
+                  isRunning ? "bg-primary" : "bg-muted-foreground/50",
+                )}
+              />
+            </Link>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
