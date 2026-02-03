@@ -20,6 +20,22 @@ import {
 import { cn } from "@/lib/utils";
 import { useNow } from "@/hooks/use-now";
 import { useMemo } from "react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -31,83 +47,93 @@ const navItems = [
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
-const mobileNavItems = navItems.slice(0, 5);
-
 export function AppShell() {
   const location = useLocation();
-  // Initialize theme on mount and listen for system preference changes
   useTheme();
 
   return (
-    <div className="flex min-h-svh flex-col md:flex-row">
-      <Sidebar />
-      <main className="flex-1 pb-16 md:pb-0">
-        <ErrorBoundary key={location.pathname}>
-          <Outlet />
-        </ErrorBoundary>
-      </main>
-      <BottomNav />
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-14 items-center gap-2 border-b px-4 md:hidden">
+          <SidebarTrigger />
+          <FlaskConical className="size-5 text-sidebar-primary" />
+          <span className="font-semibold">KenkyuStock</span>
+        </header>
+        <main className="flex-1">
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 
-function Sidebar() {
+function AppSidebar() {
   const { logout } = useAuth();
   const location = useLocation();
   const { resolvedTheme, toggle } = useTheme();
 
   return (
-    <aside className="hidden md:flex md:w-60 md:flex-col md:border-r bg-sidebar text-sidebar-foreground">
-      <div className="flex h-14 items-center gap-2 border-b px-4">
-        <FlaskConical className="size-5 text-sidebar-primary" />
-        <span className="font-semibold">KenkyuStock</span>
-      </div>
-      <nav className="flex flex-1 flex-col gap-1 p-2">
-        {navItems.map((item) => {
-          const isActive = item.to === "/"
-            ? location.pathname === "/"
-            : location.pathname.startsWith(item.to);
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-              )}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-      <SidebarActiveJobs />
-      <div className="flex flex-col gap-1 border-t p-2">
-        <button
-          type="button"
-          onClick={toggle}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-        >
-          {resolvedTheme === "dark" ? (
-            <Sun className="size-4" />
-          ) : (
-            <Moon className="size-4" />
-          )}
-          {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
-        </button>
-        <button
-          type="button"
-          onClick={() => logout()}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-        >
-          <LogOut className="size-4" />
-          Sign out
-        </button>
-      </div>
-    </aside>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <Link to="/">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <FlaskConical className="size-4" />
+                </div>
+                <span className="font-semibold">KenkyuStock</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const isActive =
+                  item.to === "/"
+                    ? location.pathname === "/"
+                    : location.pathname.startsWith(item.to);
+                return (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                      <Link to={item.to}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarActiveJobs />
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={toggle} tooltip={resolvedTheme === "dark" ? "Light mode" : "Dark mode"}>
+              {resolvedTheme === "dark" ? <Sun /> : <Moon />}
+              <span>{resolvedTheme === "dark" ? "Light mode" : "Dark mode"}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={() => logout()} tooltip="Sign out">
+              <LogOut />
+              <span>Sign out</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
   );
 }
 
@@ -133,88 +159,57 @@ function SidebarActiveJobs() {
   if (!activeJobs || activeJobs.count === 0) return null;
 
   return (
-    <div className="border-t px-2 py-2">
-      <div className="mb-1.5 flex items-center justify-between px-2">
-        <span className="text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">
-          Active Jobs
-        </span>
-        <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary tabular-nums">
+    <SidebarGroup>
+      <SidebarGroupLabel>
+        <span>Active Jobs</span>
+        <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary tabular-nums">
           {activeJobs.count}/{activeJobs.limit}
         </span>
-      </div>
-      <div className="max-h-48 space-y-0.5 overflow-y-auto">
-        {activeJobs.jobs.map((job) => {
-          const isRunning = job.status === "running";
-          return (
-            <Link
-              key={job._id}
-              to="/research"
-              className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-sidebar-accent/50"
-            >
-              <div
-                className={cn(
-                  "flex size-6 shrink-0 items-center justify-center rounded-full",
-                  isRunning
-                    ? "bg-primary/10 text-primary"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                {isRunning ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Clock className="size-3.5" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-sidebar-foreground">
-                  {promptMap.get(job.promptId) ?? "Research Job"}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {job.stockIds.length} stock{job.stockIds.length !== 1 ? "s" : ""}{" "}
-                  · {formatRelativeTime(job.createdAt, now)}
-                </p>
-              </div>
-              <span
-                className={cn(
-                  "size-1.5 shrink-0 rounded-full",
-                  isRunning ? "bg-primary" : "bg-muted-foreground/50",
-                )}
-              />
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function BottomNav() {
-  const location = useLocation();
-
-  return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
-      <div className="flex items-center justify-around">
-        {mobileNavItems.map((item) => {
-          const isActive = item.to === "/"
-            ? location.pathname === "/"
-            : location.pathname.startsWith(item.to);
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition-colors",
-                isActive
-                  ? "text-primary"
-                  : "text-muted-foreground",
-              )}
-            >
-              <item.icon className="size-5" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {activeJobs.jobs.map((job) => {
+            const isRunning = job.status === "running";
+            return (
+              <SidebarMenuItem key={job._id}>
+                <SidebarMenuButton asChild tooltip={promptMap.get(job.promptId) ?? "Research Job"}>
+                  <Link to="/research">
+                    <div
+                      className={cn(
+                        "flex size-4 shrink-0 items-center justify-center rounded-full",
+                        isRunning
+                          ? "text-primary"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {isRunning ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Clock className="size-3.5" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium">
+                        {promptMap.get(job.promptId) ?? "Research Job"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {job.stockIds.length} stock{job.stockIds.length !== 1 ? "s" : ""}{" "}
+                        · {formatRelativeTime(job.createdAt, now)}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "size-1.5 shrink-0 rounded-full",
+                        isRunning ? "bg-primary" : "bg-muted-foreground/50",
+                      )}
+                    />
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   );
 }
