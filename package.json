@@ -21,6 +21,7 @@
     "dev:web": "bun run --filter @repo/web dev",
     "dev:convex": "bun run --filter @repo/convex dev",
     "build:web": "bun run --filter @repo/web build",
+    "start:web": "bunx serve apps/web/dist -s -l ${PORT:-3000}",
     "typecheck": "bun run --filter '*' typecheck",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
@@ -34,6 +35,7 @@
     "concurrently": "^9.2.1",
     "oxfmt": "^0.26.0",
     "oxlint": "^1.41.0",
+    "serve": "^14.2.5",
     "typescript": "catalog:"
   }
 }
