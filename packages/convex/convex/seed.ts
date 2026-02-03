@@ -54,6 +54,52 @@ const BUILT_IN_PROMPTS = [
   },
 ];
 
+/**
+ * One-off backfill: for every completed researchJob that has a costUsd but no
+ * matching costLogs entry, insert the missing cost log row.
+ * Run via: npx convex run seed:backfillCostLogs
+ */
+export const backfillCostLogs = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const completedJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "completed"))
+      .collect();
+
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const job of completedJobs) {
+      if (job.costUsd === undefined) {
+        skipped++;
+        continue;
+      }
+
+      // Check if a cost log already exists for this job
+      const existing = await ctx.db
+        .query("costLogs")
+        .withIndex("by_jobId", (q) => q.eq("jobId", job._id))
+        .first();
+
+      if (existing) {
+        skipped++;
+        continue;
+      }
+
+      await ctx.db.insert("costLogs", {
+        jobId: job._id,
+        provider: "openai",
+        costUsd: job.costUsd,
+        timestamp: job.completedAt ?? job.createdAt,
+      });
+      inserted++;
+    }
+
+    return { inserted, skipped };
+  },
+});
+
 export const seedPrompts = mutation({
   args: {},
   handler: async (ctx) => {

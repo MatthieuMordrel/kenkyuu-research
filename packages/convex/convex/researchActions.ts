@@ -38,6 +38,12 @@ export const processWebhookEvent = internalAction({
       throw new Error("Research job not found or missing external ID");
     }
 
+    // Idempotency guard: skip if the job has already reached a terminal state.
+    // Duplicate webhook deliveries would otherwise insert extra rows into costLogs.
+    if (job.status === "completed" || (job.status === "failed" && args.eventType === "response.completed")) {
+      return;
+    }
+
     const client = await getOpenAIClient(ctx);
     if (!client) {
       await ctx.runMutation(internal.researchJobs.updateJobStatus, {

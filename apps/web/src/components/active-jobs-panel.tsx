@@ -123,7 +123,7 @@ function JobCard({
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  const now = useNow();
+  const now = useNow(1_000);
 
   const config = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = config.icon;
