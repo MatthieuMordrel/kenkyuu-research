@@ -5,6 +5,7 @@ import {
   useSearchResults,
   useToggleFavorite,
 } from "@/hooks/use-research-history";
+import { useDeleteJob } from "@/hooks/use-research";
 import { useStocks } from "@/hooks/use-stocks";
 import { usePrompts } from "@/hooks/use-prompts";
 import { PageHeader } from "@/components/page-header";
@@ -15,12 +16,21 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Search,
   History,
   Star,
   Filter,
   X,
   ChevronDown,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GenericId } from "convex/values";
@@ -77,6 +87,17 @@ function HistoryPage() {
   const stocks = useStocks();
   const prompts = usePrompts();
   const toggleFavorite = useToggleFavorite();
+  const deleteJob = useDeleteJob();
+  const [deleteTarget, setDeleteTarget] = useState<Doc<"researchJobs"> | null>(null);
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await deleteJob({ id: deleteTarget._id });
+    } finally {
+      setDeleteTarget(null);
+    }
+  }
 
   const isSearchMode = search.length > 0;
   const displayResults = isSearchMode ? searchResults : results;
@@ -286,6 +307,7 @@ function HistoryPage() {
                 onToggleFavorite={() =>
                   toggleFavorite({ id: job._id })
                 }
+                onDelete={() => setDeleteTarget(job)}
               />
             ))}
 
@@ -300,6 +322,30 @@ function HistoryPage() {
           </div>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Research Job</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this research job? This will also
+              remove all associated cost logs. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -317,9 +363,11 @@ const statusConfig: Record<
 function ResultCard({
   job,
   onToggleFavorite,
+  onDelete,
 }: {
   job: Doc<"researchJobs">;
   onToggleFavorite: () => void;
+  onDelete: () => void;
 }) {
   const config = statusConfig[job.status] ?? statusConfig.pending;
   const createdDate = new Date(job.createdAt).toLocaleDateString("en-US", {
@@ -392,24 +440,39 @@ function ResultCard({
           )}
         </Link>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            onToggleFavorite();
-          }}
-          className="shrink-0 p-1 rounded-md hover:bg-accent transition-colors"
-          aria-label={job.isFavorited ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Star
-            className={cn(
-              "size-4",
-              job.isFavorited
-                ? "fill-yellow-400 text-yellow-400"
-                : "text-muted-foreground",
-            )}
-          />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onToggleFavorite();
+            }}
+            className="p-1 rounded-md hover:bg-accent transition-colors"
+            aria-label={job.isFavorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Star
+              className={cn(
+                "size-4",
+                job.isFavorited
+                  ? "fill-yellow-400 text-yellow-400"
+                  : "text-muted-foreground",
+              )}
+            />
+          </button>
+          {job.status !== "pending" && job.status !== "running" && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                onDelete();
+              }}
+              className="p-1 rounded-md hover:bg-destructive/10 transition-colors"
+              aria-label="Delete research job"
+            >
+              <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+            </button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

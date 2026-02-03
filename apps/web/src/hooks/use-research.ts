@@ -42,3 +42,7 @@ export function useCancelJob() {
 export function useRetryJob() {
   return useMutation(api.researchJobs.retryJob);
 }
+
+export function useDeleteJob() {
+  return useMutation(api.researchJobs.deleteJob);
+}

@@ -242,6 +242,39 @@ export const retryJob = mutation({
   },
 });
 
+export const deleteJob = mutation({
+  args: {
+    id: v.id("researchJobs"),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    if (job.status === "pending" || job.status === "running") {
+      throw new Error(
+        `Cannot delete a ${job.status} job. Cancel it first.`,
+      );
+    }
+
+    // Delete associated cost logs
+    const costLogs = await ctx.db
+      .query("costLogs")
+      .withIndex("by_jobId", (q) => q.eq("jobId", args.id))
+      .collect();
+
+    for (const log of costLogs) {
+      await ctx.db.delete(log._id);
+    }
+
+    // Delete the job itself
+    await ctx.db.delete(args.id);
+
+    return args.id;
+  },
+});
+
 export const toggleFavorite = mutation({
   args: {
     id: v.id("researchJobs"),

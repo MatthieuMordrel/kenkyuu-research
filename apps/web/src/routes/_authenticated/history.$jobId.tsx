@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useResearchJob } from "@/hooks/use-research";
+import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useResearchJob, useDeleteJob } from "@/hooks/use-research";
 import { useToggleFavorite } from "@/hooks/use-research-history";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -8,6 +9,14 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   Star,
@@ -18,6 +27,7 @@ import {
   AlertCircle,
   FlaskConical,
   BarChart3,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GenericId } from "convex/values";
@@ -38,8 +48,20 @@ const statusConfig: Record<
 
 function ResultDetailPage() {
   const { jobId } = Route.useParams();
+  const navigate = useNavigate();
   const job = useResearchJob(jobId as GenericId<"researchJobs">);
   const toggleFavorite = useToggleFavorite();
+  const deleteJob = useDeleteJob();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  async function confirmDelete() {
+    try {
+      await deleteJob({ id: jobId as GenericId<"researchJobs"> });
+      navigate({ to: "/history" });
+    } finally {
+      setShowDeleteDialog(false);
+    }
+  }
 
   if (job === undefined) {
     return <PageSkeleton />;
@@ -139,6 +161,16 @@ function ResultDetailPage() {
               />
               {job.isFavorited ? "Favorited" : "Favorite"}
             </Button>
+            {job.status !== "pending" && job.status !== "running" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="size-4" />
+                Delete
+              </Button>
+            )}
           </div>
         }
       />
@@ -248,6 +280,30 @@ function ResultDetailPage() {
           </Card>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => !open && setShowDeleteDialog(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Research Job</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this research job? This will also
+              remove all associated cost logs. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
