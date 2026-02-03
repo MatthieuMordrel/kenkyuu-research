@@ -201,11 +201,11 @@ function estimateCost(
 ): number | undefined {
   if (!usage) return undefined;
 
-  // Approximate pricing for o3-deep-research
-  // Input: $2/1M tokens, Output: $8/1M tokens (approximate)
+  // o3-deep-research pricing
+  // Input: $10/1M tokens, Output: $40/1M tokens
   const inputTokens = usage.input_tokens ?? 0;
   const outputTokens = usage.output_tokens ?? 0;
-  return (inputTokens * 2 + outputTokens * 8) / 1_000_000;
+  return (inputTokens * 10 + outputTokens * 40) / 1_000_000;
 }
 
 // Type definitions
