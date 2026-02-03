@@ -109,43 +109,84 @@ const baseComponents: Components = {
 
 const remarkPlugins = [remarkGfm];
 
-// --- Section parsing ---
+// --- Section parsing (hierarchical) ---
 
 interface Section {
   level: number;
+  displayLevel: number;
   title: string;
   content: string;
+  children: Section[];
 }
 
-function parseSections(markdown: string): { preamble: string; sections: Section[] } {
+interface ParsedMarkdown {
+  preamble: string;
+  sections: Section[];
+}
+
+function parseSections(markdown: string): ParsedMarkdown {
   const lines = markdown.split("\n");
   let preamble = "";
-  const sections: Section[] = [];
-  let current: Section | null = null;
-  const contentLines: string[] = [];
 
-  function flushContent() {
-    if (current) {
-      current.content = contentLines.join("\n").trim();
-      sections.push(current);
-      contentLines.length = 0;
-    }
-  }
+  // First pass: collect flat sections
+  interface FlatSection { level: number; displayLevel: number; title: string; contentLines: string[] }
+  const flat: FlatSection[] = [];
+  let current: FlatSection | null = null;
 
   for (const line of lines) {
     const match = line.match(/^(#{1,4})\s+(.+)$/);
     if (match) {
-      flushContent();
-      current = { level: match[1].length, title: match[2], content: "" };
+      if (current) flat.push(current);
+      const lvl = match[1].length;
+      current = { level: lvl, displayLevel: lvl, title: match[2], contentLines: [] };
     } else if (current) {
-      contentLines.push(line);
+      current.contentLines.push(line);
     } else {
       preamble += line + "\n";
     }
   }
-  flushContent();
+  if (current) flat.push(current);
 
-  return { preamble: preamble.trim(), sections };
+  // Treat the first h1 like an h2 for tree-building (so it's collapsible)
+  // but keep its original display level for styling
+  const firstIsH1 = flat.length > 0 && flat[0].level === 1;
+  if (firstIsH1) {
+    flat[0].level = 2;
+  }
+
+  // Build tree: nest sections by heading level
+  function buildTree(items: FlatSection[]): Section[] {
+    const result: Section[] = [];
+    let i = 0;
+
+    while (i < items.length) {
+      const item = items[i];
+      const section: Section = {
+        level: item.level,
+        displayLevel: item.displayLevel,
+        title: item.title,
+        content: item.contentLines.join("\n").trim(),
+        children: [],
+      };
+
+      // Collect all following sections with a deeper level as children
+      i++;
+      const childItems: FlatSection[] = [];
+      while (i < items.length && items[i].level > item.level) {
+        childItems.push(items[i]);
+        i++;
+      }
+      if (childItems.length > 0) {
+        section.children = buildTree(childItems);
+      }
+
+      result.push(section);
+    }
+
+    return result;
+  }
+
+  return { preamble: preamble.trim(), sections: buildTree(flat) };
 }
 
 // --- Heading styles ---
@@ -157,22 +198,26 @@ const headingStyles: Record<number, string> = {
   4: "text-base font-semibold",
 };
 
-// --- Collapsible section ---
+// --- Collapsible section (recursive) ---
 
 function CollapsibleSection({
   section,
-  isOpen,
+  openSet,
+  pathKey,
   onToggle,
 }: {
   section: Section;
-  isOpen: boolean;
-  onToggle: () => void;
+  openSet: Set<string>;
+  pathKey: string;
+  onToggle: (key: string) => void;
 }) {
+  const isOpen = openSet.has(pathKey);
+
   return (
     <div className="border-border/50 border-b last:border-b-0">
       <button
         type="button"
-        onClick={onToggle}
+        onClick={() => onToggle(pathKey)}
         className="flex w-full items-center gap-2 py-2 text-left hover:bg-accent/30 rounded-md px-1 -mx-1 transition-colors"
       >
         <ChevronRight
@@ -181,15 +226,35 @@ function CollapsibleSection({
             isOpen && "rotate-90",
           )}
         />
-        <span className={cn(headingStyles[section.level])}>
-          {section.title}
+        <span className={cn(headingStyles[section.displayLevel])}>
+          <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            components={{ p: ({ children }) => <>{children}</> }}
+          >
+            {section.title}
+          </ReactMarkdown>
         </span>
       </button>
-      {isOpen && section.content && (
+      {isOpen && (
         <div className="pb-3 pl-6">
-          <ReactMarkdown remarkPlugins={remarkPlugins} components={baseComponents}>
-            {section.content}
-          </ReactMarkdown>
+          {section.content && (
+            <ReactMarkdown remarkPlugins={remarkPlugins} components={baseComponents}>
+              {section.content}
+            </ReactMarkdown>
+          )}
+          {section.children.length > 0 && (
+            <div className="flex flex-col">
+              {section.children.map((child, i) => (
+                <CollapsibleSection
+                  key={i}
+                  section={child}
+                  openSet={openSet}
+                  pathKey={`${pathKey}.${i}`}
+                  onToggle={onToggle}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -212,19 +277,31 @@ export function MarkdownRenderer({
   const { preamble, sections } = useMemo(() => parseSections(content), [content]);
   const hasCollapsibleSections = collapsible && sections.length > 0;
 
-  const [openSet, setOpenSet] = useState<Set<number>>(() => {
-    return new Set(sections.map((_, i) => i));
-  });
+  // Collect all keys from the tree for expand-all
+  const allKeys = useMemo(() => {
+    const keys: string[] = [];
+    function collect(items: Section[], prefix: string) {
+      items.forEach((s, i) => {
+        const key = `${prefix}${i}`;
+        keys.push(key);
+        collect(s.children, `${key}.`);
+      });
+    }
+    collect(sections, "");
+    return keys;
+  }, [sections]);
 
-  const allExpanded = openSet.size === sections.length;
+  const [openSet, setOpenSet] = useState<Set<string>>(() => new Set(allKeys));
 
-  const toggleSection = useCallback((index: number) => {
+  const allExpanded = openSet.size === allKeys.length;
+
+  const toggleSection = useCallback((key: string) => {
     setOpenSet((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        next.add(index);
+        next.add(key);
       }
       return next;
     });
@@ -235,8 +312,8 @@ export function MarkdownRenderer({
   }, []);
 
   const expandAll = useCallback(() => {
-    setOpenSet(new Set(sections.map((_, i) => i)));
-  }, [sections]);
+    setOpenSet(new Set(allKeys));
+  }, [allKeys]);
 
   if (!hasCollapsibleSections) {
     return (
@@ -272,7 +349,7 @@ export function MarkdownRenderer({
         </Button>
       </div>
 
-      {/* Preamble (content before any heading) */}
+      {/* Preamble (content before any heading, or h1's content) */}
       {preamble && (
         <div className="mb-3">
           <ReactMarkdown remarkPlugins={remarkPlugins} components={baseComponents}>
@@ -281,14 +358,15 @@ export function MarkdownRenderer({
         </div>
       )}
 
-      {/* Collapsible sections */}
+      {/* Collapsible sections (hierarchical) */}
       <div className="flex flex-col">
         {sections.map((section, i) => (
           <CollapsibleSection
             key={i}
             section={section}
-            isOpen={openSet.has(i)}
-            onToggle={() => toggleSection(i)}
+            openSet={openSet}
+            pathKey={`${i}`}
+            onToggle={toggleSection}
           />
         ))}
       </div>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="#0c1222"/>
+
+  <!-- Upward trend line (stock chart) -->
+  <polyline points="14,44 24,38 32,42 42,28 50,20" stroke="#0ea5e9" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Glow dot at the end of trend -->
+  <circle cx="50" cy="20" r="3" fill="#0ea5e9"/>
+  <circle cx="50" cy="20" r="5" fill="#0ea5e9" opacity="0.3"/>
+
+  <!-- Magnifying glass (research) -->
+  <circle cx="26" cy="30" r="10" stroke="#a855f7" stroke-width="2.5" fill="none" opacity="0.7"/>
+  <line x1="33" y1="37" x2="40" y2="44" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+</svg>
