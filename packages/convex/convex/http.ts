@@ -1,6 +1,11 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type {
+  ResponseCancelledWebhookEvent,
+  ResponseCompletedWebhookEvent,
+  ResponseFailedWebhookEvent,
+} from "openai/resources/webhooks";
 
 const http = httpRouter();
 
@@ -12,6 +17,8 @@ http.route({
     const body = await request.text();
 
     // Validate webhook signature using Standard Webhooks spec
+    // Note: We can't use the OpenAI SDK's client.webhooks.unwrap() here
+    // because Convex HTTP actions run in a V8 runtime, not Node.js.
     if (webhookSecret) {
       const msgId = request.headers.get("webhook-id");
       const timestamp = request.headers.get("webhook-timestamp");
@@ -31,7 +38,7 @@ http.route({
       const secretBytes = base64Decode(webhookSecret.replace("whsec_", ""));
       const key = await crypto.subtle.importKey(
         "raw",
-        secretBytes,
+        secretBytes.buffer as ArrayBuffer,
         { name: "HMAC", hash: "SHA-256" },
         false,
         ["sign"],
@@ -76,19 +83,27 @@ async function handleWebhookPayload(
   ctx: Parameters<Parameters<typeof httpAction>[0]>[0],
   body: string,
 ): Promise<Response> {
-  let event: WebhookEvent;
+  type ResponseWebhookEvent =
+    | ResponseCompletedWebhookEvent
+    | ResponseFailedWebhookEvent
+    | ResponseCancelledWebhookEvent;
+
+  let event: ResponseWebhookEvent;
   try {
-    event = JSON.parse(body) as WebhookEvent;
+    event = JSON.parse(body) as ResponseWebhookEvent;
   } catch {
     return new Response("Invalid JSON payload", { status: 400 });
   }
 
-  // OpenAI sends an event envelope: { type, data }
-  // The response object is inside event.data
-  // Also handle legacy/direct payload format for backwards compatibility
-  const responseData = event.data ?? event;
+  if (
+    event.type !== "response.completed" &&
+    event.type !== "response.failed" &&
+    event.type !== "response.cancelled"
+  ) {
+    return new Response("OK", { status: 200 });
+  }
 
-  const responseId = responseData.id;
+  const responseId = event.data.id;
   if (!responseId) {
     return new Response("Missing response ID in payload", { status: 400 });
   }
@@ -102,161 +117,14 @@ async function handleWebhookPayload(
     return new Response("No matching research job found", { status: 404 });
   }
 
-  const status = responseData.status;
-  if (status === "completed") {
-    const outputContent = extractOutputContent(responseData);
-    const completedAt = Date.now();
-    const durationMs = completedAt - job.createdAt;
-
-    const usage = responseData.usage;
-    const costUsd = estimateCost(usage);
-
-    await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-      id: job._id,
-      status: "completed",
-      result: outputContent,
-      costUsd,
-      durationMs,
-    });
-
-    // Log cost
-    if (costUsd !== undefined) {
-      await ctx.runMutation(internal.researchJobs.logCost, {
-        jobId: job._id,
-        provider: "openai",
-        costUsd,
-      });
-    }
-
-    // Dispatch notifications for completed job
-    await ctx.scheduler.runAfter(
-      0,
-      internal.notifications.dispatchJobNotification,
-      { jobId: job._id },
-    );
-
-    // Check budget alert
-    if (costUsd !== undefined) {
-      await ctx.scheduler.runAfter(
-        0,
-        internal.budgetAlert.checkBudgetAlert,
-        { currentCostUsd: costUsd },
-      );
-    }
-  } else if (status === "failed" || status === "cancelled") {
-    const error =
-      responseData.status_details?.error?.message ??
-      responseData.error?.message ??
-      `Research ${status}`;
-
-    await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-      id: job._id,
-      status: "failed",
-      error,
-    });
-
-    // Trigger retry if under max attempts
-    if (status === "failed" && job.attempts < 3) {
-      await ctx.scheduler.runAfter(
-        Math.pow(2, job.attempts) * 5000,
-        internal.researchActions.startResearch,
-        { jobId: job._id },
-      );
-    } else {
-      // Only notify on final failure (no more retries)
-      await ctx.scheduler.runAfter(
-        0,
-        internal.notifications.dispatchJobNotification,
-        { jobId: job._id },
-      );
-    }
-  }
+  // Schedule a Node.js action to fetch the full response via the SDK
+  await ctx.scheduler.runAfter(
+    0,
+    internal.researchActions.processWebhookEvent,
+    { jobId: job._id, eventType: event.type },
+  );
 
   return new Response("OK", { status: 200 });
-}
-
-function extractOutputContent(responseData: ResponseData): string {
-  const output = responseData.output;
-  if (Array.isArray(output)) {
-    const textParts = output
-      .filter(
-        (item: OutputItem) => item.type === "message" && item.content,
-      )
-      .flatMap((item: OutputItem) =>
-        (item.content ?? [])
-          .filter((c: ContentItem) => c.type === "output_text")
-          .map((c: ContentItem) => c.text ?? ""),
-      );
-    if (textParts.length > 0) {
-      return textParts.join("\n\n");
-    }
-  }
-
-  // Fallback: return raw stringified output
-  return JSON.stringify(output ?? responseData);
-}
-
-function estimateCost(
-  usage: ResponseData["usage"],
-): number | undefined {
-  if (!usage) return undefined;
-
-  // o3-deep-research pricing
-  // Input: $10/1M tokens, Output: $40/1M tokens
-  const inputTokens = usage.input_tokens ?? 0;
-  const outputTokens = usage.output_tokens ?? 0;
-  return (inputTokens * 10 + outputTokens * 40) / 1_000_000;
-}
-
-// Type definitions
-
-interface ContentItem {
-  type: string;
-  text?: string;
-}
-
-interface OutputItem {
-  type: string;
-  content?: ContentItem[];
-}
-
-interface ResponseData {
-  id?: string;
-  status?: string;
-  output?: OutputItem[];
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-  };
-  error?: {
-    message?: string;
-  };
-  status_details?: {
-    error?: {
-      message?: string;
-    };
-  };
-}
-
-interface WebhookEvent {
-  type?: string;
-  data?: ResponseData;
-  // Backwards compatibility: allow direct response fields
-  id?: string;
-  status?: string;
-  output?: OutputItem[];
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-  };
-  error?: {
-    message?: string;
-  };
-  status_details?: {
-    error?: {
-      message?: string;
-    };
-  };
 }
 
 export default http;
