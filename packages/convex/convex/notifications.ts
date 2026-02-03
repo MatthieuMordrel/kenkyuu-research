@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { internalAction } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 // --- Telegram ---
@@ -82,7 +82,7 @@ export const sendEmail = internalAction({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "KenkyuStock <notifications@kenkyustock.com>",
+        from: process.env.EMAIL_FROM ?? "KenkyuStock <notifications@mordrel.pro>",
         to: [toEmail],
         subject: args.subject,
         html: args.html,
@@ -268,5 +268,33 @@ export const dispatchBatchNotification = internalAction({
         html: `<pre>${text}</pre>`,
       });
     }
+  },
+});
+
+// --- Test Email ---
+
+export const sendTestEmail = action({
+  args: { token: v.string() },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ sent: boolean; reason?: string }> => {
+    // Validate session
+    const session = await ctx.runQuery(
+      internal.authHelpers.validateSessionInternal,
+      { token: args.token },
+    );
+    if (!session.valid) {
+      throw new Error("Unauthorized");
+    }
+
+    return await ctx.runAction(internal.notifications.sendEmail, {
+      subject: "Kenkyuu - Test Email",
+      html: `
+        <h2>Test Email</h2>
+        <p>If you're reading this, your email notifications are working correctly.</p>
+        <p style="color: #666; font-size: 12px;">Sent from Kenkyuu Research</p>
+      `.trim(),
+    });
   },
 });

@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAction } from "convex/react";
 import { api } from "@repo/convex";
 import { useSettings, useUpdateSetting } from "@/hooks/use-settings";
+import { useAuthToken } from "@/lib/auth";
 import { useTheme } from "@/hooks/use-theme";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/loading-skeleton";
@@ -28,6 +29,7 @@ import {
   Eye,
   EyeOff,
   Check,
+  Send,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -253,6 +255,41 @@ function TelegramSection() {
 }
 
 function EmailSection() {
+  const token = useAuthToken();
+  const sendTestEmail = useAction(api.notifications.sendTestEmail);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  async function handleTestEmail() {
+    if (!token) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const result = await sendTestEmail({ token });
+      if (result.sent) {
+        setTestResult({ type: "success", message: "Test email sent! Check your inbox." });
+      } else {
+        setTestResult({
+          type: "error",
+          message: result.reason === "not_configured"
+            ? "Email not configured. Please set your Resend API key and notification email above."
+            : `Failed to send: ${result.reason}`,
+        });
+      }
+    } catch (err) {
+      setTestResult({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to send test email",
+      });
+    } finally {
+      setTesting(false);
+      setTimeout(() => setTestResult(null), 5000);
+    }
+  }
+
   return (
     <Card className="py-4">
       <CardHeader>
@@ -277,6 +314,29 @@ function EmailSection() {
             label="Notification Email"
             placeholder="you@example.com"
           />
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestEmail}
+              disabled={testing || !token}
+              className="self-start"
+            >
+              <Send className="mr-2 size-4" />
+              {testing ? "Sending..." : "Send Test Email"}
+            </Button>
+            {testResult && (
+              <p
+                className={`text-sm ${
+                  testResult.type === "success"
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-destructive"
+                }`}
+              >
+                {testResult.message}
+              </p>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -298,12 +358,12 @@ function NotificationTogglesSection() {
       <CardContent>
         <div className="flex flex-col gap-4">
           <ToggleField
-            settingKey="notifications_telegram_enabled"
+            settingKey="notification_telegram_enabled"
             label="Telegram"
             description="Send notifications via Telegram bot"
           />
           <ToggleField
-            settingKey="notifications_email_enabled"
+            settingKey="notification_email_enabled"
             label="Email"
             description="Send notifications via email"
           />

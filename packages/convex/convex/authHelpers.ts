@@ -94,3 +94,19 @@ export const validateSession = query({
     return { valid: true, expiresAt: session.expiresAt } as const;
   },
 });
+
+export const validateSessionInternal = internalQuery({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .unique();
+
+    if (!session || session.expiresAt < Date.now()) {
+      return { valid: false } as const;
+    }
+
+    return { valid: true } as const;
+  },
+});
