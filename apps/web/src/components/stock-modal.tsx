@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useAddStock, useUpdateStock } from "@/hooks/use-stocks";
+import { useAddStock, useUpdateStock, useTags } from "@/hooks/use-stocks";
 import {
   validateStockForm,
   hasErrors,
@@ -21,7 +21,21 @@ import {
   type StockFormErrors,
 } from "@/lib/stock-validation";
 import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Doc } from "@repo/convex/dataModel";
+
+const EXCHANGES = [
+  "NASDAQ",
+  "NYSE",
+  "LSE",
+  "TSE",
+  "HKEX",
+  "Euronext",
+  "SSE",
+  "SZSE",
+  "TSX",
+  "ASX",
+] as const;
 
 interface StockModalProps {
   open: boolean;
@@ -41,6 +55,7 @@ const INITIAL_FORM: StockFormData = {
 export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
   const addStock = useAddStock();
   const updateStock = useUpdateStock();
+  const existingTags = useTags();
   const isEditing = !!stock;
 
   const [form, setForm] = useState<StockFormData>(INITIAL_FORM);
@@ -187,13 +202,27 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="exchange">Exchange *</Label>
-            <Input
+            <select
               id="exchange"
-              placeholder="e.g. NASDAQ"
               value={form.exchange}
               onChange={(e) => updateField("exchange", e.target.value)}
               aria-invalid={!!errors.exchange}
-            />
+              className={cn(
+                "border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm",
+                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+                "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+                !form.exchange && "text-muted-foreground",
+              )}
+            >
+              <option value="" disabled>
+                Select an exchange
+              </option>
+              {EXCHANGES.map((ex) => (
+                <option key={ex} value={ex}>
+                  {ex}
+                </option>
+              ))}
+            </select>
             {errors.exchange && (
               <p className="text-xs text-destructive">{errors.exchange}</p>
             )}
@@ -255,6 +284,27 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
                     </button>
                   </Badge>
                 ))}
+              </div>
+            )}
+            {existingTags && existingTags.filter((t) => !form.tags.includes(t)).length > 0 && (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Existing tags:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {existingTags
+                    .filter((t) => !form.tags.includes(t))
+                    .map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-accent"
+                        onClick={() =>
+                          setForm((prev) => ({ ...prev, tags: [...prev.tags, tag] }))
+                        }
+                      >
+                        + {tag}
+                      </Badge>
+                    ))}
+                </div>
               </div>
             )}
           </div>
