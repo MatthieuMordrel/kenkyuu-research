@@ -95,6 +95,23 @@ export default defineSchema({
     .index("by_jobId", ["jobId"])
     .index("by_timestamp", ["timestamp"]),
 
+  earnings: defineTable({
+    stockId: v.id("stocks"),
+    symbol: v.string(),
+    date: v.string(), // YYYY-MM-DD
+    epsEstimate: v.optional(v.number()),
+    epsActual: v.optional(v.number()),
+    revenueEstimate: v.optional(v.number()),
+    revenueActual: v.optional(v.number()),
+    hour: v.optional(v.string()), // bmo, amc, dmh
+    quarter: v.optional(v.number()),
+    year: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_stockId", ["stockId"])
+    .index("by_symbol_date", ["symbol", "date"])
+    .index("by_date", ["date"]),
+
   sessions: defineTable({
     token: v.string(),
     expiresAt: v.number(),

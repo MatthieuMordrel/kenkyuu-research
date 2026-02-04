@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useStock, useDeleteStock } from "@/hooks/use-stocks";
+import { useStockEarnings } from "@/hooks/use-earnings";
 import { PageHeader } from "@/components/page-header";
 import { StockModal } from "@/components/stock-modal";
 import { EmptyState } from "@/components/empty-state";
@@ -26,6 +27,7 @@ import {
   Calendar,
   FileText,
   FlaskConical,
+  BarChart3,
 } from "lucide-react";
 import type { GenericId } from "convex/values";
 
@@ -36,6 +38,7 @@ export const Route = createFileRoute("/_authenticated/stocks/$stockId")({
 function StockDetailPage() {
   const { stockId } = Route.useParams();
   const stock = useStock(stockId as GenericId<"stocks">);
+  const earnings = useStockEarnings(stockId as GenericId<"stocks">);
   const navigate = useNavigate();
   const deleteStock = useDeleteStock();
 
@@ -204,6 +207,9 @@ function StockDetailPage() {
           </Card>
         )}
 
+        {/* Earnings Card */}
+        <EarningsCard earnings={earnings} />
+
         {/* Research History Card */}
         <Card className="md:col-span-2">
           <CardHeader>
@@ -251,5 +257,102 @@ function StockDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function formatEarningsDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year!, month! - 1, day!);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatHour(hour?: string): string {
+  if (hour === "bmo") return "Before Market Open";
+  if (hour === "amc") return "After Market Close";
+  return "";
+}
+
+interface EarningsEntry {
+  date: string;
+  epsEstimate?: number;
+  epsActual?: number;
+  revenueEstimate?: number;
+  revenueActual?: number;
+  hour?: string;
+  quarter?: number;
+  year?: number;
+}
+
+function EarningsCard({ earnings }: { earnings?: EarningsEntry[] }) {
+  if (!earnings) return null;
+
+  const today = new Date().toISOString().split("T")[0]!;
+  const past = earnings.filter((e) => e.date < today);
+  const future = earnings.filter((e) => e.date >= today);
+
+  const previous = past.length > 0 ? past[past.length - 1] : undefined;
+  const next = future.length > 0 ? future[0] : undefined;
+  const nextNext = future.length > 1 ? future[1] : undefined;
+
+  const keyDates = [
+    { label: "Previous", entry: previous },
+    { label: "Next", entry: next },
+    { label: "Following", entry: nextNext },
+  ].filter((d) => d.entry);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <BarChart3 className="size-4" />
+          Earnings
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {keyDates.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No earnings data available</p>
+        ) : (
+          <dl className="flex flex-col gap-3 text-sm">
+            {keyDates.map(({ label, entry }) => (
+              <div key={label} className="flex justify-between">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="text-right">
+                  <span className={label === "Next" ? "font-medium" : ""}>
+                    {formatEarningsDate(entry!.date)}
+                  </span>
+                  {formatHour(entry!.hour) && (
+                    <span className="text-muted-foreground text-xs ml-1">
+                      ({formatHour(entry!.hour)})
+                    </span>
+                  )}
+                  {entry!.quarter && entry!.year && (
+                    <span className="text-muted-foreground text-xs ml-1">
+                      Q{entry!.quarter} {entry!.year}
+                    </span>
+                  )}
+                </dd>
+              </div>
+            ))}
+            {previous?.epsActual != null && (
+              <div className="flex justify-between border-t pt-3">
+                <dt className="text-muted-foreground">Last EPS</dt>
+                <dd>
+                  <span className="font-medium">${previous.epsActual.toFixed(2)}</span>
+                  {previous.epsEstimate != null && (
+                    <span className="text-muted-foreground text-xs ml-1">
+                      (est. ${previous.epsEstimate.toFixed(2)})
+                    </span>
+                  )}
+                </dd>
+              </div>
+            )}
+          </dl>
+        )}
+      </CardContent>
+    </Card>
   );
 }

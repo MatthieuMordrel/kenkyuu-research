@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStocks, useTags, useDeleteStock } from "@/hooks/use-stocks";
+import { useEarningsSummary } from "@/hooks/use-earnings";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { ListSkeleton } from "@/components/loading-skeleton";
@@ -28,11 +29,24 @@ import {
 import { cn } from "@/lib/utils";
 import type { Doc } from "@repo/convex/dataModel";
 
+function formatEarningsDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year!, month! - 1, day!);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatHour(hour?: string): string {
+  if (!hour) return "";
+  if (hour === "bmo") return "BMO";
+  if (hour === "amc") return "AMC";
+  return "";
+}
+
 export const Route = createFileRoute("/_authenticated/stocks")({
   component: StocksPage,
 });
 
-type SortField = "ticker" | "companyName" | "createdAt" | "updatedAt";
+type SortField = "ticker" | "companyName" | "createdAt" | "updatedAt" | "nextEarnings";
 
 function StocksPage() {
   const [search, setSearch] = useState("");
@@ -43,9 +57,26 @@ function StocksPage() {
   const [editingStock, setEditingStock] = useState<Doc<"stocks"> | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Doc<"stocks"> | null>(null);
 
-  const stocks = useStocks({ search, tag: selectedTag, sortBy, sortOrder });
+  const backendSortBy = sortBy === "nextEarnings" ? undefined : sortBy;
+  const backendSortOrder = sortBy === "nextEarnings" ? undefined : sortOrder;
+  const stocks = useStocks({ search, tag: selectedTag, sortBy: backendSortBy, sortOrder: backendSortOrder });
   const tags = useTags();
   const deleteStock = useDeleteStock();
+  const earningsSummary = useEarningsSummary();
+
+  const sortedStocks = useMemo(() => {
+    if (!stocks || sortBy !== "nextEarnings" || !earningsSummary) return stocks;
+    return [...stocks].sort((a, b) => {
+      const aDate = earningsSummary[a._id]?.next?.date ?? "";
+      const bDate = earningsSummary[b._id]?.next?.date ?? "";
+      // Stocks without earnings go to the end
+      if (!aDate && !bDate) return 0;
+      if (!aDate) return 1;
+      if (!bDate) return -1;
+      const cmp = aDate.localeCompare(bDate);
+      return sortOrder === "asc" ? cmp : -cmp;
+    });
+  }, [stocks, sortBy, sortOrder, earningsSummary]);
 
   function handleSort(field: SortField) {
     if (sortBy === field) {
@@ -148,6 +179,7 @@ function StocksPage() {
               { field: "companyName", label: "Name" },
               { field: "createdAt", label: "Date Added" },
               { field: "updatedAt", label: "Updated" },
+              { field: "nextEarnings", label: "Next Earnings" },
             ] as const
           ).map(({ field, label }) => (
             <button
@@ -194,10 +226,11 @@ function StocksPage() {
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {stocks.map((stock) => (
+            {(sortedStocks ?? []).map((stock) => (
               <StockCard
                 key={stock._id}
                 stock={stock}
+                earnings={earningsSummary?.[stock._id]}
                 onEdit={() => openEdit(stock)}
                 onDelete={() => setDeleteTarget(stock)}
               />
@@ -240,12 +273,20 @@ function StocksPage() {
   );
 }
 
+interface EarningsSummary {
+  previous?: { date: string; hour?: string };
+  next?: { date: string; hour?: string };
+  nextNext?: { date: string; hour?: string };
+}
+
 function StockCard({
   stock,
+  earnings,
   onEdit,
   onDelete,
 }: {
   stock: Doc<"stocks">;
+  earnings?: EarningsSummary;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -276,6 +317,32 @@ function StockCard({
             </div>
           )}
         </Link>
+        {earnings && (earnings.previous || earnings.next) && (
+          <div className="flex shrink-0 flex-col items-end gap-0.5 text-xs">
+            {earnings.previous && (
+              <span className="text-muted-foreground">
+                <span className="text-muted-foreground/60">Prev</span>{" "}
+                {formatEarningsDate(earnings.previous.date)}
+              </span>
+            )}
+            {earnings.next && (
+              <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                Next {formatEarningsDate(earnings.next.date)}
+                {formatHour(earnings.next.hour) && (
+                  <span className="ml-0.5 text-[11px] font-normal text-emerald-500/70 dark:text-emerald-400/70">
+                    {formatHour(earnings.next.hour)}
+                  </span>
+                )}
+              </span>
+            )}
+            {earnings.nextNext && (
+              <span className="text-muted-foreground/70">
+                <span className="text-muted-foreground/50">After</span>{" "}
+                {formatEarningsDate(earnings.nextNext.date)}
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           <Button
             variant="ghost"
