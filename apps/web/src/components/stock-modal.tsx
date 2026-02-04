@@ -21,7 +21,14 @@ import {
   type StockFormErrors,
 } from "@/lib/stock-validation";
 import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import type { Doc } from "@repo/convex/dataModel";
 
 const EXCHANGES = [
@@ -202,27 +209,32 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="exchange">Exchange *</Label>
-            <select
-              id="exchange"
-              value={form.exchange}
-              onChange={(e) => updateField("exchange", e.target.value)}
-              aria-invalid={!!errors.exchange}
-              className={cn(
-                "border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm",
-                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-                "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-                !form.exchange && "text-muted-foreground",
-              )}
+            <Select
+              value={form.exchange || null}
+              onValueChange={(value) => updateField("exchange", value)}
             >
-              <option value="" disabled>
-                Select an exchange
-              </option>
-              {EXCHANGES.map((ex) => (
-                <option key={ex} value={ex}>
-                  {ex}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                id="exchange"
+                aria-invalid={!!errors.exchange}
+              >
+                <SelectValue
+                  render={(_, { value }) =>
+                    value ?? (
+                      <span className="text-muted-foreground">
+                        Select an exchange
+                      </span>
+                    )
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {EXCHANGES.map((ex) => (
+                  <SelectItem key={ex} value={ex}>
+                    {ex}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.exchange && (
               <p className="text-xs text-destructive">{errors.exchange}</p>
             )}
