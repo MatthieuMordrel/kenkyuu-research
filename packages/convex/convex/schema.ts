@@ -56,7 +56,8 @@ export default defineSchema({
     .index("by_promptId", ["promptId"])
     .index("by_scheduleId", ["scheduleId"])
     .index("by_externalJobId", ["externalJobId"])
-    .index("by_createdAt", ["createdAt"]),
+    .index("by_createdAt", ["createdAt"])
+    .index("by_isFavorited", ["isFavorited"]),
 
   schedules: defineTable({
     name: v.string(),

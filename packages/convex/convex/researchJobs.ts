@@ -16,6 +16,24 @@ const jobStatus = v.union(
   v.literal("failed"),
 );
 
+/** Throws if concurrent job limit is reached. */
+async function enforceConcurrentJobLimit(ctx: { db: any }) {
+  const pendingJobs = await ctx.db
+    .query("researchJobs")
+    .withIndex("by_status", (q: any) => q.eq("status", "pending"))
+    .collect();
+  const runningJobs = await ctx.db
+    .query("researchJobs")
+    .withIndex("by_status", (q: any) => q.eq("status", "running"))
+    .collect();
+
+  if (pendingJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
+    throw new Error(
+      `Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed`,
+    );
+  }
+}
+
 // --- Mutations ---
 
 export const createResearchJob = mutation({
@@ -26,27 +44,12 @@ export const createResearchJob = mutation({
     scheduleId: v.optional(v.id("schedules")),
   },
   handler: async (ctx, args) => {
-    // Validate prompt exists and snapshot it
     const prompt = await ctx.db.get(args.promptId);
     if (!prompt) {
       throw new Error("Prompt not found");
     }
 
-    // Enforce concurrent job limit
-    const activeJobs = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .collect();
-    const runningJobs = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "running"))
-      .collect();
-
-    if (activeJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
-      throw new Error(
-        `Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed`,
-      );
-    }
+    await enforceConcurrentJobLimit(ctx);
 
     const now = Date.now();
     return await ctx.db.insert("researchJobs", {
@@ -70,27 +73,12 @@ export const createAndStartResearch = mutation({
     scheduleId: v.optional(v.id("schedules")),
   },
   handler: async (ctx, args) => {
-    // Validate prompt exists and snapshot it
     const prompt = await ctx.db.get(args.promptId);
     if (!prompt) {
       throw new Error("Prompt not found");
     }
 
-    // Enforce concurrent job limit
-    const activeJobs = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .collect();
-    const runningJobs = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "running"))
-      .collect();
-
-    if (activeJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
-      throw new Error(
-        `Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed`,
-      );
-    }
+    await enforceConcurrentJobLimit(ctx);
 
     const now = Date.now();
     const jobId = await ctx.db.insert("researchJobs", {
@@ -461,8 +449,11 @@ export const searchResults = query({
 export const listFavorites = query({
   args: {},
   handler: async (ctx) => {
-    const allJobs = await ctx.db.query("researchJobs").order("desc").collect();
-    return allJobs.filter((j) => j.isFavorited === true);
+    return await ctx.db
+      .query("researchJobs")
+      .withIndex("by_isFavorited", (q) => q.eq("isFavorited", true))
+      .order("desc")
+      .collect();
   },
 });
 
