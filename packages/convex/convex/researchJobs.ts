@@ -8,6 +8,8 @@ import {
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
+import { validateSearchTerm, truncateResult } from "./validation";
+import { logAuditEvent } from "./auditLog";
 
 const MAX_CONCURRENT_JOBS = 5;
 
@@ -133,7 +135,7 @@ export const updateJobStatus = internalMutation({
 
     if (updates.externalJobId !== undefined)
       patch.externalJobId = updates.externalJobId;
-    if (updates.result !== undefined) patch.result = updates.result;
+    if (updates.result !== undefined) patch.result = truncateResult(updates.result);
     if (updates.error !== undefined) patch.error = updates.error;
     if (updates.costUsd !== undefined) patch.costUsd = updates.costUsd;
     if (updates.durationMs !== undefined) patch.durationMs = updates.durationMs;
@@ -200,6 +202,7 @@ export const cancelJob = mutation({
       error: "Cancelled by user",
       completedAt: Date.now(),
     });
+    await logAuditEvent(ctx, { action: "job.cancel", resourceType: "researchJobs", resourceId: args.id });
 
     return args.id;
   },
@@ -278,6 +281,7 @@ export const deleteJob = mutation({
 
     // Delete the job itself
     await ctx.db.delete(args.id);
+    await logAuditEvent(ctx, { action: "job.delete", resourceType: "researchJobs", resourceId: args.id });
 
     return args.id;
   },
@@ -309,11 +313,13 @@ export const listJobs = query({
     status: v.optional(jobStatus),
     stockId: v.optional(v.id("stocks")),
     promptId: v.optional(v.id("prompts")),
+    limit: v.optional(v.number()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
+    const maxResults = Math.min(args.limit ?? 200, 500);
     let jobs;
 
     if (args.status) {
@@ -321,15 +327,15 @@ export const listJobs = query({
         .query("researchJobs")
         .withIndex("by_status", (q) => q.eq("status", args.status!))
         .order("desc")
-        .collect();
+        .take(maxResults);
     } else if (args.promptId) {
       jobs = await ctx.db
         .query("researchJobs")
         .withIndex("by_promptId", (q) => q.eq("promptId", args.promptId!))
         .order("desc")
-        .collect();
+        .take(maxResults);
     } else {
-      jobs = await ctx.db.query("researchJobs").order("desc").collect();
+      jobs = await ctx.db.query("researchJobs").order("desc").take(maxResults);
     }
 
     // Filter by stockId in memory (stockIds is an array)
@@ -452,6 +458,7 @@ export const searchResults = query({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
+    validateSearchTerm(args.searchTerm);
     const maxResults = Math.min(args.limit ?? 50, 100);
     const term = args.searchTerm.toLowerCase();
 
@@ -482,15 +489,19 @@ export const searchResults = query({
 });
 
 export const listFavorites = query({
-  args: { token: v.optional(v.string()) },
+  args: {
+    limit: v.optional(v.number()),
+    token: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
+    const maxResults = Math.min(args.limit ?? 100, 200);
     return await ctx.db
       .query("researchJobs")
       .withIndex("by_isFavorited", (q) => q.eq("isFavorited", true))
       .order("desc")
-      .collect();
+      .take(maxResults);
   },
 });
 

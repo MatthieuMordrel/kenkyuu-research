@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
+import { validateStockInput, validateSearchTerm } from "./validation";
+import { logAuditEvent } from "./auditLog";
 
 // --- Mutations ---
 
@@ -16,6 +18,7 @@ export const addStock = mutation({
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    validateStockInput(args);
 
     // Duplicate validation: check if ticker already exists
     const existing = await ctx.db
@@ -28,7 +31,7 @@ export const addStock = mutation({
     }
 
     const now = Date.now();
-    return await ctx.db.insert("stocks", {
+    const id = await ctx.db.insert("stocks", {
       ticker: args.ticker,
       exchange: args.exchange,
       companyName: args.companyName,
@@ -38,6 +41,8 @@ export const addStock = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    await logAuditEvent(ctx, { action: "stock.create", resourceType: "stocks", resourceId: id, details: args.ticker });
+    return id;
   },
 });
 
@@ -54,6 +59,7 @@ export const updateStock = mutation({
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    validateStockInput(args);
 
     const { id, token: _token, ...updates } = args;
 
@@ -87,6 +93,7 @@ export const updateStock = mutation({
     if (updates.tags !== undefined) patch.tags = updates.tags;
 
     await ctx.db.patch(id, patch);
+    await logAuditEvent(ctx, { action: "stock.update", resourceType: "stocks", resourceId: id });
     return id;
   },
 });
@@ -102,6 +109,7 @@ export const deleteStock = mutation({
     }
 
     await ctx.db.delete(args.id);
+    await logAuditEvent(ctx, { action: "stock.delete", resourceType: "stocks", resourceId: args.id, details: existing.ticker });
   },
 });
 
@@ -120,12 +128,15 @@ export const listStocks = query({
       ),
     ),
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+    limit: v.optional(v.number()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    if (args.search) validateSearchTerm(args.search);
 
-    let stocks = await ctx.db.query("stocks").collect();
+    const maxResults = Math.min(args.limit ?? 500, 500);
+    let stocks = await ctx.db.query("stocks").take(maxResults);
 
     // Filter by tag
     if (args.tag) {
@@ -187,7 +198,7 @@ export const listTags = query({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
-    const stocks = await ctx.db.query("stocks").collect();
+    const stocks = await ctx.db.query("stocks").take(500);
     const tagSet = new Set<string>();
     for (const stock of stocks) {
       for (const tag of stock.tags) {

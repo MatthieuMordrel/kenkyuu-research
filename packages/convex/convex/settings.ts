@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
+import { validateSettingInput } from "./validation";
+import { logAuditEvent } from "./auditLog";
 
 const PROTECTED_SETTING_KEYS = new Set([
   "auth_password_hash",
@@ -27,6 +29,7 @@ export const upsertSetting = mutation({
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    validateSettingInput(args.key, args.value);
 
     if (PROTECTED_SETTING_KEYS.has(args.key)) {
       throw new Error(`Setting "${args.key}" cannot be modified directly`);
@@ -39,12 +42,15 @@ export const upsertSetting = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, { value: args.value });
+      await logAuditEvent(ctx, { action: "settings.update", resourceType: "settings", details: args.key });
       return existing._id;
     }
 
-    return await ctx.db.insert("settings", {
+    const id = await ctx.db.insert("settings", {
       key: args.key,
       value: args.value,
     });
+    await logAuditEvent(ctx, { action: "settings.create", resourceType: "settings", details: args.key });
+    return id;
   },
 });

@@ -28,7 +28,7 @@ export const fetchAllEarnings = internalAction({
     const stocks = await ctx.runQuery(internal.earnings.listAllStocksInternal, {});
 
     if (stocks.length === 0) {
-      console.log("No stocks found, skipping earnings fetch.");
+      console.warn("No stocks found, skipping earnings fetch.");
       return;
     }
 
@@ -41,7 +41,7 @@ export const fetchAllEarnings = internalAction({
     const fromStr = formatDate(from);
     const toStr = formatDate(to);
 
-    console.log(`Fetching earnings for ${stocks.length} stocks from ${fromStr} to ${toStr}`);
+    console.info(`Fetching earnings for ${stocks.length} stocks from ${fromStr} to ${toStr}`);
 
     for (const stock of stocks) {
       try {
@@ -87,9 +87,9 @@ export const fetchAllEarnings = internalAction({
             symbol: stock.ticker,
             entries,
           });
-          console.log(`Upserted ${entries.length} earnings for ${stock.ticker}`);
+          console.info(`Upserted ${entries.length} earnings for ${stock.ticker}`);
         } else {
-          console.log(`No earnings found for ${stock.ticker}`);
+          console.info(`No earnings found for ${stock.ticker}`);
         }
       } catch (error) {
         console.error(`Error fetching earnings for ${stock.ticker}:`, error);
@@ -99,6 +99,6 @@ export const fetchAllEarnings = internalAction({
       await sleep(1100);
     }
 
-    console.log("Earnings fetch complete.");
+    console.info("Earnings fetch complete.");
   },
 });

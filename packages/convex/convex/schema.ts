@@ -128,4 +128,14 @@ export default defineSchema({
     success: v.boolean(),
   })
     .index("by_identifier_timestamp", ["identifier", "timestamp"]),
+
+  auditLogs: defineTable({
+    action: v.string(), // e.g. "stock.create", "prompt.delete", "settings.update"
+    resourceType: v.optional(v.string()),
+    resourceId: v.optional(v.string()),
+    details: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_action", ["action"]),
 });

@@ -24,7 +24,7 @@ export const sendTelegramMessage = internalAction({
     );
 
     if (!botToken || !chatId) {
-      console.log("Telegram not configured, skipping notification");
+      console.warn("Telegram not configured, skipping notification");
       return { sent: false, reason: "not_configured" };
     }
 
@@ -71,7 +71,7 @@ export const sendEmail = internalAction({
     );
 
     if (!apiKey || !toEmail) {
-      console.log("Email not configured, skipping notification");
+      console.warn("Email not configured, skipping notification");
       return { sent: false, reason: "not_configured" };
     }
 

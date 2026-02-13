@@ -7,6 +7,8 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
+import { validateScheduleInput } from "./validation";
+import { logAuditEvent } from "./auditLog";
 
 const stockSelectionValidator = v.object({
   type: v.union(
@@ -34,6 +36,7 @@ export const createSchedule = mutation({
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    validateScheduleInput(args);
 
     const prompt = await ctx.db.get(args.promptId);
     if (!prompt) {
@@ -67,6 +70,7 @@ export const createSchedule = mutation({
       });
     }
 
+    await logAuditEvent(ctx, { action: "schedule.create", resourceType: "schedules", resourceId: scheduleId, details: args.name });
     return scheduleId;
   },
 });
@@ -85,6 +89,7 @@ export const updateSchedule = mutation({
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    validateScheduleInput(args);
 
     const schedule = await ctx.db.get(args.id);
     if (!schedule) {
@@ -165,6 +170,7 @@ export const deleteSchedule = mutation({
     }
 
     await ctx.db.delete(args.id);
+    await logAuditEvent(ctx, { action: "schedule.delete", resourceType: "schedules", resourceId: args.id, details: schedule.name });
     return args.id;
   },
 });
@@ -290,11 +296,15 @@ export const updateScheduleNextRun = internalMutation({
 // --- Queries ---
 
 export const listSchedules = query({
-  args: { token: v.optional(v.string()) },
+  args: {
+    limit: v.optional(v.number()),
+    token: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
-    const schedules = await ctx.db.query("schedules").order("desc").collect();
+    const maxResults = Math.min(args.limit ?? 200, 200);
+    const schedules = await ctx.db.query("schedules").order("desc").take(maxResults);
 
     const globalPause = await ctx.db
       .query("settings")
@@ -420,8 +430,9 @@ export const createScheduledJob = internalMutation({
       .withIndex("by_status", (q) => q.eq("status", "running"))
       .collect();
 
-    if (pendingJobs.length + runningJobs.length >= 5) {
-      throw new Error("Maximum of 5 concurrent jobs allowed. Scheduled job deferred.");
+    const MAX_CONCURRENT_JOBS = 5;
+    if (pendingJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
+      throw new Error(`Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed. Scheduled job deferred.`);
     }
 
     const now = Date.now();

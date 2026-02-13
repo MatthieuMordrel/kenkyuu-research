@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
+import { validatePromptInput } from "./validation";
+import { logAuditEvent } from "./auditLog";
 
 const promptType = v.union(
   v.literal("single-stock"),
@@ -22,9 +24,10 @@ export const createPrompt = mutation({
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    validatePromptInput(args);
 
     const now = Date.now();
-    return await ctx.db.insert("prompts", {
+    const id = await ctx.db.insert("prompts", {
       name: args.name,
       description: args.description,
       type: args.type,
@@ -34,6 +37,8 @@ export const createPrompt = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    await logAuditEvent(ctx, { action: "prompt.create", resourceType: "prompts", resourceId: id, details: args.name });
+    return id;
   },
 });
 
@@ -49,6 +54,7 @@ export const updatePrompt = mutation({
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    validatePromptInput(args);
 
     const { id, token: _token, ...updates } = args;
 
@@ -67,6 +73,7 @@ export const updatePrompt = mutation({
       patch.defaultProvider = updates.defaultProvider;
 
     await ctx.db.patch(id, patch);
+    await logAuditEvent(ctx, { action: "prompt.update", resourceType: "prompts", resourceId: id });
     return id;
   },
 });
@@ -86,6 +93,7 @@ export const deletePrompt = mutation({
     }
 
     await ctx.db.delete(args.id);
+    await logAuditEvent(ctx, { action: "prompt.delete", resourceType: "prompts", resourceId: args.id, details: existing.name });
   },
 });
 
@@ -118,12 +126,14 @@ export const clonePrompt = mutation({
 export const listPrompts = query({
   args: {
     type: v.optional(promptType),
+    limit: v.optional(v.number()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
-    let prompts = await ctx.db.query("prompts").collect();
+    const maxResults = Math.min(args.limit ?? 200, 200);
+    let prompts = await ctx.db.query("prompts").take(maxResults);
 
     if (args.type) {
       prompts = prompts.filter((p) => p.type === args.type);

@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
 
+const MAX_CONCURRENT_JOBS = 5;
+
 /** Recent research: last 5 completed or failed jobs with prompt and stock info. */
 export const recentResearch = query({
   args: { token: v.optional(v.string()) },
@@ -157,7 +159,7 @@ export const activeJobsCount = query({
       pending: pendingJobs.length,
       running: runningJobs.length,
       total: pendingJobs.length + runningJobs.length,
-      limit: 5,
+      limit: MAX_CONCURRENT_JOBS,
     };
   },
 });
