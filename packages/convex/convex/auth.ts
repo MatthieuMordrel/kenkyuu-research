@@ -64,6 +64,10 @@ export const changePassword = action({
       throw new Error("Current password is incorrect");
     }
 
+    if (args.newPassword.length < 8) {
+      throw new Error("Password must be at least 8 characters long");
+    }
+
     const newHash = await bcrypt.hash(args.newPassword, 10);
 
     await ctx.runMutation(internal.authHelpers.upsertSettingInternal, {

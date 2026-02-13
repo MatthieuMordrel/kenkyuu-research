@@ -10,8 +10,6 @@ import "./styles.css";
 
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 
-console.log("[app] starting kenkyuu-research");
-
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 // Create a new router instance

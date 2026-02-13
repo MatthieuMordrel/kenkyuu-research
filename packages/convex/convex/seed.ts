@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
 const SENIOR_EQUITY_RESEARCH_SCREEN_TEMPLATE = `You are a senior equity research analyst at a top-tier investment bank. Conduct a comprehensive stock screening and discovery analysis as of {{DATE}}.
 
@@ -59,7 +59,7 @@ const BUILT_IN_PROMPTS = [
  * matching costLogs entry, insert the missing cost log row.
  * Run via: npx convex run seed:backfillCostLogs
  */
-export const backfillCostLogs = mutation({
+export const backfillCostLogs = internalMutation({
   args: {},
   handler: async (ctx) => {
     const completedJobs = await ctx.db
@@ -100,7 +100,7 @@ export const backfillCostLogs = mutation({
   },
 });
 
-export const seedPrompts = mutation({
+export const seedPrompts = internalMutation({
   args: {},
   handler: async (ctx) => {
     const existing = await ctx.db.query("prompts").collect();

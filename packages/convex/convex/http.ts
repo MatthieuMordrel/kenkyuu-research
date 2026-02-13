@@ -16,46 +16,60 @@ http.route({
     const webhookSecret = process.env.WEBHOOK_SECRET;
     const body = await request.text();
 
+    if (!webhookSecret) {
+      console.error("WEBHOOK_SECRET is not configured — rejecting webhook");
+      return new Response("Webhook verification not configured", {
+        status: 500,
+      });
+    }
+
     // Validate webhook signature using Standard Webhooks spec
     // Note: We can't use the OpenAI SDK's client.webhooks.unwrap() here
     // because Convex HTTP actions run in a V8 runtime, not Node.js.
-    if (webhookSecret) {
-      const msgId = request.headers.get("webhook-id");
-      const timestamp = request.headers.get("webhook-timestamp");
-      const signature = request.headers.get("webhook-signature");
+    const msgId = request.headers.get("webhook-id");
+    const timestamp = request.headers.get("webhook-timestamp");
+    const signature = request.headers.get("webhook-signature");
 
-      if (!msgId || !timestamp || !signature) {
-        return new Response("Missing webhook verification headers", {
-          status: 401,
-        });
-      }
+    if (!msgId || !timestamp || !signature) {
+      return new Response("Missing webhook verification headers", {
+        status: 401,
+      });
+    }
 
-      // Standard Webhooks: sign "msgId.timestamp.body"
-      const signedContent = `${msgId}.${timestamp}.${body}`;
-      const encoder = new TextEncoder();
+    // Reject stale timestamps to prevent replay attacks (5-minute window)
+    const now = Math.floor(Date.now() / 1000);
+    const ts = parseInt(timestamp, 10);
+    if (Number.isNaN(ts) || Math.abs(now - ts) > 300) {
+      return new Response("Webhook timestamp too old or invalid", {
+        status: 401,
+      });
+    }
 
-      // The secret from OpenAI is base64-encoded, prefixed with "whsec_"
-      const secretBytes = base64Decode(webhookSecret.replace("whsec_", ""));
-      const key = await crypto.subtle.importKey(
-        "raw",
-        secretBytes.buffer as ArrayBuffer,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"],
-      );
-      const signatureBytes = await crypto.subtle.sign(
-        "HMAC",
-        key,
-        encoder.encode(signedContent),
-      );
-      const expectedSignature =
-        "v1," + uint8ArrayToBase64(new Uint8Array(signatureBytes));
+    // Standard Webhooks: sign "msgId.timestamp.body"
+    const signedContent = `${msgId}.${timestamp}.${body}`;
+    const encoder = new TextEncoder();
 
-      // OpenAI may send multiple signatures separated by spaces
-      const signatures = signature.split(" ");
-      if (!signatures.includes(expectedSignature)) {
-        return new Response("Invalid webhook signature", { status: 401 });
-      }
+    // The secret from OpenAI is base64-encoded, prefixed with "whsec_"
+    const secretBytes = base64Decode(webhookSecret.replace("whsec_", ""));
+    const key = await crypto.subtle.importKey(
+      "raw",
+      secretBytes.buffer as ArrayBuffer,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const signatureBytes = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      encoder.encode(signedContent),
+    );
+    const expectedSignature =
+      "v1," + uint8ArrayToBase64(new Uint8Array(signatureBytes));
+
+    // OpenAI may send multiple signatures separated by spaces
+    const signatures = signature.split(" ");
+    if (!signatures.includes(expectedSignature)) {
+      return new Response("Invalid webhook signature", { status: 401 });
     }
 
     return await handleWebhookPayload(ctx, body);

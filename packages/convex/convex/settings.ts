@@ -1,13 +1,18 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
+
+const PROTECTED_SETTING_KEYS = new Set([
+  "auth_password_hash",
+]);
 
 async function validateSession(
-  ctx: { db: any },
+  ctx: QueryCtx | MutationCtx,
   token: string,
 ): Promise<void> {
   const session = await ctx.db
     .query("sessions")
-    .withIndex("by_token", (q: any) => q.eq("token", token))
+    .withIndex("by_token", (q) => q.eq("token", token))
     .unique();
 
   if (!session || session.expiresAt < Date.now()) {
@@ -38,6 +43,10 @@ export const upsertSetting = mutation({
   handler: async (ctx, args) => {
     if (!args.token) throw new Error("Unauthorized");
     await validateSession(ctx, args.token);
+
+    if (PROTECTED_SETTING_KEYS.has(args.key)) {
+      throw new Error(`Setting "${args.key}" cannot be modified directly`);
+    }
 
     const existing = await ctx.db
       .query("settings")

@@ -41,7 +41,7 @@ export const colors = {
     900: "#171717",
     950: "#0a0a0a",
   },
-  success: "#22c55e",
+  success: "#86f284",
   warning: "#f59e0b",
   error: "#ef4444",
   info: "#3b82f6",

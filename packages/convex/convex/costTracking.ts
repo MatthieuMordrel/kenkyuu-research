@@ -3,27 +3,6 @@ import { internalMutation, internalQuery, query } from "./_generated/server";
 
 // --- Mutations ---
 
-/**
- * Log a cost entry after job completion.
- * This is an alias kept here for domain clarity; the original logCost in
- * researchJobs.ts is still used by the webhook handler.
- */
-export const logCost = internalMutation({
-  args: {
-    jobId: v.id("researchJobs"),
-    provider: v.literal("openai"),
-    costUsd: v.number(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.insert("costLogs", {
-      jobId: args.jobId,
-      provider: args.provider,
-      costUsd: args.costUsd,
-      timestamp: Date.now(),
-    });
-  },
-});
-
 /** Mark that a budget alert has been sent for a given month. */
 export const markBudgetAlertSent = internalMutation({
   args: { key: v.string() },

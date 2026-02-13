@@ -99,6 +99,15 @@ export const sendEmail = internalAction({
   },
 });
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // --- Dispatch Logic ---
 
 /**
@@ -182,12 +191,12 @@ export const dispatchJobNotification = internalAction({
     if (emailEnabled === "true") {
       const subject = `${statusEmoji} Research ${statusText}: ${stockLabel}`;
       const html = `
-        <h2>Research ${statusText}</h2>
-        <p><strong>Stocks:</strong> ${stockLabel}</p>
+        <h2>Research ${escapeHtml(statusText)}</h2>
+        <p><strong>Stocks:</strong> ${escapeHtml(stockLabel)}</p>
         ${costLine ? `<p><strong>Cost:</strong> $${job.costUsd?.toFixed(2)}</p>` : ""}
         ${job.durationMs ? `<p><strong>Duration:</strong> ${Math.round(job.durationMs / 1000)}s</p>` : ""}
         <hr>
-        <div style="white-space: pre-wrap;">${summary}</div>
+        <div style="white-space: pre-wrap;">${escapeHtml(summary)}</div>
       `.trim();
 
       await ctx.runAction(internal.notifications.sendEmail, {
@@ -265,7 +274,7 @@ export const dispatchBatchNotification = internalAction({
     if (emailEnabled === "true") {
       await ctx.runAction(internal.notifications.sendEmail, {
         subject: `Research Batch: ${completed.length} completed, ${failed.length} failed`,
-        html: `<pre>${text}</pre>`,
+        html: `<pre>${escapeHtml(text)}</pre>`,
       });
     }
   },

@@ -324,7 +324,7 @@ function MetadataCard({
         {label}
       </div>
       <div className="text-sm font-medium">
-        {typeof value === "string" ? value : value}
+        {value}
       </div>
     </div>
   );

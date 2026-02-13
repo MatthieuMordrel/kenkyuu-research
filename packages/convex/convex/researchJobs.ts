@@ -5,6 +5,7 @@ import {
   mutation,
   query,
 } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 const MAX_CONCURRENT_JOBS = 5;
@@ -17,14 +18,14 @@ const jobStatus = v.union(
 );
 
 /** Throws if concurrent job limit is reached. */
-async function enforceConcurrentJobLimit(ctx: { db: any }) {
+async function enforceConcurrentJobLimit(ctx: MutationCtx) {
   const pendingJobs = await ctx.db
     .query("researchJobs")
-    .withIndex("by_status", (q: any) => q.eq("status", "pending"))
+    .withIndex("by_status", (q) => q.eq("status", "pending"))
     .collect();
   const runningJobs = await ctx.db
     .query("researchJobs")
-    .withIndex("by_status", (q: any) => q.eq("status", "running"))
+    .withIndex("by_status", (q) => q.eq("status", "running"))
     .collect();
 
   if (pendingJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
