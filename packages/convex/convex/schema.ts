@@ -121,4 +121,11 @@ export default defineSchema({
   })
     .index("by_token", ["token"])
     .index("by_expiresAt", ["expiresAt"]),
+
+  loginAttempts: defineTable({
+    identifier: v.string(), // "global" for single-user setup
+    timestamp: v.number(),
+    success: v.boolean(),
+  })
+    .index("by_identifier_timestamp", ["identifier", "timestamp"]),
 });

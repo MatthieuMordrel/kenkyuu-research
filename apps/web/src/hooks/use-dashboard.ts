@@ -3,27 +3,32 @@ import { api } from "@repo/convex";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { useResearchFlow } from "./use-research-flow";
+import { useAuthToken } from "@/lib/auth";
 
 // --- Dashboard Query Hooks ---
 
 /** Last 5 completed/failed research jobs with enriched prompt + stock info. */
 export function useRecentResearch() {
-  return useQuery(api.dashboard.recentResearch, {});
+  const token = useAuthToken();
+  return useQuery(api.dashboard.recentResearch, token ? { token } : "skip");
 }
 
 /** Top 5 upcoming scheduled runs sorted by next run time. */
 export function useUpcomingSchedules() {
-  return useQuery(api.dashboard.upcomingSchedules, {});
+  const token = useAuthToken();
+  return useQuery(api.dashboard.upcomingSchedules, token ? { token } : "skip");
 }
 
 /** Monthly cost summary with budget threshold. */
 export function useMonthlySpend() {
-  return useQuery(api.dashboard.monthlySpend, {});
+  const token = useAuthToken();
+  return useQuery(api.dashboard.monthlySpend, token ? { token } : "skip");
 }
 
 /** Count of active (pending + running) jobs and the concurrency limit. */
 export function useActiveJobsCount() {
-  return useQuery(api.dashboard.activeJobsCount, {});
+  const token = useAuthToken();
+  return useQuery(api.dashboard.activeJobsCount, token ? { token } : "skip");
 }
 
 // --- Quick Action Handlers ---

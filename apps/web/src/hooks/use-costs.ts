@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "@repo/convex";
+import { useAuthToken } from "@/lib/auth";
 
 // --- Query Hooks ---
 
@@ -8,9 +9,13 @@ interface UseMonthlyCostOptions {
 }
 
 export function useMonthlyCost(options: UseMonthlyCostOptions = {}) {
-  return useQuery(api.costTracking.getMonthlyCost, {
-    monthTimestamp: options.monthTimestamp,
-  });
+  const token = useAuthToken();
+  return useQuery(
+    api.costTracking.getMonthlyCost,
+    token
+      ? { monthTimestamp: options.monthTimestamp, token }
+      : "skip",
+  );
 }
 
 interface UseCostHistoryOptions {
@@ -18,9 +23,13 @@ interface UseCostHistoryOptions {
 }
 
 export function useCostHistory(options: UseCostHistoryOptions = {}) {
-  return useQuery(api.costTracking.getCostHistory, {
-    months: options.months,
-  });
+  const token = useAuthToken();
+  return useQuery(
+    api.costTracking.getCostHistory,
+    token
+      ? { months: options.months, token }
+      : "skip",
+  );
 }
 
 interface UseCostByProviderOptions {
@@ -29,8 +38,11 @@ interface UseCostByProviderOptions {
 }
 
 export function useCostByProvider(options: UseCostByProviderOptions = {}) {
-  return useQuery(api.costTracking.getCostByProvider, {
-    from: options.from,
-    to: options.to,
-  });
+  const token = useAuthToken();
+  return useQuery(
+    api.costTracking.getCostByProvider,
+    token
+      ? { from: options.from, to: options.to, token }
+      : "skip",
+  );
 }

@@ -1,8 +1,32 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
 
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 const REMEMBER_ME_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/**
+ * Validates that a session token is present and valid.
+ * Throws "Unauthorized" if the token is missing, invalid, or expired.
+ * Use in all public queries and mutations to enforce authentication.
+ */
+export async function requireAuth(
+  ctx: QueryCtx | MutationCtx,
+  token: string | undefined,
+): Promise<void> {
+  if (!token) {
+    throw new Error("Unauthorized");
+  }
+
+  const session = await ctx.db
+    .query("sessions")
+    .withIndex("by_token", (q) => q.eq("token", token))
+    .unique();
+
+  if (!session || session.expiresAt < Date.now()) {
+    throw new Error("Unauthorized");
+  }
+}
 
 function generateToken(): string {
   const bytes = new Uint8Array(48);
@@ -104,5 +128,60 @@ export const validateSessionInternal = internalQuery({
     }
 
     return { valid: true } as const;
+  },
+});
+
+// --- Rate Limiting ---
+
+const MAX_LOGIN_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+export const checkLoginRateLimit = internalQuery({
+  args: { identifier: v.string() },
+  handler: async (ctx, args) => {
+    const windowStart = Date.now() - RATE_LIMIT_WINDOW_MS;
+
+    const recentAttempts = await ctx.db
+      .query("loginAttempts")
+      .withIndex("by_identifier_timestamp", (q) =>
+        q.eq("identifier", args.identifier).gte("timestamp", windowStart),
+      )
+      .collect();
+
+    const failedAttempts = recentAttempts.filter((a) => !a.success);
+    return {
+      allowed: failedAttempts.length < MAX_LOGIN_ATTEMPTS,
+      remainingAttempts: Math.max(0, MAX_LOGIN_ATTEMPTS - failedAttempts.length),
+      retryAfterMs: failedAttempts.length >= MAX_LOGIN_ATTEMPTS
+        ? RATE_LIMIT_WINDOW_MS - (Date.now() - Math.min(...failedAttempts.map((a) => a.timestamp)))
+        : 0,
+    };
+  },
+});
+
+export const recordLoginAttempt = internalMutation({
+  args: {
+    identifier: v.string(),
+    success: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("loginAttempts", {
+      identifier: args.identifier,
+      timestamp: Date.now(),
+      success: args.success,
+    });
+
+    // Cleanup: delete attempts older than the window to prevent table bloat
+    const windowStart = Date.now() - RATE_LIMIT_WINDOW_MS;
+    const oldAttempts = await ctx.db
+      .query("loginAttempts")
+      .withIndex("by_identifier_timestamp", (q) =>
+        q.eq("identifier", args.identifier).lt("timestamp", windowStart),
+      )
+      .collect();
+
+    for (const attempt of oldAttempts) {
+      await ctx.db.delete(attempt._id);
+    }
   },
 });

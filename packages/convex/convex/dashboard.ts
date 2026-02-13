@@ -1,9 +1,13 @@
+import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { requireAuth } from "./authHelpers";
 
 /** Recent research: last 5 completed or failed jobs with prompt and stock info. */
 export const recentResearch = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const jobs = await ctx.db
       .query("researchJobs")
       .order("desc")
@@ -54,8 +58,10 @@ export const recentResearch = query({
 
 /** Upcoming scheduled runs sorted by next run time. */
 export const upcomingSchedules = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const schedules = await ctx.db.query("schedules").collect();
 
     const upcoming = schedules
@@ -86,8 +92,10 @@ export const upcomingSchedules = query({
 
 /** Monthly spend: total cost and job count for the current calendar month. */
 export const monthlySpend = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const now = new Date();
     const startOfMonth = new Date(
       now.getFullYear(),
@@ -132,8 +140,10 @@ export const monthlySpend = query({
 
 /** Active jobs count: number of pending + running jobs and the max limit. */
 export const activeJobsCount = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const pendingJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "pending"))

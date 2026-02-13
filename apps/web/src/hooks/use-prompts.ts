@@ -1,6 +1,8 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@repo/convex";
 import type { GenericId } from "convex/values";
+import { useAuthToken } from "@/lib/auth";
+import { useCallback } from "react";
 
 // --- Query Hooks ---
 
@@ -11,30 +13,59 @@ interface UsePromptsOptions {
 }
 
 export function usePrompts(options: UsePromptsOptions = {}) {
+  const token = useAuthToken();
   const { type } = options;
-  return useQuery(api.prompts.listPrompts, {
-    type: type || undefined,
-  });
+  return useQuery(
+    api.prompts.listPrompts,
+    token
+      ? { type: type || undefined, token }
+      : "skip",
+  );
 }
 
 export function usePrompt(id: GenericId<"prompts">) {
-  return useQuery(api.prompts.getPrompt, { id });
+  const token = useAuthToken();
+  return useQuery(api.prompts.getPrompt, token ? { id, token } : "skip");
 }
 
 // --- Mutation Hooks ---
 
 export function useCreatePrompt() {
-  return useMutation(api.prompts.createPrompt);
+  const token = useAuthToken();
+  const mutation = useMutation(api.prompts.createPrompt);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }
 
 export function useUpdatePrompt() {
-  return useMutation(api.prompts.updatePrompt);
+  const token = useAuthToken();
+  const mutation = useMutation(api.prompts.updatePrompt);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }
 
 export function useDeletePrompt() {
-  return useMutation(api.prompts.deletePrompt);
+  const token = useAuthToken();
+  const mutation = useMutation(api.prompts.deletePrompt);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }
 
 export function useClonePrompt() {
-  return useMutation(api.prompts.clonePrompt);
+  const token = useAuthToken();
+  const mutation = useMutation(api.prompts.clonePrompt);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }

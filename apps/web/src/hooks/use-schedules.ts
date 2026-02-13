@@ -1,55 +1,96 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@repo/convex";
 import type { GenericId } from "convex/values";
+import { useAuthToken } from "@/lib/auth";
+import { useCallback } from "react";
 
 // --- Query Hooks ---
 
 export function useSchedules() {
-  return useQuery(api.schedules.listSchedules, {});
+  const token = useAuthToken();
+  return useQuery(api.schedules.listSchedules, token ? { token } : "skip");
 }
 
 export function useSchedule(id: GenericId<"schedules">) {
-  return useQuery(api.schedules.getSchedule, { id });
+  const token = useAuthToken();
+  return useQuery(api.schedules.getSchedule, token ? { id, token } : "skip");
 }
 
 export function useUpcomingRuns(limit?: number) {
-  return useQuery(api.schedules.getUpcomingRuns, {
-    limit: limit || undefined,
-  });
+  const token = useAuthToken();
+  return useQuery(
+    api.schedules.getUpcomingRuns,
+    token
+      ? { limit: limit || undefined, token }
+      : "skip",
+  );
 }
 
 export function useScheduleHistory(
   scheduleId: GenericId<"schedules">,
   limit?: number,
 ) {
-  return useQuery(api.schedules.getScheduleHistory, {
-    scheduleId,
-    limit: limit || undefined,
-  });
+  const token = useAuthToken();
+  return useQuery(
+    api.schedules.getScheduleHistory,
+    token
+      ? { scheduleId, limit: limit || undefined, token }
+      : "skip",
+  );
 }
 
 export function useGlobalPauseStatus() {
-  return useQuery(api.schedules.getGlobalPauseStatus, {});
+  const token = useAuthToken();
+  return useQuery(api.schedules.getGlobalPauseStatus, token ? { token } : "skip");
 }
 
 // --- Mutation Hooks ---
 
 export function useCreateSchedule() {
-  return useMutation(api.schedules.createSchedule);
+  const token = useAuthToken();
+  const mutation = useMutation(api.schedules.createSchedule);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }
 
 export function useUpdateSchedule() {
-  return useMutation(api.schedules.updateSchedule);
+  const token = useAuthToken();
+  const mutation = useMutation(api.schedules.updateSchedule);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }
 
 export function useDeleteSchedule() {
-  return useMutation(api.schedules.deleteSchedule);
+  const token = useAuthToken();
+  const mutation = useMutation(api.schedules.deleteSchedule);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }
 
 export function useToggleSchedule() {
-  return useMutation(api.schedules.toggleSchedule);
+  const token = useAuthToken();
+  const mutation = useMutation(api.schedules.toggleSchedule);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }
 
 export function useToggleGlobalPause() {
-  return useMutation(api.schedules.toggleGlobalPause);
+  const token = useAuthToken();
+  const mutation = useMutation(api.schedules.toggleGlobalPause);
+  return useCallback(
+    () => mutation({ token: token ?? undefined }),
+    [mutation, token],
+  );
 }

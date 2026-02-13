@@ -24,8 +24,13 @@ PARENT_DIR=$(dirname "$CURRENT_DIR")
 SHOULD_RENAME_FOLDER=false
 
 if [ -n "$PROJECT_NAME" ]; then
-  # Convert to lowercase and replace spaces with hyphens
-  PROJECT_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+  # Convert to lowercase, replace spaces with hyphens, strip dangerous characters
+  PROJECT_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9._-]//g')
+
+  if [ -z "$PROJECT_NAME" ]; then
+    echo "Invalid project name. Using 'base-repo'."
+    PROJECT_NAME="base-repo"
+  fi
 
   echo ""
   read -p "Enter package scope (leave empty to use '@$PROJECT_NAME'): " SCOPE
@@ -33,7 +38,8 @@ if [ -n "$PROJECT_NAME" ]; then
   if [ -z "$SCOPE" ]; then
     SCOPE="@$PROJECT_NAME"
   else
-    # Ensure scope starts with @
+    # Ensure scope starts with @, strip dangerous characters
+    SCOPE=$(echo "$SCOPE" | sed 's/[^a-zA-Z0-9@._-]//g')
     if [[ ! "$SCOPE" == @* ]]; then
       SCOPE="@$SCOPE"
     fi
@@ -42,7 +48,7 @@ if [ -n "$PROJECT_NAME" ]; then
   echo ""
   echo "Renaming project to '$PROJECT_NAME' with scope '$SCOPE'..."
 
-  # Update root package.json name
+  # Update root package.json name (inputs are sanitized to [a-z0-9._-] so safe for sed)
   sed -i "s/\"name\": \"base-repo\"/\"name\": \"$PROJECT_NAME\"/" package.json
 
   # Update all @repo/ scoped package names and dependencies

@@ -6,6 +6,7 @@ import {
   query,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { requireAuth } from "./authHelpers";
 
 const stockSelectionValidator = v.object({
   type: v.union(
@@ -29,8 +30,11 @@ export const createSchedule = mutation({
     cron: v.string(),
     timezone: v.string(),
     enabled: v.boolean(),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const prompt = await ctx.db.get(args.promptId);
     if (!prompt) {
       throw new Error("Prompt not found");
@@ -77,14 +81,17 @@ export const updateSchedule = mutation({
     cron: v.optional(v.string()),
     timezone: v.optional(v.string()),
     enabled: v.optional(v.boolean()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const schedule = await ctx.db.get(args.id);
     if (!schedule) {
       throw new Error("Schedule not found");
     }
 
-    const { id, ...updates } = args;
+    const { id, token: _token, ...updates } = args;
     const patch: Record<string, unknown> = {};
 
     if (updates.name !== undefined) patch.name = updates.name;
@@ -138,8 +145,11 @@ export const updateSchedule = mutation({
 export const deleteSchedule = mutation({
   args: {
     id: v.id("schedules"),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const schedule = await ctx.db.get(args.id);
     if (!schedule) {
       throw new Error("Schedule not found");
@@ -162,8 +172,11 @@ export const deleteSchedule = mutation({
 export const toggleSchedule = mutation({
   args: {
     id: v.id("schedules"),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const schedule = await ctx.db.get(args.id);
     if (!schedule) {
       throw new Error("Schedule not found");
@@ -199,8 +212,10 @@ export const toggleSchedule = mutation({
 });
 
 export const toggleGlobalPause = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const existing = await ctx.db
       .query("settings")
       .withIndex("by_key", (q) => q.eq("key", "global_schedules_paused"))
@@ -275,8 +290,10 @@ export const updateScheduleNextRun = internalMutation({
 // --- Queries ---
 
 export const listSchedules = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const schedules = await ctx.db.query("schedules").order("desc").collect();
 
     const globalPause = await ctx.db
@@ -292,8 +309,9 @@ export const listSchedules = query({
 });
 
 export const getSchedule = query({
-  args: { id: v.id("schedules") },
+  args: { id: v.id("schedules"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
     return await ctx.db.get(args.id);
   },
 });
@@ -308,8 +326,11 @@ export const getScheduleInternal = internalQuery({
 export const getUpcomingRuns = query({
   args: {
     limit: v.optional(v.number()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const maxResults = args.limit ?? 10;
 
     const schedules = await ctx.db.query("schedules").collect();
@@ -333,8 +354,11 @@ export const getScheduleHistory = query({
   args: {
     scheduleId: v.id("schedules"),
     limit: v.optional(v.number()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const maxResults = Math.min(args.limit ?? 20, 100);
 
     const jobs = await ctx.db
@@ -348,8 +372,10 @@ export const getScheduleHistory = query({
 });
 
 export const getGlobalPauseStatus = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const setting = await ctx.db
       .query("settings")
       .withIndex("by_key", (q) => q.eq("key", "global_schedules_paused"))
@@ -382,6 +408,20 @@ export const createScheduledJob = internalMutation({
     const prompt = await ctx.db.get(args.promptId);
     if (!prompt) {
       throw new Error("Prompt not found");
+    }
+
+    // Enforce concurrent job limit on scheduled jobs to prevent bypass
+    const pendingJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    const runningJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+
+    if (pendingJobs.length + runningJobs.length >= 5) {
+      throw new Error("Maximum of 5 concurrent jobs allowed. Scheduled job deferred.");
     }
 
     const now = Date.now();

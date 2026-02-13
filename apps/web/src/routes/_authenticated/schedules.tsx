@@ -84,7 +84,7 @@ function SchedulesPage() {
             <Button
               size="sm"
               variant={globalPaused ? "destructive" : "outline"}
-              onClick={() => toggleGlobalPause({})}
+              onClick={() => toggleGlobalPause()}
               disabled={isLoading}
             >
               {globalPaused ? (

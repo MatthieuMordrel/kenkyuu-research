@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireAuth } from "./authHelpers";
 
 const promptType = v.union(
   v.literal("single-stock"),
@@ -17,8 +18,11 @@ export const createPrompt = mutation({
     template: v.string(),
     defaultProvider: v.optional(v.literal("openai")),
     isBuiltIn: v.optional(v.boolean()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const now = Date.now();
     return await ctx.db.insert("prompts", {
       name: args.name,
@@ -41,9 +45,12 @@ export const updatePrompt = mutation({
     type: v.optional(promptType),
     template: v.optional(v.string()),
     defaultProvider: v.optional(v.literal("openai")),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
+    await requireAuth(ctx, args.token);
+
+    const { id, token: _token, ...updates } = args;
 
     const existing = await ctx.db.get(id);
     if (!existing) {
@@ -65,8 +72,10 @@ export const updatePrompt = mutation({
 });
 
 export const deletePrompt = mutation({
-  args: { id: v.id("prompts") },
+  args: { id: v.id("prompts"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const existing = await ctx.db.get(args.id);
     if (!existing) {
       throw new Error("Prompt not found");
@@ -81,8 +90,10 @@ export const deletePrompt = mutation({
 });
 
 export const clonePrompt = mutation({
-  args: { id: v.id("prompts") },
+  args: { id: v.id("prompts"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const existing = await ctx.db.get(args.id);
     if (!existing) {
       throw new Error("Prompt not found");
@@ -107,8 +118,11 @@ export const clonePrompt = mutation({
 export const listPrompts = query({
   args: {
     type: v.optional(promptType),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     let prompts = await ctx.db.query("prompts").collect();
 
     if (args.type) {
@@ -128,8 +142,9 @@ export const listPrompts = query({
 });
 
 export const getPrompt = query({
-  args: { id: v.id("prompts") },
+  args: { id: v.id("prompts"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
     return await ctx.db.get(args.id);
   },
 });

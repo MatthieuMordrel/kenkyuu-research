@@ -4,6 +4,8 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 
+const LOGIN_IDENTIFIER = "global"; // Single-user app uses a global identifier
+
 export const login = action({
   args: {
     password: v.string(),
@@ -13,6 +15,19 @@ export const login = action({
     ctx,
     args,
   ): Promise<{ token: string; expiresAt: number }> => {
+    // Check rate limit before attempting login
+    const rateLimit = await ctx.runQuery(
+      internal.authHelpers.checkLoginRateLimit,
+      { identifier: LOGIN_IDENTIFIER },
+    );
+
+    if (!rateLimit.allowed) {
+      const retryMinutes = Math.ceil(rateLimit.retryAfterMs / 60_000);
+      throw new Error(
+        `Too many login attempts. Try again in ${retryMinutes} minute${retryMinutes === 1 ? "" : "s"}.`,
+      );
+    }
+
     const storedHash = (await ctx.runQuery(
       internal.authHelpers.getSettingValue,
       {
@@ -28,8 +43,19 @@ export const login = action({
     const valid = await bcrypt.compare(args.password, storedHash);
 
     if (!valid) {
+      // Record failed attempt
+      await ctx.runMutation(internal.authHelpers.recordLoginAttempt, {
+        identifier: LOGIN_IDENTIFIER,
+        success: false,
+      });
       throw new Error("Invalid password");
     }
+
+    // Record successful attempt (resets effective rate limit)
+    await ctx.runMutation(internal.authHelpers.recordLoginAttempt, {
+      identifier: LOGIN_IDENTIFIER,
+      success: true,
+    });
 
     const result: { token: string; expiresAt: number } =
       await ctx.runMutation(internal.authHelpers.createSession, {

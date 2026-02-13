@@ -1,6 +1,8 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@repo/convex";
 import type { GenericId } from "convex/values";
+import { useAuthToken } from "@/lib/auth";
+import { useCallback } from "react";
 
 // --- Query Hooks ---
 
@@ -12,37 +14,65 @@ interface UseStocksOptions {
 }
 
 export function useStocks(options: UseStocksOptions = {}) {
+  const token = useAuthToken();
   const { search, tag, sortBy, sortOrder } = options;
-  return useQuery(api.stocks.listStocks, {
-    search: search || undefined,
-    tag: tag || undefined,
-    sortBy,
-    sortOrder,
-  });
+  return useQuery(
+    api.stocks.listStocks,
+    token
+      ? {
+          search: search || undefined,
+          tag: tag || undefined,
+          sortBy,
+          sortOrder,
+          token,
+        }
+      : "skip",
+  );
 }
 
 export function useStock(id: GenericId<"stocks">) {
-  return useQuery(api.stocks.getStock, { id });
+  const token = useAuthToken();
+  return useQuery(api.stocks.getStock, token ? { id, token } : "skip");
 }
 
 export function useStockByTicker(ticker: string) {
-  return useQuery(api.stocks.getStockByTicker, { ticker });
+  const token = useAuthToken();
+  return useQuery(api.stocks.getStockByTicker, token ? { ticker, token } : "skip");
 }
 
 export function useTags() {
-  return useQuery(api.stocks.listTags);
+  const token = useAuthToken();
+  return useQuery(api.stocks.listTags, token ? { token } : "skip");
 }
 
 // --- Mutation Hooks ---
 
 export function useAddStock() {
-  return useMutation(api.stocks.addStock);
+  const token = useAuthToken();
+  const mutation = useMutation(api.stocks.addStock);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }
 
 export function useUpdateStock() {
-  return useMutation(api.stocks.updateStock);
+  const token = useAuthToken();
+  const mutation = useMutation(api.stocks.updateStock);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }
 
 export function useDeleteStock() {
-  return useMutation(api.stocks.deleteStock);
+  const token = useAuthToken();
+  const mutation = useMutation(api.stocks.deleteStock);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
 }

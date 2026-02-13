@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
+import { requireAuth } from "./authHelpers";
 
 export const listAllStocksInternal = internalQuery({
   args: {},
@@ -55,8 +56,10 @@ export const upsertEarnings = internalMutation({
 });
 
 export const getEarningsSummaryAll = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const allEarnings = await ctx.db.query("earnings").collect();
     const today = new Date().toISOString().split("T")[0]!;
 
@@ -100,8 +103,10 @@ export const getEarningsSummaryAll = query({
 });
 
 export const getEarningsByStockId = query({
-  args: { stockId: v.id("stocks") },
+  args: { stockId: v.id("stocks"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const earnings = await ctx.db
       .query("earnings")
       .withIndex("by_stockId", (q) => q.eq("stockId", args.stockId))

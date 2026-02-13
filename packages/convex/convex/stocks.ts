@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireAuth } from "./authHelpers";
 
 // --- Mutations ---
 
@@ -11,8 +12,11 @@ export const addStock = mutation({
     sector: v.optional(v.string()),
     notes: v.optional(v.string()),
     tags: v.array(v.string()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     // Duplicate validation: check if ticker already exists
     const existing = await ctx.db
       .query("stocks")
@@ -25,7 +29,12 @@ export const addStock = mutation({
 
     const now = Date.now();
     return await ctx.db.insert("stocks", {
-      ...args,
+      ticker: args.ticker,
+      exchange: args.exchange,
+      companyName: args.companyName,
+      sector: args.sector,
+      notes: args.notes,
+      tags: args.tags,
       createdAt: now,
       updatedAt: now,
     });
@@ -41,9 +50,12 @@ export const updateStock = mutation({
     sector: v.optional(v.string()),
     notes: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
+    await requireAuth(ctx, args.token);
+
+    const { id, token: _token, ...updates } = args;
 
     const existing = await ctx.db.get(id);
     if (!existing) {
@@ -80,8 +92,10 @@ export const updateStock = mutation({
 });
 
 export const deleteStock = mutation({
-  args: { id: v.id("stocks") },
+  args: { id: v.id("stocks"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const existing = await ctx.db.get(args.id);
     if (!existing) {
       throw new Error("Stock not found");
@@ -106,8 +120,11 @@ export const listStocks = query({
       ),
     ),
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     let stocks = await ctx.db.query("stocks").collect();
 
     // Filter by tag
@@ -147,15 +164,17 @@ export const listStocks = query({
 });
 
 export const getStock = query({
-  args: { id: v.id("stocks") },
+  args: { id: v.id("stocks"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
     return await ctx.db.get(args.id);
   },
 });
 
 export const getStockByTicker = query({
-  args: { ticker: v.string() },
+  args: { ticker: v.string(), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
     return await ctx.db
       .query("stocks")
       .withIndex("by_ticker", (q) => q.eq("ticker", args.ticker))
@@ -164,8 +183,10 @@ export const getStockByTicker = query({
 });
 
 export const listTags = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const stocks = await ctx.db.query("stocks").collect();
     const tagSet = new Set<string>();
     for (const stock of stocks) {

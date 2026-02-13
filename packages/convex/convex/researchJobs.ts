@@ -7,6 +7,7 @@ import {
 } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { requireAuth } from "./authHelpers";
 
 const MAX_CONCURRENT_JOBS = 5;
 
@@ -43,8 +44,11 @@ export const createResearchJob = mutation({
     stockIds: v.array(v.id("stocks")),
     provider: v.literal("openai"),
     scheduleId: v.optional(v.id("schedules")),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const prompt = await ctx.db.get(args.promptId);
     if (!prompt) {
       throw new Error("Prompt not found");
@@ -72,8 +76,11 @@ export const createAndStartResearch = mutation({
     stockIds: v.array(v.id("stocks")),
     provider: v.literal("openai"),
     scheduleId: v.optional(v.id("schedules")),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const prompt = await ctx.db.get(args.promptId);
     if (!prompt) {
       throw new Error("Prompt not found");
@@ -174,8 +181,11 @@ export const logCost = internalMutation({
 export const cancelJob = mutation({
   args: {
     id: v.id("researchJobs"),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const job = await ctx.db.get(args.id);
     if (!job) {
       throw new Error("Research job not found");
@@ -198,8 +208,11 @@ export const cancelJob = mutation({
 export const retryJob = mutation({
   args: {
     id: v.id("researchJobs"),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const job = await ctx.db.get(args.id);
     if (!job) {
       throw new Error("Research job not found");
@@ -208,6 +221,9 @@ export const retryJob = mutation({
     if (job.status !== "failed") {
       throw new Error("Can only retry failed jobs");
     }
+
+    // Enforce concurrent job limit on retry to prevent bypass
+    await enforceConcurrentJobLimit(ctx);
 
     if (job.attempts >= 3) {
       // Reset attempts to allow manual retry
@@ -234,8 +250,11 @@ export const retryJob = mutation({
 export const deleteJob = mutation({
   args: {
     id: v.id("researchJobs"),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const job = await ctx.db.get(args.id);
     if (!job) {
       throw new Error("Research job not found");
@@ -267,8 +286,11 @@ export const deleteJob = mutation({
 export const toggleFavorite = mutation({
   args: {
     id: v.id("researchJobs"),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const job = await ctx.db.get(args.id);
     if (!job) {
       throw new Error("Research job not found");
@@ -287,8 +309,11 @@ export const listJobs = query({
     status: v.optional(jobStatus),
     stockId: v.optional(v.id("stocks")),
     promptId: v.optional(v.id("prompts")),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     let jobs;
 
     if (args.status) {
@@ -317,15 +342,18 @@ export const listJobs = query({
 });
 
 export const getJob = query({
-  args: { id: v.id("researchJobs") },
+  args: { id: v.id("researchJobs"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
     return await ctx.db.get(args.id);
   },
 });
 
 export const getActiveJobs = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const pendingJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
@@ -366,8 +394,11 @@ export const listResults = query({
     dateTo: v.optional(v.number()),
     cursor: v.optional(v.string()),
     limit: v.optional(v.number()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const pageSize = Math.min(args.limit ?? 20, 100);
 
     let jobsQuery;
@@ -416,8 +447,11 @@ export const searchResults = query({
   args: {
     searchTerm: v.string(),
     limit: v.optional(v.number()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const maxResults = Math.min(args.limit ?? 50, 100);
     const term = args.searchTerm.toLowerCase();
 
@@ -448,8 +482,10 @@ export const searchResults = query({
 });
 
 export const listFavorites = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     return await ctx.db
       .query("researchJobs")
       .withIndex("by_isFavorited", (q) => q.eq("isFavorited", true))

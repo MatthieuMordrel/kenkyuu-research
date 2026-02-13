@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
+import { requireAuth } from "./authHelpers";
 
 // --- Mutations ---
 
@@ -27,8 +28,11 @@ export const getMonthlyCost = query({
   args: {
     /** Optional: override the month to query (unix ms of any moment in the desired month). Defaults to now. */
     monthTimestamp: v.optional(v.number()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const target = new Date(args.monthTimestamp ?? Date.now());
     const startOfMonth = new Date(
       target.getFullYear(),
@@ -104,8 +108,11 @@ export const getCostByProvider = query({
     from: v.optional(v.number()),
     /** Optional end timestamp filter (unix ms). */
     to: v.optional(v.number()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     let logsQuery = ctx.db.query("costLogs").withIndex("by_timestamp");
 
     if (args.from !== undefined && args.to !== undefined) {
@@ -156,8 +163,11 @@ export const getCostHistory = query({
   args: {
     /** Number of months to look back (default 6). */
     months: v.optional(v.number()),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.token);
+
     const monthCount = Math.min(args.months ?? 6, 24);
     const now = new Date();
 
