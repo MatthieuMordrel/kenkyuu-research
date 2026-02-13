@@ -11,7 +11,8 @@ import type { Id } from "./_generated/dataModel";
  * Supports standard 5-field cron: minute hour dayOfMonth month dayOfWeek
  * Also supports preset aliases: @daily, @weekly, @monthly, @hourly
  */
-function computeNextRunAt(cronExpr: string, timezone: string, afterMs: number): number {
+/** @internal Exported for testing */
+export function computeNextRunAt(cronExpr: string, timezone: string, afterMs: number): number {
   const parsed = parseCron(cronExpr);
   const after = new Date(afterMs);
 
@@ -42,7 +43,7 @@ function computeNextRunAt(cronExpr: string, timezone: string, afterMs: number): 
   return afterMs + 24 * 60 * 60 * 1000;
 }
 
-interface CronFields {
+export interface CronFields {
   minute: FieldSpec;
   hour: FieldSpec;
   dayOfMonth: FieldSpec;
@@ -50,9 +51,10 @@ interface CronFields {
   dayOfWeek: FieldSpec;
 }
 
-type FieldSpec = { type: "any" } | { type: "values"; values: Set<number> };
+export type FieldSpec = { type: "any" } | { type: "values"; values: Set<number> };
 
-function parseCron(expr: string): CronFields {
+/** @internal Exported for testing */
+export function parseCron(expr: string): CronFields {
   const trimmed = expr.trim();
 
   if (trimmed === "@daily" || trimmed === "@midnight") {
@@ -82,7 +84,8 @@ function parseCron(expr: string): CronFields {
   };
 }
 
-function parseField(field: string, min: number, max: number): FieldSpec {
+/** @internal Exported for testing */
+export function parseField(field: string, min: number, max: number): FieldSpec {
   if (field === "*") {
     return { type: "any" };
   }
@@ -127,7 +130,8 @@ function parseField(field: string, min: number, max: number): FieldSpec {
   return { type: "values", values };
 }
 
-function matchesField(spec: FieldSpec, value: number): boolean {
+/** @internal Exported for testing */
+export function matchesField(spec: FieldSpec, value: number): boolean {
   if (spec.type === "any") return true;
   return spec.values.has(value);
 }

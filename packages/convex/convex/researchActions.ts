@@ -18,7 +18,8 @@ async function getOpenAIClient(
 }
 
 // o3-deep-research pricing: Input $10/1M tokens, Output $40/1M tokens
-function estimateCost(usage: OpenAI.Responses.ResponseUsage | undefined): number | undefined {
+/** @internal Exported for testing */
+export function estimateCost(usage: OpenAI.Responses.ResponseUsage | undefined): number | undefined {
   if (!usage) return undefined;
   const inputTokens = usage.input_tokens ?? 0;
   const outputTokens = usage.output_tokens ?? 0;

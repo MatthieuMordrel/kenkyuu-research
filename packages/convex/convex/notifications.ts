@@ -99,7 +99,8 @@ export const sendEmail = internalAction({
   },
 });
 
-function escapeHtml(str: string): string {
+/** @internal Exported for testing */
+export function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

@@ -76,7 +76,8 @@ http.route({
   }),
 });
 
-function base64Decode(str: string): Uint8Array {
+/** @internal Exported for testing */
+export function base64Decode(str: string): Uint8Array {
   const binaryStr = atob(str);
   const bytes = new Uint8Array(binaryStr.length);
   for (let i = 0; i < binaryStr.length; i++) {
@@ -85,7 +86,8 @@ function base64Decode(str: string): Uint8Array {
   return bytes;
 }
 
-function uint8ArrayToBase64(bytes: Uint8Array): string {
+/** @internal Exported for testing */
+export function uint8ArrayToBase64(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);

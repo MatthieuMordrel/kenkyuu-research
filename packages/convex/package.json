@@ -20,6 +20,7 @@
   "scripts": {
     "dev": "convex dev",
     "deploy": "convex deploy",
+    "test": "vitest run",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
-    "@types/node": "^25.1.0"
+    "@types/node": "^25.1.0",
+    "vitest": "^4.0.18"
   }
 }

@@ -75,6 +75,7 @@
       "devDependencies": {
         "@types/bcryptjs": "^3.0.0",
         "@types/node": "^25.1.0",
+        "vitest": "^4.0.18",
       },
     },
     "packages/utils": {
