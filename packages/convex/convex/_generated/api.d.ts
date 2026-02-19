@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as auditLog from "../auditLog.js";
 import type * as auth from "../auth.js";
 import type * as authHelpers from "../authHelpers.js";
 import type * as budgetAlert from "../budgetAlert.js";
@@ -26,6 +27,7 @@ import type * as schedules from "../schedules.js";
 import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
 import type * as stocks from "../stocks.js";
+import type * as validation from "../validation.js";
 
 import type {
   ApiFromModules,
@@ -34,6 +36,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auditLog: typeof auditLog;
   auth: typeof auth;
   authHelpers: typeof authHelpers;
   budgetAlert: typeof budgetAlert;
@@ -52,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   settings: typeof settings;
   stocks: typeof stocks;
+  validation: typeof validation;
 }>;
 
 /**
