@@ -1,15 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <!-- Background circle -->
-  <circle cx="32" cy="32" r="30" fill="#0c1222"/>
+  <!-- Background -->
+  <rect width="64" height="64" rx="14" fill="#0c1222"/>
 
-  <!-- Upward trend line (stock chart) -->
-  <polyline points="14,44 24,38 32,42 42,28 50,20" stroke="#0ea5e9" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Flask outline -->
+  <path d="M27 12 L27 24 L17 47 C15.8 49.8 17.5 52 20 52 L44 52 C46.5 52 48.2 49.8 47 47 L37 24 L37 12"
+        stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.55"/>
+  <path d="M25 12 L39 12" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" opacity="0.55"/>
 
-  <!-- Glow dot at the end of trend -->
-  <circle cx="50" cy="20" r="3" fill="#0ea5e9"/>
-  <circle cx="50" cy="20" r="5" fill="#0ea5e9" opacity="0.3"/>
+  <!-- Liquid fill -->
+  <path d="M21.5 40 L18.2 46 C16.8 48.8 18.2 51 20.5 51 L43.5 51 C45.8 51 47.2 48.8 45.8 46 L42.5 40 Z"
+        fill="#0ea5e9" fill-opacity="0.2"/>
 
-  <!-- Magnifying glass (research) -->
-  <circle cx="26" cy="30" r="10" stroke="#a855f7" stroke-width="2.5" fill="none" opacity="0.7"/>
-  <line x1="33" y1="37" x2="40" y2="44" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+  <!-- Chart trend line as single path -->
+  <path d="M15 48 L22 42 L30 45 L38 35 L46 24"
+        stroke="#22d3ee" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Glow dot -->
+  <circle cx="46" cy="24" r="3.5" fill="#22d3ee"/>
+  <circle cx="46" cy="24" r="7" fill="#0ea5e9" fill-opacity="0.25"/>
 </svg>
