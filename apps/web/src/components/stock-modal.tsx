@@ -167,7 +167,17 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-md"
+        onPointerDownOutside={(e) => {
+          // Prevent dialog from closing when clicking on portaled Base UI select content
+          const target = (e as unknown as { detail: { originalEvent: PointerEvent } })
+            .detail.originalEvent.target as HTMLElement | null;
+          if (target?.closest?.("[data-slot='select-content']")) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Stock" : "Add Stock"}</DialogTitle>
           <DialogDescription>
