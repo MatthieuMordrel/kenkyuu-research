@@ -1,10 +1,16 @@
 import { QueryClient } from "@tanstack/react-query";
+import { ConvexQueryClient } from "@convex-dev/react-query";
+import { convex } from "./convex";
+
+const convexQueryClient = new ConvexQueryClient(convex);
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60, // 1 minute
-      retry: 1,
+      queryKeyHashFn: convexQueryClient.hashFn(),
+      queryFn: convexQueryClient.queryFn(),
     },
   },
 });
+
+convexQueryClient.connect(queryClient);

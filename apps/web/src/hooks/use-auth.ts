@@ -1,4 +1,5 @@
-import { useAction, useQuery } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
+import { convexQuery, useConvexAction } from "@convex-dev/react-query";
 import { api } from "@repo/convex";
 import { useCallback } from "react";
 import {
@@ -14,13 +15,12 @@ export function useAuth() {
   const hasHydrated = useAuthHasHydrated();
   const { loggedIn, loggedOut } = useAuthActions();
 
-  const loginAction = useAction(api.auth.login);
-  const logoutAction = useAction(api.auth.logout);
+  const loginAction = useConvexAction(api.auth.login);
+  const logoutAction = useConvexAction(api.auth.logout);
 
   // Validate session reactively via Convex query
-  const sessionValidation = useQuery(
-    api.authHelpers.validateSession,
-    token ? { token } : "skip",
+  const { data: sessionValidation } = useQuery(
+    convexQuery(api.authHelpers.validateSession, token ? { token } : "skip"),
   );
 
   // If we think we're authenticated but the server says invalid, log out

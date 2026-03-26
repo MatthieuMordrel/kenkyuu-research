@@ -1,4 +1,5 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
+import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@repo/convex";
 import type { GenericId } from "convex/values";
 import { useAuthToken } from "@/lib/auth";
@@ -16,40 +17,46 @@ interface UseStocksOptions {
 export function useStocks(options: UseStocksOptions = {}) {
   const token = useAuthToken();
   const { search, tag, sortBy, sortOrder } = options;
-  return useQuery(
-    api.stocks.listStocks,
-    token
-      ? {
-          search: search || undefined,
-          tag: tag || undefined,
-          sortBy,
-          sortOrder,
-          token,
-        }
-      : "skip",
+  const { data } = useQuery(
+    convexQuery(
+      api.stocks.listStocks,
+      token
+        ? {
+            search: search || undefined,
+            tag: tag || undefined,
+            sortBy,
+            sortOrder,
+            token,
+          }
+        : "skip",
+    ),
   );
+  return data;
 }
 
 export function useStock(id: GenericId<"stocks">) {
   const token = useAuthToken();
-  return useQuery(api.stocks.getStock, token ? { id, token } : "skip");
+  const { data } = useQuery(convexQuery(api.stocks.getStock, token ? { id, token } : "skip"));
+  return data;
 }
 
 export function useStockByTicker(ticker: string) {
   const token = useAuthToken();
-  return useQuery(api.stocks.getStockByTicker, token ? { ticker, token } : "skip");
+  const { data } = useQuery(convexQuery(api.stocks.getStockByTicker, token ? { ticker, token } : "skip"));
+  return data;
 }
 
 export function useTags() {
   const token = useAuthToken();
-  return useQuery(api.stocks.listTags, token ? { token } : "skip");
+  const { data } = useQuery(convexQuery(api.stocks.listTags, token ? { token } : "skip"));
+  return data;
 }
 
 // --- Mutation Hooks ---
 
 export function useAddStock() {
   const token = useAuthToken();
-  const mutation = useMutation(api.stocks.addStock);
+  const mutation = useConvexMutation(api.stocks.addStock);
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
@@ -59,7 +66,7 @@ export function useAddStock() {
 
 export function useUpdateStock() {
   const token = useAuthToken();
-  const mutation = useMutation(api.stocks.updateStock);
+  const mutation = useConvexMutation(api.stocks.updateStock);
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
@@ -69,7 +76,7 @@ export function useUpdateStock() {
 
 export function useDeleteStock() {
   const token = useAuthToken();
-  const mutation = useMutation(api.stocks.deleteStock);
+  const mutation = useConvexMutation(api.stocks.deleteStock);
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),

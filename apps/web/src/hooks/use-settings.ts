@@ -1,4 +1,5 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
+import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@repo/convex";
 import { useAuthToken } from "@/lib/auth";
 import { useCallback } from "react";
@@ -7,17 +8,17 @@ import { useCallback } from "react";
 
 export function useSettings(key: string) {
   const token = useAuthToken();
-  return useQuery(
-    api.settings.getSetting,
-    token ? { key, token } : "skip",
+  const { data } = useQuery(
+    convexQuery(api.settings.getSetting, token ? { key, token } : "skip"),
   );
+  return data;
 }
 
 // --- Mutation Hooks ---
 
 export function useUpdateSetting() {
   const token = useAuthToken();
-  const mutation = useMutation(api.settings.upsertSetting);
+  const mutation = useConvexMutation(api.settings.upsertSetting);
 
   return useCallback(
     async (args: { key: string; value: string }) => {

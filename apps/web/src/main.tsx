@@ -8,9 +8,8 @@ import { routeTree } from "./routeTree.gen";
 import reportWebVitals from "./reportWebVitals.ts";
 import "./styles.css";
 
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+import { ConvexProvider } from "convex/react";
+import { convex } from "./lib/convex";
 
 // Create a new router instance
 const router = createRouter({

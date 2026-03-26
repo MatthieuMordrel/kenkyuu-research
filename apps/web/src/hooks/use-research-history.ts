@@ -1,4 +1,5 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
+import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { api } from "@repo/convex";
 import type { GenericId } from "convex/values";
 import { useState, useCallback } from "react";
@@ -24,20 +25,22 @@ export function useResearchHistory(options: UseResearchHistoryOptions = {}) {
   const { status, stockId, promptId, dateFrom, dateTo, pageSize = 20 } = options;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const data = useQuery(
-    api.researchJobs.listResults,
-    token
-      ? {
-          status: status ?? undefined,
-          stockId: stockId ?? undefined,
-          promptId: promptId ?? undefined,
-          dateFrom: dateFrom ?? undefined,
-          dateTo: dateTo ?? undefined,
-          cursor,
-          limit: pageSize,
-          token,
-        }
-      : "skip",
+  const { data } = useQuery(
+    convexQuery(
+      api.researchJobs.listResults,
+      token
+        ? {
+            status: status ?? undefined,
+            stockId: stockId ?? undefined,
+            promptId: promptId ?? undefined,
+            dateFrom: dateFrom ?? undefined,
+            dateTo: dateTo ?? undefined,
+            cursor,
+            limit: pageSize,
+            token,
+          }
+        : "skip",
+    ),
   );
 
   const loadMore = useCallback(() => {
@@ -61,22 +64,26 @@ export function useResearchHistory(options: UseResearchHistoryOptions = {}) {
 
 export function useSearchResults(searchTerm: string, limit?: number) {
   const token = useAuthToken();
-  return useQuery(
-    api.researchJobs.searchResults,
-    token && searchTerm.length > 0 ? { searchTerm, limit, token } : "skip",
+  const { data } = useQuery(
+    convexQuery(
+      api.researchJobs.searchResults,
+      token && searchTerm.length > 0 ? { searchTerm, limit, token } : "skip",
+    ),
   );
+  return data;
 }
 
 export function useFavoriteResults() {
   const token = useAuthToken();
-  return useQuery(api.researchJobs.listFavorites, token ? { token } : "skip");
+  const { data } = useQuery(convexQuery(api.researchJobs.listFavorites, token ? { token } : "skip"));
+  return data;
 }
 
 // --- Mutation Hooks ---
 
 export function useToggleFavorite() {
   const token = useAuthToken();
-  const mutation = useMutation(api.researchJobs.toggleFavorite);
+  const mutation = useConvexMutation(api.researchJobs.toggleFavorite);
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
