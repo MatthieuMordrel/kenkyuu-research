@@ -131,6 +131,78 @@ export const processWebhookEvent = internalAction({
   },
 });
 
+const STALE_JOB_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Cron-driven recovery for stale "running" jobs.
+ * Polls OpenAI for the actual status of any job that has been running longer
+ * than the threshold and processes the result — exactly as the webhook would.
+ */
+export const recoverStaleJobs = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const staleJobs = await ctx.runQuery(
+      internal.researchJobs.getStaleRunningJobs,
+      { staleThresholdMs: STALE_JOB_THRESHOLD_MS },
+    );
+
+    if (staleJobs.length === 0) return;
+
+    const client = await getOpenAIClient(ctx);
+    if (!client) {
+      console.error("recoverStaleJobs: OpenAI API key not configured");
+      return;
+    }
+
+    for (const job of staleJobs) {
+      try {
+        const response = await client.responses.retrieve(job.externalJobId!);
+
+        if (response.status === "completed") {
+          await ctx.runAction(internal.researchActions.processWebhookEvent, {
+            jobId: job._id,
+            eventType: "response.completed",
+          });
+          console.log(`recoverStaleJobs: recovered completed job ${job._id}`);
+        } else if (
+          response.status === "failed" ||
+          response.status === "cancelled"
+        ) {
+          await ctx.runAction(internal.researchActions.processWebhookEvent, {
+            jobId: job._id,
+            eventType: `response.${response.status}`,
+          });
+          console.log(
+            `recoverStaleJobs: recovered ${response.status} job ${job._id}`,
+          );
+        } else if (response.status === "in_progress" || response.status === "queued") {
+          // Still running on OpenAI's side — leave it alone.
+          // If it's been extremely long (>3 hours), mark as failed to unblock the queue.
+          const threeHours = 3 * 60 * 60 * 1000;
+          if (Date.now() - job.createdAt > threeHours) {
+            await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+              id: job._id,
+              status: "failed",
+              error: "Job timed out after 3 hours with no result from OpenAI",
+            });
+            await ctx.scheduler.runAfter(
+              0,
+              internal.notifications.dispatchJobNotification,
+              { jobId: job._id },
+            );
+            console.log(`recoverStaleJobs: timed out job ${job._id}`);
+          }
+        }
+      } catch (error) {
+        console.error(
+          `recoverStaleJobs: failed to check job ${job._id}:`,
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
+  },
+});
+
 export const startResearch = internalAction({
   args: {
     jobId: v.id("researchJobs"),

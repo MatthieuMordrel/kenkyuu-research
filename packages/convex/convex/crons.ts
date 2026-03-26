@@ -9,4 +9,13 @@ crons.daily(
   internal.earningsActions.fetchAllEarnings,
 );
 
+// Recover research jobs whose webhooks were missed.
+// Runs every 15 minutes, checks for jobs stuck in "running" for >30 min,
+// polls OpenAI for their actual status, and processes the result.
+crons.interval(
+  "recover-stale-jobs",
+  { minutes: 15 },
+  internal.researchActions.recoverStaleJobs,
+);
+
 export default crons;

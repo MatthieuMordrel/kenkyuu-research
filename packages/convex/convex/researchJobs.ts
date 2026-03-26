@@ -505,6 +505,22 @@ export const listFavorites = query({
   },
 });
 
+/** Returns running jobs that have been running for longer than the given threshold. */
+export const getStaleRunningJobs = internalQuery({
+  args: { staleThresholdMs: v.number() },
+  handler: async (ctx, args) => {
+    const cutoff = Date.now() - args.staleThresholdMs;
+    const runningJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+
+    return runningJobs.filter(
+      (job) => job.externalJobId && job.createdAt < cutoff,
+    );
+  },
+});
+
 export const getJobByExternalId = internalQuery({
   args: { externalJobId: v.string() },
   handler: async (ctx, args) => {
