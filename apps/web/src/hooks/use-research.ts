@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@repo/convex";
 import type { GenericId } from "convex/values";
 import { useAuthToken } from "@/lib/auth";
@@ -69,6 +69,16 @@ export function useRetryJob() {
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
     [mutation, token],
+  );
+}
+
+export function useCheckJobHealth() {
+  const token = useAuthToken();
+  const checkHealth = useAction(api.researchActions.checkJobHealth);
+  return useCallback(
+    (args: { jobId: GenericId<"researchJobs"> }) =>
+      checkHealth({ jobId: args.jobId, token: token ?? undefined }),
+    [checkHealth, token],
   );
 }
 

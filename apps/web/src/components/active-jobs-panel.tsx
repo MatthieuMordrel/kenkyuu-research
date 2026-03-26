@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useActiveJobs, useCancelJob, useRetryJob } from "@/hooks/use-research";
+import { useActiveJobs, useCancelJob, useRetryJob, useCheckJobHealth } from "@/hooks/use-research";
 import { usePrompts } from "@/hooks/use-prompts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,26 @@ import {
   XCircle,
   RotateCcw,
   Activity,
+  HeartPulse,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useNow } from "@/hooks/use-now";
 import type { Doc } from "@repo/convex/dataModel";
+
+interface HealthCheckResult {
+  convexStatus: string;
+  openaiStatus: string | null;
+  message: string;
+  elapsedMs?: number;
+  checkedAt: number;
+}
 
 const STATUS_CONFIG: Record<
   string,
@@ -111,6 +127,42 @@ export function ActiveJobsPanel() {
   );
 }
 
+function HealthStatusIndicator({ result }: { result: HealthCheckResult }) {
+  const isHealthy =
+    result.openaiStatus === "in_progress" || result.openaiStatus === "queued";
+  const isCompleted = result.openaiStatus === "completed";
+
+  const Icon = isCompleted
+    ? CheckCircle2
+    : isHealthy
+      ? CheckCircle2
+      : AlertCircle;
+  const colorClass = isCompleted
+    ? "text-blue-500"
+    : isHealthy
+      ? "text-green-500"
+      : "text-yellow-500";
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
+          <Icon className={cn("size-3", colorClass)} />
+          <span className="text-[10px] font-medium">
+            {result.openaiStatus ?? "unknown"}
+          </span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs">
+        <p className="text-xs">{result.message}</p>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Checked {formatRelativeTime(result.checkedAt, Date.now())}
+        </p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function JobCard({
   job,
   promptName,
@@ -120,15 +172,21 @@ function JobCard({
 }) {
   const cancelJob = useCancelJob();
   const retryJob = useRetryJob();
+  const checkHealth = useCheckJobHealth();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(
+    null,
+  );
   const now = useNow(1_000);
 
   const config = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = config.icon;
   const canCancel = job.status === "pending" || job.status === "running";
   const canRetry = job.status === "failed";
+  const canCheck = job.status === "running" || job.status === "pending";
 
   async function handleCancel() {
     setCancelling(true);
@@ -149,79 +207,128 @@ function JobCard({
     }
   }
 
+  async function handleCheckHealth() {
+    setChecking(true);
+    try {
+      const result = await checkHealth({ jobId: job._id });
+      setHealthResult(result as HealthCheckResult);
+    } catch {
+      setHealthResult({
+        convexStatus: job.status,
+        openaiStatus: null,
+        message: "Failed to check health.",
+        checkedAt: Date.now(),
+      });
+    } finally {
+      setChecking(false);
+    }
+  }
+
   return (
     <>
-      <div className="flex items-center gap-3 rounded-lg border p-3">
-        <div
-          className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-md",
-            job.status === "running" ? "bg-primary/10" : "bg-muted",
-          )}
-        >
-          <StatusIcon
+      <div className="flex flex-col gap-2 rounded-lg border p-3">
+        <div className="flex items-center gap-3">
+          <div
             className={cn(
-              "size-4",
-              job.status === "running"
-                ? "animate-spin text-primary"
-                : "text-muted-foreground",
+              "flex size-8 shrink-0 items-center justify-center rounded-md",
+              job.status === "running" ? "bg-primary/10" : "bg-muted",
             )}
-          />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium">
-              {promptName ?? "Research Job"}
-            </span>
-            <Badge variant={config.variant} className="text-[10px] px-1.5 py-0 shrink-0">
-              {config.label}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{job.stockIds.length} stock{job.stockIds.length !== 1 ? "s" : ""}</span>
-            <span>·</span>
-            <span>{formatRelativeTime(job.createdAt, now)}</span>
-            {job.attempts > 0 && (
-              <>
-                <span>·</span>
-                <span>Attempt {job.attempts}/3</span>
-              </>
-            )}
-          </div>
-          {job.error && (
-            <p className="text-xs text-destructive mt-0.5 line-clamp-1">
-              {job.error}
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {canRetry && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleRetry}
-              disabled={retrying}
-              title="Retry"
-            >
-              {retrying ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <RotateCcw className="size-3.5" />
+          >
+            <StatusIcon
+              className={cn(
+                "size-4",
+                job.status === "running"
+                  ? "animate-spin text-primary"
+                  : "text-muted-foreground",
               )}
-              <span className="sr-only">Retry</span>
-            </Button>
-          )}
-          {canCancel && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setCancelDialogOpen(true)}
-              title="Cancel"
-            >
-              <XCircle className="size-3.5 text-destructive" />
-              <span className="sr-only">Cancel</span>
-            </Button>
-          )}
+            />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-medium">
+                {promptName ?? "Research Job"}
+              </span>
+              <Badge
+                variant={config.variant}
+                className="text-[10px] px-1.5 py-0 shrink-0"
+              >
+                {config.label}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>
+                {job.stockIds.length} stock
+                {job.stockIds.length !== 1 ? "s" : ""}
+              </span>
+              <span>·</span>
+              <span>{formatRelativeTime(job.createdAt, now)}</span>
+              {job.attempts > 0 && (
+                <>
+                  <span>·</span>
+                  <span>Attempt {job.attempts}/3</span>
+                </>
+              )}
+            </div>
+            {job.error && (
+              <p className="text-xs text-destructive mt-0.5 line-clamp-1">
+                {job.error}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {canCheck && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={handleCheckHealth}
+                    disabled={checking}
+                    title="Check Health"
+                  >
+                    {checking ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <HeartPulse className="size-3.5" />
+                    )}
+                    <span className="sr-only">Check Health</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Check OpenAI status</TooltipContent>
+              </Tooltip>
+            )}
+            {canRetry && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleRetry}
+                disabled={retrying}
+                title="Retry"
+              >
+                {retrying ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="size-3.5" />
+                )}
+                <span className="sr-only">Retry</span>
+              </Button>
+            )}
+            {canCancel && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setCancelDialogOpen(true)}
+                title="Cancel"
+              >
+                <XCircle className="size-3.5 text-destructive" />
+                <span className="sr-only">Cancel</span>
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Health check result */}
+        {healthResult && <HealthStatusIndicator result={healthResult} />}
       </div>
 
       {/* Cancel confirmation dialog */}

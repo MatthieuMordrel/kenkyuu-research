@@ -2,8 +2,8 @@
 
 import { v } from "convex/values";
 import OpenAI from "openai";
-import { internalAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { action, internalAction } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 
 const MAX_RETRIES = 3;
 
@@ -199,6 +199,112 @@ export const recoverStaleJobs = internalAction({
           error instanceof Error ? error.message : error,
         );
       }
+    }
+  },
+});
+
+/**
+ * Public action: checks the health of a running job by polling OpenAI directly.
+ * Returns the OpenAI-side status so the user can confirm the job is progressing.
+ */
+interface HealthCheckResult {
+  jobId: string;
+  convexStatus: string;
+  openaiStatus: string | null;
+  message: string;
+  elapsedMs?: number;
+  checkedAt: number;
+}
+
+export const checkJobHealth = action({
+  args: {
+    jobId: v.id("researchJobs"),
+    token: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<HealthCheckResult> => {
+    // Validate auth
+    if (!args.token) throw new Error("Unauthorized");
+    const session = await ctx.runQuery(
+      internal.authHelpers.validateSessionInternal,
+      { token: args.token },
+    );
+    if (!session.valid) throw new Error("Unauthorized");
+
+    const job = await ctx.runQuery(internal.researchJobs.getJobInternal, {
+      id: args.jobId,
+    });
+    if (!job) throw new Error("Research job not found");
+
+    const jobId = args.jobId as string;
+
+    // If no external ID yet, job hasn't been submitted to OpenAI
+    if (!job.externalJobId) {
+      return {
+        jobId,
+        convexStatus: job.status as string,
+        openaiStatus: null,
+        message:
+          job.status === "pending"
+            ? "Job is queued and has not been submitted to OpenAI yet."
+            : "No external job ID found.",
+        checkedAt: Date.now(),
+      };
+    }
+
+    // If job is already terminal, no need to poll OpenAI
+    if (job.status === "completed" || job.status === "failed") {
+      return {
+        jobId,
+        convexStatus: job.status as string,
+        openaiStatus: job.status === "completed" ? "completed" : "failed",
+        message: `Job already ${job.status}.`,
+        checkedAt: Date.now(),
+      };
+    }
+
+    const client = await getOpenAIClient(ctx);
+    if (!client) {
+      return {
+        jobId,
+        convexStatus: job.status as string,
+        openaiStatus: null,
+        message: "OpenAI API key not configured. Cannot verify external status.",
+        checkedAt: Date.now(),
+      };
+    }
+
+    try {
+      const response = await client.responses.retrieve(job.externalJobId);
+      const elapsedMs = Date.now() - job.createdAt;
+      const elapsedMin = Math.floor(elapsedMs / 60_000);
+
+      let message: string;
+      if (response.status === "in_progress" || response.status === "queued") {
+        message = `Job is ${response.status} on OpenAI (running for ${elapsedMin}m). This is normal for o3-deep-research.`;
+      } else if (response.status === "completed") {
+        message = `OpenAI reports completed — webhook may be pending. Recovery cron will pick it up within 15 minutes.`;
+      } else {
+        message = `OpenAI status: ${response.status}`;
+      }
+
+      return {
+        jobId,
+        convexStatus: job.status as string,
+        openaiStatus: (response.status as string) ?? null,
+        elapsedMs,
+        message,
+        checkedAt: Date.now(),
+      };
+    } catch (error: unknown) {
+      const errMsg =
+        error instanceof Error ? error.message : "Unknown error";
+      return {
+        jobId,
+        convexStatus: job.status as string,
+        openaiStatus: null,
+        message: `Failed to check OpenAI status: ${errMsg}`,
+        checkedAt: Date.now(),
+      };
     }
   },
 });
