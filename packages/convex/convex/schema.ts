@@ -28,7 +28,9 @@ export default defineSchema({
     isBuiltIn: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }),
+  })
+    .index("by_type", ["type"])
+    .index("by_name", ["name"]),
 
   researchJobs: defineTable({
     promptId: v.id("prompts"),
@@ -80,7 +82,8 @@ export default defineSchema({
     nextRunAt: v.optional(v.number()),
     nextScheduledFunctionId: v.optional(v.string()),
     createdAt: v.number(),
-  }),
+  })
+    .index("by_enabled_nextRunAt", ["enabled", "nextRunAt"]),
 
   settings: defineTable({
     key: v.string(),

@@ -64,10 +64,15 @@ export const upcomingSchedules = query({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
-    const schedules = await ctx.db.query("schedules").collect();
+    // Use compound index to get only enabled schedules sorted by nextRunAt
+    const enabledSchedules = await ctx.db
+      .query("schedules")
+      .withIndex("by_enabled_nextRunAt", (q) => q.eq("enabled", true))
+      .order("asc")
+      .take(5);
 
-    const upcoming = schedules
-      .filter((s) => s.enabled && s.nextRunAt !== undefined)
+    const upcoming = enabledSchedules
+      .filter((s) => s.nextRunAt !== undefined)
       .map((s) => ({
         _id: s._id,
         name: s.name,
@@ -75,9 +80,7 @@ export const upcomingSchedules = query({
         nextRunAt: s.nextRunAt!,
         cron: s.cron,
         timezone: s.timezone,
-      }))
-      .toSorted((a, b) => a.nextRunAt - b.nextRunAt)
-      .slice(0, 5);
+      }));
 
     // Enrich with prompt names
     const enriched = await Promise.all(
@@ -149,11 +152,11 @@ export const activeJobsCount = query({
     const pendingJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .collect();
+      .take(MAX_CONCURRENT_JOBS + 1);
     const runningJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "running"))
-      .collect();
+      .take(MAX_CONCURRENT_JOBS + 1);
 
     return {
       pending: pendingJobs.length,

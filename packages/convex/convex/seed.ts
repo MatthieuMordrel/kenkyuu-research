@@ -103,14 +103,16 @@ export const backfillCostLogs = internalMutation({
 export const seedPrompts = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const existing = await ctx.db.query("prompts").collect();
-    const existingNames = new Set(existing.map((p) => p.name));
-
     let inserted = 0;
     const now = Date.now();
 
     for (const prompt of BUILT_IN_PROMPTS) {
-      if (!existingNames.has(prompt.name)) {
+      // Check existence by name using index instead of loading all prompts
+      const existingPrompt = await ctx.db
+        .query("prompts")
+        .withIndex("by_name", (q) => q.eq("name", prompt.name))
+        .first();
+      if (!existingPrompt) {
         await ctx.db.insert("prompts", {
           ...prompt,
           createdAt: now,

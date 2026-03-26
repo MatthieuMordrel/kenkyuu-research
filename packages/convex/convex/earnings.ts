@@ -60,8 +60,21 @@ export const getEarningsSummaryAll = query({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
-    const allEarnings = await ctx.db.query("earnings").collect();
     const today = new Date().toISOString().split("T")[0]!;
+    // Only fetch earnings within a relevant window: 1 year back + 1 year ahead
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const oneYearAhead = new Date();
+    oneYearAhead.setFullYear(oneYearAhead.getFullYear() + 1);
+    const dateFrom = oneYearAgo.toISOString().split("T")[0]!;
+    const dateTo = oneYearAhead.toISOString().split("T")[0]!;
+
+    const allEarnings = await ctx.db
+      .query("earnings")
+      .withIndex("by_date", (q) =>
+        q.gte("date", dateFrom).lte("date", dateTo),
+      )
+      .collect();
 
     const byStock: Record<
       string,

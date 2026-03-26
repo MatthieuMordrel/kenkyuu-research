@@ -133,10 +133,15 @@ export const listPrompts = query({
     await requireAuth(ctx, args.token);
 
     const maxResults = Math.min(args.limit ?? 200, 200);
-    let prompts = await ctx.db.query("prompts").take(maxResults);
 
+    let prompts;
     if (args.type) {
-      prompts = prompts.filter((p) => p.type === args.type);
+      prompts = await ctx.db
+        .query("prompts")
+        .withIndex("by_type", (q) => q.eq("type", args.type!))
+        .take(maxResults);
+    } else {
+      prompts = await ctx.db.query("prompts").take(maxResults);
     }
 
     // Sort: built-in first, then by createdAt descending

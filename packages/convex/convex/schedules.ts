@@ -240,10 +240,13 @@ export const toggleGlobalPause = mutation({
     }
 
     if (newValue) {
-      // Pausing: cancel all scheduled functions
-      const enabledSchedules = await ctx.db.query("schedules").collect();
+      // Pausing: cancel all enabled scheduled functions
+      const enabledSchedules = await ctx.db
+        .query("schedules")
+        .withIndex("by_enabled_nextRunAt", (q) => q.eq("enabled", true))
+        .take(200);
       for (const schedule of enabledSchedules) {
-        if (schedule.enabled && schedule.nextScheduledFunctionId) {
+        if (schedule.nextScheduledFunctionId) {
           try {
             await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
           } catch {
@@ -257,9 +260,12 @@ export const toggleGlobalPause = mutation({
       }
     } else {
       // Unpausing: reschedule all enabled schedules
-      const enabledSchedules = await ctx.db.query("schedules").collect();
+      const enabledSchedules = await ctx.db
+        .query("schedules")
+        .withIndex("by_enabled_nextRunAt", (q) => q.eq("enabled", true))
+        .take(200);
       for (const schedule of enabledSchedules) {
-        if (schedule.enabled) {
+        {
           await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
             scheduleId: schedule._id,
           });
@@ -343,18 +349,22 @@ export const getUpcomingRuns = query({
 
     const maxResults = args.limit ?? 10;
 
-    const schedules = await ctx.db.query("schedules").collect();
-    const upcoming = schedules
-      .filter((s) => s.enabled && s.nextRunAt !== undefined)
+    // Use compound index to get only enabled schedules sorted by nextRunAt
+    const enabledSchedules = await ctx.db
+      .query("schedules")
+      .withIndex("by_enabled_nextRunAt", (q) => q.eq("enabled", true))
+      .order("asc")
+      .take(maxResults);
+
+    const upcoming = enabledSchedules
+      .filter((s) => s.nextRunAt !== undefined)
       .map((s) => ({
         scheduleId: s._id,
         scheduleName: s.name,
         promptId: s.promptId,
         nextRunAt: s.nextRunAt!,
         timezone: s.timezone,
-      }))
-      .toSorted((a, b) => a.nextRunAt - b.nextRunAt)
-      .slice(0, maxResults);
+      }));
 
     return upcoming;
   },
@@ -421,16 +431,16 @@ export const createScheduledJob = internalMutation({
     }
 
     // Enforce concurrent job limit on scheduled jobs to prevent bypass
+    const MAX_CONCURRENT_JOBS = 5;
     const pendingJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .collect();
+      .take(MAX_CONCURRENT_JOBS);
     const runningJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "running"))
-      .collect();
+      .take(MAX_CONCURRENT_JOBS);
 
-    const MAX_CONCURRENT_JOBS = 5;
     if (pendingJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
       throw new Error(`Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed. Scheduled job deferred.`);
     }

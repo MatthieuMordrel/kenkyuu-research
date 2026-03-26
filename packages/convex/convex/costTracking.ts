@@ -179,10 +179,16 @@ export const getCostHistory = query({
     );
     const startTimestamp = startDate.getTime();
 
+    const endTimestamp = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      1,
+    ).getTime();
+
     const logs = await ctx.db
       .query("costLogs")
       .withIndex("by_timestamp", (q) =>
-        q.gte("timestamp", startTimestamp),
+        q.gte("timestamp", startTimestamp).lt("timestamp", endTimestamp),
       )
       .collect();
 

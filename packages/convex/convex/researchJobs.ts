@@ -25,11 +25,11 @@ async function enforceConcurrentJobLimit(ctx: MutationCtx) {
   const pendingJobs = await ctx.db
     .query("researchJobs")
     .withIndex("by_status", (q) => q.eq("status", "pending"))
-    .collect();
+    .take(MAX_CONCURRENT_JOBS);
   const runningJobs = await ctx.db
     .query("researchJobs")
     .withIndex("by_status", (q) => q.eq("status", "running"))
-    .collect();
+    .take(MAX_CONCURRENT_JOBS);
 
   if (pendingJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
     throw new Error(
@@ -335,7 +335,11 @@ export const listJobs = query({
         .order("desc")
         .take(maxResults);
     } else {
-      jobs = await ctx.db.query("researchJobs").order("desc").take(maxResults);
+      jobs = await ctx.db
+        .query("researchJobs")
+        .withIndex("by_createdAt")
+        .order("desc")
+        .take(maxResults);
     }
 
     // Filter by stockId in memory (stockIds is an array)
@@ -363,11 +367,11 @@ export const getActiveJobs = query({
     const pendingJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .collect();
+      .take(MAX_CONCURRENT_JOBS);
     const runningJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "running"))
-      .collect();
+      .take(MAX_CONCURRENT_JOBS);
 
     return {
       jobs: [...pendingJobs, ...runningJobs],
@@ -417,6 +421,25 @@ export const listResults = query({
       jobsQuery = ctx.db
         .query("researchJobs")
         .withIndex("by_promptId", (q) => q.eq("promptId", args.promptId!));
+    } else if (args.dateFrom && args.dateTo) {
+      // Use createdAt index for date-range filtering to avoid post-filter pagination issues
+      jobsQuery = ctx.db
+        .query("researchJobs")
+        .withIndex("by_createdAt", (q) =>
+          q.gte("createdAt", args.dateFrom!).lte("createdAt", args.dateTo!),
+        );
+    } else if (args.dateFrom) {
+      jobsQuery = ctx.db
+        .query("researchJobs")
+        .withIndex("by_createdAt", (q) =>
+          q.gte("createdAt", args.dateFrom!),
+        );
+    } else if (args.dateTo) {
+      jobsQuery = ctx.db
+        .query("researchJobs")
+        .withIndex("by_createdAt", (q) =>
+          q.lte("createdAt", args.dateTo!),
+        );
     } else {
       jobsQuery = ctx.db.query("researchJobs");
     }
@@ -428,16 +451,16 @@ export const listResults = query({
 
     let results = paginatedResult.page;
 
-    // Filter by stockId in memory (stockIds is an array field)
+    // Filter by stockId in memory (stockIds is an array field — can't index)
     if (args.stockId) {
       results = results.filter((j) => j.stockIds.includes(args.stockId!));
     }
 
-    // Filter by date range
-    if (args.dateFrom) {
+    // Filter by date range in memory only when another index was chosen above
+    if ((args.status || args.promptId) && args.dateFrom) {
       results = results.filter((j) => j.createdAt >= args.dateFrom!);
     }
-    if (args.dateTo) {
+    if ((args.status || args.promptId) && args.dateTo) {
       results = results.filter((j) => j.createdAt <= args.dateTo!);
     }
 
@@ -466,12 +489,14 @@ export const searchResults = query({
       return [];
     }
 
-    // Search through completed jobs that have results
+    // Search through recent completed jobs that have results
+    // Limit scan to avoid reading entire table for text search
+    const scanLimit = maxResults * 10;
     const completedJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "completed"))
       .order("desc")
-      .collect();
+      .take(scanLimit);
 
     const matches = [];
     for (const job of completedJobs) {
@@ -510,10 +535,11 @@ export const getStaleRunningJobs = internalQuery({
   args: { staleThresholdMs: v.number() },
   handler: async (ctx, args) => {
     const cutoff = Date.now() - args.staleThresholdMs;
+    // Running jobs are bounded by MAX_CONCURRENT_JOBS, but use a safe limit
     const runningJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "running"))
-      .collect();
+      .take(50);
 
     return runningJobs.filter(
       (job) => job.externalJobId && job.createdAt < cutoff,
