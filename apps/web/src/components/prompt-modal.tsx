@@ -18,7 +18,7 @@ import {
   extractVariables,
   getPromptVariables,
 } from "@/lib/prompt-preview";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Doc } from "@repo/convex/dataModel";
 
@@ -236,60 +236,77 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="prompt-template">Template *</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPreview(!showPreview)}
-                className="h-auto py-1 text-xs"
-              >
-                {showPreview ? (
-                  <EyeOff className="size-3.5" />
-                ) : (
-                  <Eye className="size-3.5" />
-                )}
-                {showPreview ? "Hide Preview" : "Show Preview"}
-              </Button>
-            </div>
-
-            {/* Variable hints */}
-            <div className="flex flex-wrap gap-1.5">
-              {availableVariables.map((v) => (
-                <Badge
-                  key={v.name}
-                  variant={usedVariables.includes(v.name) ? "default" : "outline"}
-                  className="text-[10px] px-1.5 py-0 cursor-help"
-                  title={v.description}
+              <Label>Template *</Label>
+              <div className="flex items-center rounded-md border bg-muted p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className={cn(
+                    "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                    !showPreview
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
                 >
-                  {v.pattern}
-                </Badge>
-              ))}
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className={cn(
+                    "flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                    showPreview
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Eye className="size-3" />
+                  Preview
+                </button>
+              </div>
             </div>
 
-            <Textarea
-              id="prompt-template"
-              placeholder="Write your prompt template here. Use {{TICKER}}, {{STOCKS}}, or {{DATE}} for variable injection."
-              value={form.template}
-              onChange={(e) => updateField("template", e.target.value)}
-              aria-invalid={!!errors.template}
-              rows={8}
-              className="font-mono text-sm"
-            />
-            {errors.template && (
-              <p className="text-xs text-destructive">{errors.template}</p>
+            {/* Variable hints — only show in edit mode */}
+            {!showPreview && (
+              <div className="flex flex-wrap gap-1.5">
+                {availableVariables.map((v) => (
+                  <Badge
+                    key={v.name}
+                    variant={usedVariables.includes(v.name) ? "default" : "outline"}
+                    className="text-[10px] px-1.5 py-0 cursor-help"
+                    title={v.description}
+                  >
+                    {v.pattern}
+                  </Badge>
+                ))}
+              </div>
             )}
 
-            {/* Live preview panel */}
-            {showPreview && form.template.trim() && (
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-muted-foreground">
-                  Preview (with sample data)
-                </Label>
-                <div className="rounded-md border bg-muted/50 p-3 text-sm whitespace-pre-wrap max-h-48 overflow-y-auto">
-                  {previewText}
-                </div>
+            {showPreview ? (
+              <div className="rounded-md border bg-muted/50 p-3 text-sm whitespace-pre-wrap font-mono min-h-[12rem] max-h-[24rem] overflow-y-auto">
+                {form.template.trim() ? (
+                  previewText
+                ) : (
+                  <span className="text-muted-foreground italic">
+                    Enter a template to see a preview
+                  </span>
+                )}
               </div>
+            ) : (
+              <>
+                <Textarea
+                  id="prompt-template"
+                  placeholder="Write your prompt template here. Use {{TICKER}}, {{STOCKS}}, or {{DATE}} for variable injection."
+                  value={form.template}
+                  onChange={(e) => updateField("template", e.target.value)}
+                  aria-invalid={!!errors.template}
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+                {errors.template && (
+                  <p className="text-xs text-destructive">{errors.template}</p>
+                )}
+              </>
             )}
           </div>
 
