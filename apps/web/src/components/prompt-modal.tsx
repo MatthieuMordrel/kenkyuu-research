@@ -18,6 +18,8 @@ import {
   extractVariables,
   getPromptVariables,
 } from "@/lib/prompt-preview";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Doc } from "@repo/convex/dataModel";
@@ -283,9 +285,11 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
             )}
 
             {showPreview ? (
-              <div className="rounded-md border bg-muted/50 p-3 text-sm whitespace-pre-wrap font-mono min-h-[12rem] max-h-[24rem] overflow-y-auto">
+              <div className="rounded-md border bg-muted/50 p-4 text-sm min-h-[12rem] max-h-[24rem] overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-3 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:mb-2 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:mb-2 [&_p]:mb-2 [&_p]:leading-relaxed [&_ul]:mb-2 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:mb-2 [&_ol]:ml-5 [&_ol]:list-decimal [&_li]:mb-1 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs [&_code]:font-mono [&_pre]:mb-2 [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3 [&_pre]:overflow-x-auto [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_a]:text-primary [&_a]:underline [&_strong]:font-semibold [&_hr]:my-3 [&_hr]:border-border [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-1.5">
                 {form.template.trim() ? (
-                  previewText
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {previewText}
+                  </ReactMarkdown>
                 ) : (
                   <span className="text-muted-foreground italic">
                     Enter a template to see a preview
