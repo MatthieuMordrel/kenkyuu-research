@@ -28,6 +28,8 @@ import {
   Activity,
   CheckCircle2,
   XCircle,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -217,6 +219,20 @@ function QuickActions() {
   );
 }
 
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function RecentResearchCard() {
   const recentResearch = useRecentResearch();
 
@@ -228,72 +244,99 @@ function RecentResearchCard() {
     <Card className="py-4">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Recent Research</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">Recent Research</CardTitle>
+            {recentResearch.length > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
+                {recentResearch.length}
+              </span>
+            )}
+          </div>
           <Link
             to="/research"
-            className="text-xs text-muted-foreground hover:text-foreground"
+            className="group flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             View all
+            <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
         <CardDescription>Last 5 completed research runs</CardDescription>
       </CardHeader>
       <CardContent>
         {recentResearch.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No research runs yet. Start your first research to see results here.
-          </p>
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+              <Sparkles className="size-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">No research yet</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Start your first research to see results here.
+              </p>
+            </div>
+          </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
             {recentResearch.map((job) => (
               <Link
                 key={job._id}
                 to="/research/$jobId"
                 params={{ jobId: job._id }}
-                className="flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-accent"
+                className="group relative flex items-center gap-3 rounded-xl p-2.5 transition-all hover:bg-accent"
               >
-                <div className="mt-0.5">
+                {/* Status indicator */}
+                <div
+                  className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                    job.status === "completed"
+                      ? "bg-green-500/10 dark:bg-green-500/20"
+                      : "bg-destructive/10 dark:bg-destructive/20"
+                  }`}
+                >
                   {job.status === "completed" ? (
                     <CheckCircle2 className="size-4 text-green-600 dark:text-green-400" />
                   ) : (
                     <XCircle className="size-4 text-destructive" />
                   )}
                 </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-sm font-medium">
-                    {job.promptName}
-                  </span>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {job.stockTickers.length > 0 ? (
-                      job.stockTickers.slice(0, 3).map((ticker) => (
-                        <Badge
-                          key={ticker}
-                          variant="secondary"
-                          className="text-[10px]"
-                        >
-                          {ticker}
-                        </Badge>
-                      ))
-                    ) : (
-                      <Badge variant="secondary" className="text-[10px]">
-                        Discovery
-                      </Badge>
-                    )}
-                    {job.stockTickers.length > 3 && (
-                      <span className="text-[10px] text-muted-foreground">
-                        +{job.stockTickers.length - 3}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>
-                      {new Date(job.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
+
+                {/* Content */}
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium">
+                      {job.promptName}
                     </span>
+                    <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                      {formatRelativeTime(new Date(job.createdAt))}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1">
+                      {job.stockTickers.length > 0 ? (
+                        job.stockTickers.slice(0, 3).map((ticker) => (
+                          <Badge
+                            key={ticker}
+                            variant="secondary"
+                            className="rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
+                          >
+                            {ticker}
+                          </Badge>
+                        ))
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
+                        >
+                          Discovery
+                        </Badge>
+                      )}
+                      {job.stockTickers.length > 3 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          +{job.stockTickers.length - 3}
+                        </span>
+                      )}
+                    </div>
                     {job.costUsd != null && (
-                      <span className="tabular-nums">
+                      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
                         ${job.costUsd.toFixed(2)}
                       </span>
                     )}
