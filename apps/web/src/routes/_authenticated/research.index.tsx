@@ -97,6 +97,14 @@ function ResearchPage() {
     }
   }
 
+  // Build prompt lookup map
+  const promptMap = new Map<string, Doc<"prompts">>();
+  if (prompts) {
+    for (const p of prompts) {
+      promptMap.set(p._id, p);
+    }
+  }
+
   async function confirmDelete() {
     if (!deleteTarget) return;
     try {
@@ -321,6 +329,7 @@ function ResearchPage() {
                 key={job._id}
                 job={job}
                 stockMap={stockMap}
+                promptMap={promptMap}
                 onToggleFavorite={() => toggleFavorite({ id: job._id })}
                 onDelete={() => setDeleteTarget(job)}
               />
@@ -387,11 +396,13 @@ const statusConfig: Record<
 function ResultCard({
   job,
   stockMap,
+  promptMap,
   onToggleFavorite,
   onDelete,
 }: {
   job: Doc<"researchJobs">;
   stockMap: Map<string, Doc<"stocks">>;
+  promptMap: Map<string, Doc<"prompts">>;
   onToggleFavorite: () => void;
   onDelete: () => void;
 }) {
@@ -414,6 +425,9 @@ function ResultCard({
     : undefined;
 
   const costStr = job.costUsd ? `$${job.costUsd.toFixed(2)}` : undefined;
+
+  // Resolve prompt name
+  const promptName = promptMap.get(job.promptId as string)?.name;
 
   // Resolve stock tickers
   const stockTickers = job.stockIds
@@ -473,6 +487,12 @@ function ResultCard({
           {/* Row 2: Meta info + snippet */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{createdDate} {createdTime}</span>
+            {promptName && (
+              <>
+                <span>·</span>
+                <span className="truncate font-medium text-foreground/70">{promptName}</span>
+              </>
+            )}
             {durationStr && (
               <>
                 <span>·</span>
