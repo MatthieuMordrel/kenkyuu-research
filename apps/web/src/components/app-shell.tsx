@@ -58,7 +58,7 @@ export function AppShell() {
           <FlaskConical className="size-5 text-sidebar-primary" />
           <span className="font-semibold">KenkyuStock</span>
         </header>
-        <main className="flex-1">
+        <main className="flex-1 overflow-x-hidden">
           <ErrorBoundary key={location.pathname}>
             <Outlet />
           </ErrorBoundary>

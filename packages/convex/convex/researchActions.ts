@@ -401,13 +401,17 @@ export const startResearch = internalAction({
 
       // If under max retries, schedule a retry
       if (attempts < MAX_RETRIES) {
+        // Use shorter delay for rate limits (they say "try again in Xms")
+        const isRateLimit = message.toLowerCase().includes("rate limit");
+        const delayMs = isRateLimit
+          ? 2000 // 2 seconds for rate limits (generous buffer over the ~400ms OpenAI suggests)
+          : Math.pow(2, attempts) * 5000;
+
         await ctx.runMutation(internal.researchJobs.updateJobStatus, {
           id: args.jobId,
           status: "failed",
           error: message,
         });
-        // Schedule retry with exponential backoff
-        const delayMs = Math.pow(2, attempts) * 5000;
         await ctx.scheduler.runAfter(
           delayMs,
           internal.researchActions.startResearch,

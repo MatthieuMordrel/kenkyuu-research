@@ -136,7 +136,7 @@ function ResearchPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 min-w-0">
       <PageHeader
         title="Research"
         description="Run AI-powered deep research on your stocks"
@@ -435,12 +435,6 @@ function ResultCard({
     .filter(Boolean)
     .map((s) => s!.ticker);
 
-  const snippet = job.result
-    ? job.result.replace(/[#*_`>[\]]/g, "").slice(0, 140) +
-      (job.result.length > 140 ? "..." : "")
-    : job.error
-      ? job.error.slice(0, 100)
-      : undefined;
 
   return (
     <Card
@@ -449,7 +443,7 @@ function ResultCard({
         isActive && "border-primary/30 bg-primary/[0.02]",
       )}
     >
-      <CardContent className="flex h-full items-center gap-3">
+      <CardContent className="flex h-full items-center gap-3 min-w-0">
         <Link
           to="/research/$jobId"
           params={{ jobId: job._id }}
@@ -485,30 +479,24 @@ function ResultCard({
           </div>
 
           {/* Row 2: Meta info + snippet */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{createdDate} {createdTime}</span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0 overflow-hidden">
+            <span className="shrink-0 whitespace-nowrap">{createdDate} {createdTime}</span>
             {promptName && (
               <>
-                <span>·</span>
+                <span className="shrink-0">·</span>
                 <span className="truncate font-medium text-foreground/70">{promptName}</span>
               </>
             )}
             {durationStr && (
               <>
-                <span>·</span>
-                <span>{durationStr}</span>
+                <span className="shrink-0">·</span>
+                <span className="shrink-0">{durationStr}</span>
               </>
             )}
             {costStr && (
               <>
-                <span>·</span>
-                <span>{costStr}</span>
-              </>
-            )}
-            {snippet && (
-              <>
-                <span>·</span>
-                <span className="truncate text-muted-foreground/70">{snippet}</span>
+                <span className="shrink-0">·</span>
+                <span className="shrink-0">{costStr}</span>
               </>
             )}
           </div>

@@ -144,6 +144,12 @@ export const updateJobStatus = internalMutation({
       patch.completedAt = Date.now();
     }
 
+    // Clear error and completedAt when a retry moves the job back to running
+    if (updates.status === "running") {
+      patch.error = undefined;
+      patch.completedAt = undefined;
+    }
+
     await ctx.db.patch(id, patch);
     return id;
   },
