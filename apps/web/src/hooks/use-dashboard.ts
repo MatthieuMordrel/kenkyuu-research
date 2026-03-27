@@ -52,7 +52,7 @@ export function useQuickActions() {
   }, [navigate]);
 
   const goToHistory = useCallback(() => {
-    navigate({ to: "/history" });
+    navigate({ to: "/research" });
   }, [navigate]);
 
   const goToSchedules = useCallback(() => {

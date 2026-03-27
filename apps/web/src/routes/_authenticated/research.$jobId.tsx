@@ -32,7 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { GenericId } from "convex/values";
 
-export const Route = createFileRoute("/_authenticated/history/$jobId")({
+export const Route = createFileRoute("/_authenticated/research/$jobId")({
   component: ResultDetailPage,
 });
 
@@ -57,7 +57,7 @@ function ResultDetailPage() {
   async function confirmDelete() {
     try {
       await deleteJob({ id: jobId as GenericId<"researchJobs"> });
-      navigate({ to: "/history" });
+      navigate({ to: "/research" });
     } finally {
       setShowDeleteDialog(false);
     }
@@ -72,9 +72,9 @@ function ResultDetailPage() {
       <div className="flex flex-col gap-4">
         <div className="px-4 pt-4 md:px-6">
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/history">
+            <Link to="/research">
               <ArrowLeft className="size-4" />
-              Back to History
+              Back to Research
             </Link>
           </Button>
         </div>
@@ -84,7 +84,7 @@ function ResultDetailPage() {
           description="This research result may have been deleted."
           action={
             <Button size="sm" asChild>
-              <Link to="/history">Back to History</Link>
+              <Link to="/research">Back to Research</Link>
             </Button>
           }
         />
@@ -133,9 +133,9 @@ function ResultDetailPage() {
       {/* Back link */}
       <div className="px-4 pt-4 md:px-6">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/history">
+          <Link to="/research">
             <ArrowLeft className="size-4" />
-            Back to History
+            Back to Research
           </Link>
         </Button>
       </div>

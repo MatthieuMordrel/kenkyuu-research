@@ -230,7 +230,7 @@ function RecentResearchCard() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Recent Research</CardTitle>
           <Link
-            to="/history"
+            to="/research"
             className="text-xs text-muted-foreground hover:text-foreground"
           >
             View all
@@ -248,7 +248,7 @@ function RecentResearchCard() {
             {recentResearch.map((job) => (
               <Link
                 key={job._id}
-                to="/history/$jobId"
+                to="/research/$jobId"
                 params={{ jobId: job._id }}
                 className="flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-accent"
               >
