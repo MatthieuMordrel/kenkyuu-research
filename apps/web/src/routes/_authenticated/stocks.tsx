@@ -3,13 +3,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStocks, useTags, useDeleteStock } from "@/hooks/use-stocks";
 import { useEarningsSummary } from "@/hooks/use-earnings";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
 import { ListSkeleton } from "@/components/loading-skeleton";
 import { StockModal } from "@/components/stock-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +23,8 @@ import {
   ArrowUpDown,
   Pencil,
   Trash2,
+  Sparkles,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Doc } from "@repo/convex/dataModel";
@@ -48,6 +48,14 @@ export const Route = createFileRoute("/_authenticated/stocks")({
 
 type SortField = "ticker" | "companyName" | "createdAt" | "updatedAt" | "nextEarnings";
 
+const SORT_OPTIONS: { field: SortField; label: string }[] = [
+  { field: "ticker", label: "Ticker" },
+  { field: "companyName", label: "Name" },
+  { field: "createdAt", label: "Date Added" },
+  { field: "updatedAt", label: "Updated" },
+  { field: "nextEarnings", label: "Next Earnings" },
+];
+
 function StocksPage() {
   const [search, setSearch] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | undefined>();
@@ -69,7 +77,6 @@ function StocksPage() {
     return [...stocks].sort((a, b) => {
       const aDate = earningsSummary[a._id]?.next?.date ?? "";
       const bDate = earningsSummary[b._id]?.next?.date ?? "";
-      // Stocks without earnings go to the end
       if (!aDate && !bDate) return 0;
       if (!aDate) return 1;
       if (!bDate) return -1;
@@ -109,7 +116,7 @@ function StocksPage() {
   const isLoading = stocks === undefined;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-x-hidden">
       <PageHeader
         title="Stocks"
         description="Manage your stock watchlist"
@@ -133,20 +140,25 @@ function StocksPage() {
           />
         </div>
 
-        {/* Tag filter chips */}
+        {/* Tag filter pills */}
         {tags && tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
               onClick={() => setSelectedTag(undefined)}
               className={cn(
-                "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
+                "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-all",
                 !selectedTag
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-foreground hover:bg-accent",
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
               All
+              {!isLoading && !selectedTag && stocks && (
+                <span className="ml-1.5 rounded-full bg-primary-foreground/20 px-1.5 text-[10px]">
+                  {stocks.length}
+                </span>
+              )}
             </button>
             {tags.map((tag) => (
               <button
@@ -156,10 +168,10 @@ function StocksPage() {
                   setSelectedTag(selectedTag === tag ? undefined : tag)
                 }
                 className={cn(
-                  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
+                  "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-all",
                   selectedTag === tag
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-foreground hover:bg-accent",
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
                 {tag}
@@ -168,29 +180,19 @@ function StocksPage() {
           </div>
         )}
 
-        {/* Sort buttons */}
-        <div className="flex items-center gap-2 overflow-x-auto">
-          <span className="text-xs text-muted-foreground shrink-0">
-            Sort by:
-          </span>
-          {(
-            [
-              { field: "ticker", label: "Ticker" },
-              { field: "companyName", label: "Name" },
-              { field: "createdAt", label: "Date Added" },
-              { field: "updatedAt", label: "Updated" },
-              { field: "nextEarnings", label: "Next Earnings" },
-            ] as const
-          ).map(({ field, label }) => (
+        {/* Sort pills */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-muted-foreground shrink-0">Sort:</span>
+          {SORT_OPTIONS.map(({ field, label }) => (
             <button
               key={field}
               type="button"
               onClick={() => handleSort(field)}
               className={cn(
-                "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium transition-all",
                 sortBy === field
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-accent text-accent-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               {label}
@@ -207,27 +209,35 @@ function StocksPage() {
         {isLoading ? (
           <ListSkeleton count={5} />
         ) : stocks.length === 0 ? (
-          <EmptyState
-            icon={TrendingUp}
-            title={search || selectedTag ? "No stocks found" : "No stocks yet"}
-            description={
-              search || selectedTag
-                ? "Try adjusting your search or filters."
-                : "Add your first stock to get started with research."
-            }
-            action={
-              !search && !selectedTag ? (
-                <Button size="sm" onClick={openAdd}>
-                  <Plus className="size-4" />
-                  Add Stock
-                </Button>
-              ) : undefined
-            }
-          />
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-12 text-center">
+            <div className="flex size-11 items-center justify-center rounded-full bg-muted">
+              {search || selectedTag ? (
+                <Search className="size-5 text-muted-foreground" />
+              ) : (
+                <Sparkles className="size-5 text-muted-foreground" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-medium">
+                {search || selectedTag ? "No stocks found" : "No stocks yet"}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {search || selectedTag
+                  ? "Try adjusting your search or filters."
+                  : "Add your first stock to get started with research."}
+              </p>
+            </div>
+            {!search && !selectedTag && (
+              <Button size="sm" variant="outline" onClick={openAdd} className="mt-1">
+                <Plus className="size-4" />
+                Add Stock
+              </Button>
+            )}
+          </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {(sortedStocks ?? []).map((stock) => (
-              <StockCard
+              <StockRow
                 key={stock._id}
                 stock={stock}
                 earnings={earningsSummary?.[stock._id]}
@@ -279,7 +289,7 @@ interface EarningsSummary {
   nextNext?: { date: string; hour?: string };
 }
 
-function StockCard({
+function StockRow({
   stock,
   earnings,
   onEdit,
@@ -291,83 +301,112 @@ function StockCard({
   onDelete: () => void;
 }) {
   return (
-    <Card className="py-3">
-      <CardContent className="flex items-center gap-3">
-        <Link
-          to="/stocks/$stockId"
-          params={{ stockId: stock._id }}
-          className="flex min-w-0 flex-1 flex-col gap-1"
-        >
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm font-semibold">{stock.ticker}</span>
-            <span className="text-xs text-muted-foreground">
-              {stock.exchange}
-            </span>
-          </div>
-          <span className="truncate text-sm text-muted-foreground">
-            {stock.companyName}
-          </span>
+    <Link
+      to="/stocks/$stockId"
+      params={{ stockId: stock._id }}
+      className="group flex h-16 items-center gap-3 rounded-xl px-3 transition-all hover:bg-accent"
+    >
+      {/* Ticker badge */}
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+        <TrendingUp className="size-4" />
+      </div>
+
+      {/* Content — two rows */}
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">{stock.ticker}</span>
+          <Badge
+            variant="outline"
+            className="shrink-0 whitespace-nowrap rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
+          >
+            {stock.exchange}
+          </Badge>
           {stock.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-0.5">
-              {stock.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+            <div className="hidden sm:flex items-center gap-1">
+              {stock.tags.slice(0, 2).map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className="whitespace-nowrap rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
+                >
                   {tag}
                 </Badge>
               ))}
+              {stock.tags.length > 2 && (
+                <span className="text-[10px] text-muted-foreground">
+                  +{stock.tags.length - 2}
+                </span>
+              )}
             </div>
           )}
-        </Link>
-        {earnings && (earnings.previous || earnings.next) && (
-          <div className="flex shrink-0 flex-col items-end gap-0.5 text-xs">
-            {earnings.previous && (
-              <span className="text-muted-foreground">
-                <span className="text-muted-foreground/60">Prev</span>{" "}
-                {formatEarningsDate(earnings.previous.date)}
-              </span>
-            )}
-            {earnings.next && (
-              <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                Next {formatEarningsDate(earnings.next.date)}
-                {formatHour(earnings.next.hour) && (
-                  <span className="ml-0.5 text-[11px] font-normal text-emerald-500/70 dark:text-emerald-400/70">
-                    {formatHour(earnings.next.hour)}
-                  </span>
-                )}
-              </span>
-            )}
-            {earnings.nextNext && (
-              <span className="text-muted-foreground/70">
-                <span className="text-muted-foreground/50">After</span>{" "}
-                {formatEarningsDate(earnings.nextNext.date)}
-              </span>
-            )}
-          </div>
-        )}
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={(e) => {
-              e.preventDefault();
-              onEdit();
-            }}
-          >
-            <Pencil className="size-3.5" />
-            <span className="sr-only">Edit</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={(e) => {
-              e.preventDefault();
-              onDelete();
-            }}
-          >
-            <Trash2 className="size-3.5 text-destructive" />
-            <span className="sr-only">Delete</span>
-          </Button>
         </div>
-      </CardContent>
-    </Card>
+        <div className="flex items-center gap-2">
+          <span className="truncate text-xs text-muted-foreground">
+            {stock.companyName}
+          </span>
+          {earnings?.next && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+              <Calendar className="size-3" />
+              {formatEarningsDate(earnings.next.date)}
+              {formatHour(earnings.next.hour) && (
+                <span className="text-emerald-500/70 dark:text-emerald-400/70">
+                  {formatHour(earnings.next.hour)}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Earnings — visible on wider screens */}
+      {earnings && (earnings.previous || earnings.next) && (
+        <div className="hidden md:flex shrink-0 flex-col items-end gap-0.5 text-xs">
+          {earnings.previous && (
+            <span className="text-muted-foreground">
+              <span className="text-muted-foreground/60">Prev</span>{" "}
+              {formatEarningsDate(earnings.previous.date)}
+            </span>
+          )}
+          {earnings.next && (
+            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+              Next {formatEarningsDate(earnings.next.date)}
+              {formatHour(earnings.next.hour) && (
+                <span className="ml-0.5 text-[11px] font-normal text-emerald-500/70 dark:text-emerald-400/70">
+                  {formatHour(earnings.next.hour)}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Actions — visible on hover */}
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={(e) => {
+            e.preventDefault();
+            onEdit();
+          }}
+          title="Edit stock"
+        >
+          <Pencil className="size-3.5" />
+          <span className="sr-only">Edit</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={(e) => {
+            e.preventDefault();
+            onDelete();
+          }}
+          title="Delete stock"
+        >
+          <Trash2 className="size-3.5 text-destructive" />
+          <span className="sr-only">Delete</span>
+        </Button>
+      </div>
+    </Link>
   );
 }

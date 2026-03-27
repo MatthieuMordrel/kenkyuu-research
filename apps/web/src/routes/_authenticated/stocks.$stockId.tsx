@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/empty-state";
 import { PageSkeleton } from "@/components/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +28,7 @@ import {
   FlaskConical,
   BarChart3,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { GenericId } from "convex/values";
 
 export const Route = createFileRoute("/_authenticated/stocks/$stockId")({
@@ -97,7 +97,7 @@ function StockDetailPage() {
   });
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-x-hidden">
       <div className="px-4 pt-4 md:px-6">
         <Button variant="ghost" size="sm" asChild>
           <Link to="/stocks">
@@ -129,104 +129,96 @@ function StockDetailPage() {
       />
 
       <div className="grid gap-4 px-4 pb-4 md:grid-cols-2 md:px-6">
-        {/* Stock Info Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
+        {/* Stock Info */}
+        <div className="rounded-xl border bg-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
               <Building2 className="size-4" />
-              Stock Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="flex flex-col gap-3 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Ticker</dt>
-                <dd className="font-medium">{stock.ticker}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Exchange</dt>
-                <dd className="font-medium">{stock.exchange}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Sector</dt>
-                <dd className="font-medium">{stock.sector || "—"}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground flex items-center gap-1">
-                  <Calendar className="size-3" />
-                  Added
-                </dt>
-                <dd>{addedDate}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground flex items-center gap-1">
-                  <Calendar className="size-3" />
-                  Updated
-                </dt>
-                <dd>{updatedDate}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+            </div>
+            <h3 className="text-sm font-semibold">Stock Details</h3>
+          </div>
+          <dl className="flex flex-col gap-3 text-sm">
+            <DetailRow label="Ticker" value={stock.ticker} />
+            <DetailRow label="Exchange" value={stock.exchange} />
+            <DetailRow label="Sector" value={stock.sector || "—"} />
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="size-3" />
+                Added
+              </dt>
+              <dd className="text-right">{addedDate}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="size-3" />
+                Updated
+              </dt>
+              <dd className="text-right">{updatedDate}</dd>
+            </div>
+          </dl>
+        </div>
 
-        {/* Tags Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
+        {/* Tags */}
+        <div className="rounded-xl border bg-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400">
               <Tag className="size-4" />
-              Tags
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stock.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {stock.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No tags</p>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+            <h3 className="text-sm font-semibold">Tags</h3>
+          </div>
+          {stock.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {stock.tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className="rounded-md px-2 py-0.5 text-xs font-semibold tracking-wide"
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No tags added yet.</p>
+          )}
+        </div>
 
-        {/* Notes Card */}
+        {/* Notes */}
         {stock.notes && (
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+          <div className="rounded-xl border bg-card p-5 md:col-span-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
                 <FileText className="size-4" />
-                Notes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm whitespace-pre-wrap">{stock.notes}</p>
-            </CardContent>
-          </Card>
+              </div>
+              <h3 className="text-sm font-semibold">Notes</h3>
+            </div>
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">{stock.notes}</p>
+          </div>
         )}
 
-        {/* Earnings Card */}
-        <EarningsCard earnings={earnings} />
+        {/* Earnings */}
+        <EarningsSection earnings={earnings} />
 
-        {/* Research History Card */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
+        {/* Research History */}
+        <div className="rounded-xl border bg-card p-5 md:col-span-2">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
               <FlaskConical className="size-4" />
-              Research History
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <EmptyState
-              icon={FlaskConical}
-              title="No research yet"
-              description="Research results for this stock will appear here once you run a research job."
-              className="py-6"
-            />
-          </CardContent>
-        </Card>
+            </div>
+            <h3 className="text-sm font-semibold">Research History</h3>
+          </div>
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-8 text-center">
+            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+              <FlaskConical className="size-4 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">No research yet</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Research results for this stock will appear here.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Edit Modal */}
@@ -260,6 +252,15 @@ function StockDetailPage() {
   );
 }
 
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-medium">{value}</dd>
+    </div>
+  );
+}
+
 function formatEarningsDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year!, month! - 1, day!);
@@ -287,7 +288,7 @@ interface EarningsEntry {
   year?: number;
 }
 
-function EarningsCard({ earnings }: { earnings?: EarningsEntry[] }) {
+function EarningsSection({ earnings }: { earnings?: EarningsEntry[] }) {
   if (!earnings) return null;
 
   const today = new Date().toISOString().split("T")[0]!;
@@ -299,60 +300,58 @@ function EarningsCard({ earnings }: { earnings?: EarningsEntry[] }) {
   const nextNext = future.length > 1 ? future[1] : undefined;
 
   const keyDates = [
-    { label: "Previous", entry: previous },
-    { label: "Next", entry: next },
-    { label: "Following", entry: nextNext },
+    { label: "Previous", entry: previous, style: "text-muted-foreground" },
+    { label: "Next", entry: next, style: "font-medium text-emerald-600 dark:text-emerald-400" },
+    { label: "Following", entry: nextNext, style: "text-muted-foreground" },
   ].filter((d) => d.entry);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
+    <div className="rounded-xl border bg-card p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
           <BarChart3 className="size-4" />
-          Earnings
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {keyDates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No earnings data available</p>
-        ) : (
-          <dl className="flex flex-col gap-3 text-sm">
-            {keyDates.map(({ label, entry }) => (
-              <div key={label} className="flex justify-between">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="text-right">
-                  <span className={label === "Next" ? "font-medium" : ""}>
-                    {formatEarningsDate(entry!.date)}
+        </div>
+        <h3 className="text-sm font-semibold">Earnings</h3>
+      </div>
+      {keyDates.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No earnings data available.</p>
+      ) : (
+        <dl className="flex flex-col gap-3 text-sm">
+          {keyDates.map(({ label, entry, style }) => (
+            <div key={label} className="flex justify-between">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="text-right">
+                <span className={cn(style)}>
+                  {formatEarningsDate(entry!.date)}
+                </span>
+                {formatHour(entry!.hour) && (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    ({formatHour(entry!.hour)})
                   </span>
-                  {formatHour(entry!.hour) && (
-                    <span className="text-muted-foreground text-xs ml-1">
-                      ({formatHour(entry!.hour)})
-                    </span>
-                  )}
-                  {entry!.quarter && entry!.year && (
-                    <span className="text-muted-foreground text-xs ml-1">
-                      Q{entry!.quarter} {entry!.year}
-                    </span>
-                  )}
-                </dd>
-              </div>
-            ))}
-            {previous?.epsActual != null && (
-              <div className="flex justify-between border-t pt-3">
-                <dt className="text-muted-foreground">Last EPS</dt>
-                <dd>
-                  <span className="font-medium">${previous.epsActual.toFixed(2)}</span>
-                  {previous.epsEstimate != null && (
-                    <span className="text-muted-foreground text-xs ml-1">
-                      (est. ${previous.epsEstimate.toFixed(2)})
-                    </span>
-                  )}
-                </dd>
-              </div>
-            )}
-          </dl>
-        )}
-      </CardContent>
-    </Card>
+                )}
+                {entry!.quarter && entry!.year && (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    Q{entry!.quarter} {entry!.year}
+                  </span>
+                )}
+              </dd>
+            </div>
+          ))}
+          {previous?.epsActual != null && (
+            <div className="flex justify-between border-t pt-3">
+              <dt className="text-muted-foreground">Last EPS</dt>
+              <dd>
+                <span className="font-medium">${previous.epsActual.toFixed(2)}</span>
+                {previous.epsEstimate != null && (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    (est. ${previous.epsEstimate.toFixed(2)})
+                  </span>
+                )}
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
+    </div>
   );
 }

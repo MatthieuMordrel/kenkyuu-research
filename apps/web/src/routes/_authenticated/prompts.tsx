@@ -100,7 +100,7 @@ function PromptsPage() {
   const isLoading = prompts === undefined;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-x-hidden">
       <PageHeader
         title="Prompts"
         description="Manage research prompt templates"
@@ -121,7 +121,7 @@ function PromptsPage() {
               type="button"
               onClick={() => setSelectedType(tab.value)}
               className={cn(
-                "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all",
+                "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-all",
                 selectedType === tab.value
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -250,7 +250,7 @@ function PromptCard({
           {prompt.isBuiltIn && (
             <Badge
               variant="secondary"
-              className="shrink-0 rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
+              className="shrink-0 whitespace-nowrap rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
             >
               Built-in
             </Badge>
@@ -259,7 +259,7 @@ function PromptCard({
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
-            className="rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
+            className="shrink-0 whitespace-nowrap rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
           >
             {TYPE_LABELS[prompt.type]}
           </Badge>

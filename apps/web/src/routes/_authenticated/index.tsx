@@ -40,7 +40,7 @@ function DashboardPage() {
   const quickActions = useQuickActions();
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-x-hidden">
       <PageHeader
         title="Dashboard"
         description="Overview of your research activity and costs"
@@ -316,7 +316,7 @@ function RecentResearchCard() {
                           <Badge
                             key={ticker}
                             variant="secondary"
-                            className="rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
+                            className="whitespace-nowrap rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
                           >
                             {ticker}
                           </Badge>
@@ -324,7 +324,7 @@ function RecentResearchCard() {
                       ) : (
                         <Badge
                           variant="secondary"
-                          className="rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
+                          className="whitespace-nowrap rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
                         >
                           Discovery
                         </Badge>
