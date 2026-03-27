@@ -177,13 +177,13 @@ export const recoverStaleJobs = internalAction({
           );
         } else if (response.status === "in_progress" || response.status === "queued") {
           // Still running on OpenAI's side — leave it alone.
-          // If it's been extremely long (>3 hours), mark as failed to unblock the queue.
-          const threeHours = 3 * 60 * 60 * 1000;
-          if (Date.now() - job.createdAt > threeHours) {
+          // If it's been too long (>90 minutes), mark as failed to unblock the queue.
+          const ninetyMinutes = 90 * 60 * 1000;
+          if (Date.now() - job.createdAt > ninetyMinutes) {
             await ctx.runMutation(internal.researchJobs.updateJobStatus, {
               id: job._id,
               status: "failed",
-              error: "Job timed out after 3 hours with no result from OpenAI",
+              error: "Job timed out after 90 minutes with no result from OpenAI",
             });
             await ctx.scheduler.runAfter(
               0,

@@ -6,7 +6,7 @@ Research jobs use OpenAI's `o3-deep-research` model in **background mode**, whic
 
 1. **Webhook (primary)**: OpenAI sends a webhook to `/api/research-callback` when the job finishes.
 2. **Stale job recovery (fallback)**: A cron runs every 15 minutes to poll OpenAI for any job that has been running >30 minutes. This catches missed webhooks.
-3. **3-hour timeout**: Jobs running longer than 3 hours are automatically marked as failed.
+3. **90-minute timeout**: Jobs running longer than 90 minutes are automatically marked as failed.
 
 ## Verifying Status via the UI
 
