@@ -431,15 +431,15 @@ function ResultCard({
   return (
     <Card
       className={cn(
-        "py-3 transition-colors hover:bg-accent/30",
+        "h-[88px] py-3 transition-colors hover:bg-accent/30",
         isActive && "border-primary/30 bg-primary/[0.02]",
       )}
     >
-      <CardContent className="flex items-start gap-3">
+      <CardContent className="flex h-full items-center gap-3">
         <Link
           to="/research/$jobId"
           params={{ jobId: job._id }}
-          className="flex min-w-0 flex-1 flex-col gap-1.5"
+          className="flex min-w-0 flex-1 flex-col justify-center gap-1.5"
         >
           {/* Row 1: Stocks + status */}
           <div className="flex items-center gap-2">
@@ -470,7 +470,7 @@ function ResultCard({
             </div>
           </div>
 
-          {/* Row 2: Meta info */}
+          {/* Row 2: Meta info + snippet */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{createdDate} {createdTime}</span>
             {durationStr && (
@@ -485,18 +485,17 @@ function ResultCard({
                 <span>{costStr}</span>
               </>
             )}
+            {snippet && (
+              <>
+                <span>·</span>
+                <span className="truncate text-muted-foreground/70">{snippet}</span>
+              </>
+            )}
           </div>
-
-          {/* Row 3: Snippet */}
-          {snippet && (
-            <p className="text-xs text-muted-foreground/80 line-clamp-2">
-              {snippet}
-            </p>
-          )}
         </Link>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1 pt-0.5">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={(e) => {
@@ -517,19 +516,21 @@ function ResultCard({
               )}
             />
           </button>
-          {!isActive && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                onDelete();
-              }}
-              className="p-1 rounded-md hover:bg-destructive/10 transition-colors"
-              aria-label="Delete research job"
-            >
-              <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onDelete();
+            }}
+            className={cn(
+              "p-1 rounded-md hover:bg-destructive/10 transition-colors",
+              isActive && "invisible",
+            )}
+            aria-label="Delete research job"
+            tabIndex={isActive ? -1 : undefined}
+          >
+            <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+          </button>
         </div>
       </CardContent>
     </Card>
