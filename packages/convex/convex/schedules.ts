@@ -431,7 +431,7 @@ export const createScheduledJob = internalMutation({
     }
 
     // Enforce concurrent job limit on scheduled jobs to prevent bypass
-    const MAX_CONCURRENT_JOBS = 5;
+    const MAX_CONCURRENT_JOBS = 3;
     const pendingJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
@@ -457,8 +457,9 @@ export const createScheduledJob = internalMutation({
       createdAt: now,
     });
 
-    // Schedule the research action to start immediately
-    await ctx.scheduler.runAfter(0, internal.researchActions.startResearch, {
+    // Stagger start to avoid hitting OpenAI rate limits
+    const staggerDelayMs = runningJobs.length * 10_000; // 10s per running job
+    await ctx.scheduler.runAfter(staggerDelayMs, internal.researchActions.startResearch, {
       jobId,
     });
 

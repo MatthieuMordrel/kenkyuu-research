@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import OpenAI from "openai";
 import { action, internalAction } from "./_generated/server";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 const MAX_RETRIES = 3;
 
@@ -325,6 +325,26 @@ export const startResearch = internalAction({
       throw new Error(`Job is not in a startable state: ${job.status}`);
     }
 
+    // Pre-flight: check how many jobs are already running on OpenAI.
+    // If we're at the limit, re-queue with a delay instead of submitting immediately.
+    const MAX_RUNNING = 3;
+    const runningJobs = await ctx.runQuery(
+      internal.researchJobs.getRunningJobCount,
+      {},
+    );
+    if (runningJobs >= MAX_RUNNING) {
+      // Re-queue this job to try again in 30 seconds
+      console.log(
+        `startResearch: ${MAX_RUNNING} jobs already running, re-queuing ${args.jobId} in 30s`,
+      );
+      await ctx.scheduler.runAfter(
+        30_000,
+        internal.researchActions.startResearch,
+        { jobId: args.jobId },
+      );
+      return;
+    }
+
     // Increment attempts
     const attempts = await ctx.runMutation(
       internal.researchJobs.incrementAttempts,
@@ -352,19 +372,25 @@ export const startResearch = internalAction({
         ctx.runQuery(internal.researchJobs.getStockInternal, { id: stockId }),
       ),
     );
-    const stockTickers = stocks
-      .filter((s): s is NonNullable<typeof s> => s !== null)
-      .map((s) => s.ticker);
+    const validStocks = stocks.filter(
+      (s): s is NonNullable<typeof s> => s !== null,
+    );
+    const stockTickers = validStocks.map((s) => s.ticker);
 
     // Build the final prompt with variable injection
     let resolvedPrompt = job.promptSnapshot;
     resolvedPrompt = resolvedPrompt.replaceAll(
       "{{STOCKS}}",
-      stockTickers.join(", "),
+      validStocks
+        .map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`)
+        .join(", "),
     );
+    const firstStock = validStocks[0];
     resolvedPrompt = resolvedPrompt.replaceAll(
       "{{TICKER}}",
-      stockTickers[0] ?? "",
+      firstStock
+        ? `${firstStock.ticker} (${firstStock.companyName}, ${firstStock.exchange})`
+        : "",
     );
     resolvedPrompt = resolvedPrompt.replaceAll(
       "{{DATE}}",
@@ -401,11 +427,22 @@ export const startResearch = internalAction({
 
       // If under max retries, schedule a retry
       if (attempts < MAX_RETRIES) {
-        // Use shorter delay for rate limits (they say "try again in Xms")
+        // Parse rate limit delay from error (e.g. "Please try again in 404ms" or "in 6s")
         const isRateLimit = message.toLowerCase().includes("rate limit");
-        const delayMs = isRateLimit
-          ? 2000 // 2 seconds for rate limits (generous buffer over the ~400ms OpenAI suggests)
-          : Math.pow(2, attempts) * 5000;
+        let delayMs: number;
+        if (isRateLimit) {
+          const msMatch = message.match(/try again in (\d+)ms/i);
+          const sMatch = message.match(/try again in ([\d.]+)s/i);
+          const parsedMs = msMatch
+            ? parseInt(msMatch[1]!, 10)
+            : sMatch
+              ? parseFloat(sMatch[1]!) * 1000
+              : 0;
+          // Use parsed delay + generous buffer, minimum 5 seconds
+          delayMs = Math.max(parsedMs + 2000, 5000);
+        } else {
+          delayMs = Math.pow(2, attempts) * 5000;
+        }
 
         await ctx.runMutation(internal.researchJobs.updateJobStatus, {
           id: args.jobId,

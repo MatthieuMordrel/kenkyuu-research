@@ -11,7 +11,7 @@ import { requireAuth } from "./authHelpers";
 import { validateSearchTerm, truncateResult } from "./validation";
 import { logAuditEvent } from "./auditLog";
 
-const MAX_CONCURRENT_JOBS = 5;
+const MAX_CONCURRENT_JOBS = 3;
 
 const jobStatus = v.union(
   v.literal("pending"),
@@ -102,9 +102,16 @@ export const createAndStartResearch = mutation({
       createdAt: now,
     });
 
-    // Schedule the action to start immediately
+    // Stagger job starts to avoid hitting OpenAI rate limits.
+    // If other jobs are already running/pending, add a 10s delay per job.
+    const currentRunning = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .take(MAX_CONCURRENT_JOBS);
+    const staggerDelayMs = currentRunning.length * 10_000; // 10s per running job
+
     await ctx.scheduler.runAfter(
-      0,
+      staggerDelayMs,
       internal.researchActions.startResearch,
       { jobId },
     );
@@ -550,6 +557,19 @@ export const getStaleRunningJobs = internalQuery({
     return runningJobs.filter(
       (job) => job.externalJobId && job.createdAt < cutoff,
     );
+  },
+});
+
+/** Returns the count of jobs currently in "running" status (with an external ID = submitted to OpenAI). */
+export const getRunningJobCount = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const runningJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .take(10);
+    // Only count jobs that have actually been submitted to OpenAI
+    return runningJobs.filter((j) => j.externalJobId).length;
   },
 });
 
