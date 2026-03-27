@@ -237,10 +237,10 @@ function ResultDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Prompt Used — only show when we have the exact resolved prompt */}
-        {job.resolvedPrompt && (
+        {/* Prompt Used — prefer resolvedPrompt (exact), fall back to promptSnapshot (template) */}
+        {(job.resolvedPrompt || job.promptSnapshot) && (
           <PromptPreviewDialog
-            content={job.resolvedPrompt}
+            content={job.resolvedPrompt ?? job.promptSnapshot ?? ""}
             label="Prompt Used"
           />
         )}
