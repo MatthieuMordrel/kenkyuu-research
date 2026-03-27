@@ -125,6 +125,7 @@ export const updateJobStatus = internalMutation({
     id: v.id("researchJobs"),
     status: jobStatus,
     externalJobId: v.optional(v.string()),
+    resolvedPrompt: v.optional(v.string()),
     result: v.optional(v.string()),
     error: v.optional(v.string()),
     costUsd: v.optional(v.number()),
@@ -142,6 +143,8 @@ export const updateJobStatus = internalMutation({
 
     if (updates.externalJobId !== undefined)
       patch.externalJobId = updates.externalJobId;
+    if (updates.resolvedPrompt !== undefined)
+      patch.resolvedPrompt = updates.resolvedPrompt;
     if (updates.result !== undefined) patch.result = truncateResult(updates.result);
     if (updates.error !== undefined) patch.error = updates.error;
     if (updates.costUsd !== undefined) patch.costUsd = updates.costUsd;

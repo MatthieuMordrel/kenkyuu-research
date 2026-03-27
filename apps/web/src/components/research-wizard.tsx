@@ -15,14 +15,13 @@ import { useResearchFlow } from "@/hooks/use-research-flow";
 import { usePrompts, usePrompt } from "@/hooks/use-prompts";
 import { useStocks, useTags } from "@/hooks/use-stocks";
 import { useActiveJobs } from "@/hooks/use-research";
-import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { PromptPreviewDialog } from "@/components/prompt-preview-dialog";
+import { injectVariables } from "@/lib/prompt-preview";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   Check,
-  ChevronDown,
   ChevronRight,
-  Eye,
   FileText,
   Loader2,
   Play,
@@ -375,63 +374,38 @@ function PromptPreview({
   promptId: GenericId<"prompts">;
   stockIds: GenericId<"stocks">[];
 }) {
-  const [open, setOpen] = useState(false);
   const prompt = usePrompt(promptId);
   const allStocks = useStocks();
 
   const resolvedPrompt = useMemo(() => {
     if (!prompt?.template) return null;
-    let result = prompt.template;
 
     const selectedStocks = allStocks?.filter((s) =>
       stockIds.includes(s._id as GenericId<"stocks">),
     );
 
-    if (selectedStocks && selectedStocks.length > 0) {
-      const stocksStr = selectedStocks
-        .map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`)
-        .join(", ");
-      result = result.replaceAll("{{STOCKS}}", stocksStr);
+    const stocksStr =
+      selectedStocks && selectedStocks.length > 0
+        ? selectedStocks
+            .map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`)
+            .join(", ")
+        : undefined;
 
-      const first = selectedStocks[0];
-      result = result.replaceAll(
-        "{{TICKER}}",
-        `${first.ticker} (${first.companyName}, ${first.exchange})`,
-      );
-    }
+    const first = selectedStocks?.[0];
+    const tickerStr = first
+      ? `${first.ticker} (${first.companyName}, ${first.exchange})`
+      : undefined;
 
-    result = result.replaceAll(
-      "{{DATE}}",
-      new Date().toISOString().split("T")[0]!,
-    );
-
-    return result;
+    return injectVariables(prompt.template, {
+      stocks: stocksStr,
+      ticker: tickerStr,
+      date: new Date().toISOString().split("T")[0]!,
+    });
   }, [prompt, allStocks, stockIds]);
 
   if (!resolvedPrompt) return null;
 
-  return (
-    <div className="rounded-lg border border-border overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-accent/50 transition-colors"
-      >
-        <Eye className="size-3.5" />
-        <span className="flex-1">Prompt Preview</span>
-        {open ? (
-          <ChevronDown className="size-3.5" />
-        ) : (
-          <ChevronRight className="size-3.5" />
-        )}
-      </button>
-      {open && (
-        <div className="max-h-64 overflow-y-auto border-t border-border bg-muted/30 px-3 py-3">
-          <MarkdownRenderer content={resolvedPrompt} collapsible={false} />
-        </div>
-      )}
-    </div>
-  );
+  return <PromptPreviewDialog content={resolvedPrompt} />;
 }
 
 function ProviderConfirmStep() {

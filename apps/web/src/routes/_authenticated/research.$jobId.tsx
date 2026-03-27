@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { PageSkeleton } from "@/components/loading-skeleton";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { PromptPreviewDialog } from "@/components/prompt-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -266,18 +267,12 @@ function ResultDetailPage() {
           </Card>
         )}
 
-        {/* Prompt snapshot */}
-        {job.promptSnapshot && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Prompt Used</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="bg-muted overflow-hidden rounded-lg p-4 text-xs whitespace-pre-wrap break-words">
-                {job.promptSnapshot}
-              </pre>
-            </CardContent>
-          </Card>
+        {/* Prompt snapshot — prefer the resolved prompt (exact text sent to the AI) */}
+        {(job.resolvedPrompt ?? job.promptSnapshot) && (
+          <PromptPreviewDialog
+            content={job.resolvedPrompt ?? job.promptSnapshot}
+            label="Prompt Used"
+          />
         )}
       </div>
 

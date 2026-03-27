@@ -35,6 +35,7 @@ export default defineSchema({
   researchJobs: defineTable({
     promptId: v.id("prompts"),
     promptSnapshot: v.string(),
+    resolvedPrompt: v.optional(v.string()),
     stockIds: v.array(v.id("stocks")),
     provider: v.literal("openai"),
     status: v.union(

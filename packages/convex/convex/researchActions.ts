@@ -415,11 +415,12 @@ export const startResearch = internalAction({
         background: true,
       });
 
-      // Store the external job ID for webhook matching
+      // Store the external job ID and resolved prompt for webhook matching / audit
       await ctx.runMutation(internal.researchJobs.updateJobStatus, {
         id: args.jobId,
         status: "running",
         externalJobId: response.id,
+        resolvedPrompt,
       });
     } catch (error: unknown) {
       const message =
