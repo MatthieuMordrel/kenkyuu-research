@@ -41,11 +41,11 @@ export function PromptPreviewDialog({
         </Button>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{label}</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 pr-2">
+          <div className="overflow-y-auto overflow-x-hidden flex-1 pr-2 min-w-0">
             <MarkdownRenderer content={content} collapsible={false} />
           </div>
         </DialogContent>

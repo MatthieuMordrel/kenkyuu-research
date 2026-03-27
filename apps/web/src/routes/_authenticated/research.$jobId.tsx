@@ -130,7 +130,7 @@ function ResultDetailPage() {
   const costStr = job.costUsd != null ? `$${job.costUsd.toFixed(2)}` : undefined;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-x-hidden">
       {/* Back link */}
       <div className="px-4 pt-4 md:px-6">
         <Button variant="ghost" size="sm" asChild>
@@ -237,6 +237,14 @@ function ResultDetailPage() {
           </CardContent>
         </Card>
 
+        {/* Prompt Used — only show when we have the exact resolved prompt */}
+        {job.resolvedPrompt && (
+          <PromptPreviewDialog
+            content={job.resolvedPrompt}
+            label="Prompt Used"
+          />
+        )}
+
         {/* Error message */}
         {job.error && (
           <Card className="border-destructive/50">
@@ -267,13 +275,6 @@ function ResultDetailPage() {
           </Card>
         )}
 
-        {/* Prompt snapshot — prefer the resolved prompt (exact text sent to the AI) */}
-        {(job.resolvedPrompt ?? job.promptSnapshot) && (
-          <PromptPreviewDialog
-            content={job.resolvedPrompt ?? job.promptSnapshot}
-            label="Prompt Used"
-          />
-        )}
       </div>
 
       {/* Delete confirmation dialog */}

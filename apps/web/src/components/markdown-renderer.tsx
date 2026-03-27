@@ -68,14 +68,14 @@ const baseComponents: Components = {
   },
   pre: ({ children, ...props }) => (
     <pre
-      className="bg-muted mb-3 overflow-hidden rounded-lg p-4 text-sm whitespace-pre-wrap break-words"
+      className="bg-muted mb-3 overflow-x-auto rounded-lg p-4 text-sm whitespace-pre-wrap break-words"
       {...props}
     >
       {children}
     </pre>
   ),
   table: ({ children, ...props }) => (
-    <div className="mb-3 overflow-hidden">
+    <div className="mb-3 overflow-x-auto">
       <table className="w-full border-collapse text-sm table-fixed" {...props}>
         {children}
       </table>
@@ -252,7 +252,7 @@ function CollapsibleSection({
         </span>
       </button>
       {isOpen && (
-        <div className="pb-3 pl-6">
+        <div className="pb-3 pl-6 min-w-0 overflow-hidden">
           {section.content && (
             <ReactMarkdown remarkPlugins={remarkPlugins} components={baseComponents}>
               {section.content}
@@ -333,7 +333,7 @@ export function MarkdownRenderer({
 
   if (!hasCollapsibleSections) {
     return (
-      <div className={cn("text-foreground text-sm leading-relaxed break-words overflow-hidden", className)}>
+      <div className={cn("text-foreground text-sm leading-relaxed break-words overflow-hidden min-w-0", className)}>
         <ReactMarkdown remarkPlugins={remarkPlugins} components={baseComponents}>
           {content}
         </ReactMarkdown>
