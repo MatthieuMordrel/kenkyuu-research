@@ -2,12 +2,10 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { usePrompts, useDeletePrompt, useClonePrompt } from "@/hooks/use-prompts";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
 import { ListSkeleton } from "@/components/loading-skeleton";
 import { PromptModal } from "@/components/prompt-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +14,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, FileText, Pencil, Trash2, Copy } from "lucide-react";
+import {
+  Plus,
+  FileText,
+  Pencil,
+  Trash2,
+  Copy,
+  Sparkles,
+  TrendingUp,
+  BarChart3,
+  Search,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Doc } from "@repo/convex/dataModel";
 
@@ -37,6 +45,21 @@ const TYPE_LABELS: Record<PromptType, string> = {
   "single-stock": "Single Stock",
   "multi-stock": "Multi Stock",
   discovery: "Discovery",
+};
+
+const TYPE_CONFIG: Record<PromptType, { icon: typeof TrendingUp; color: string }> = {
+  "single-stock": {
+    icon: TrendingUp,
+    color: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400",
+  },
+  "multi-stock": {
+    icon: BarChart3,
+    color: "bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400",
+  },
+  discovery: {
+    icon: Search,
+    color: "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
+  },
 };
 
 function PromptsPage() {
@@ -98,13 +121,18 @@ function PromptsPage() {
               type="button"
               onClick={() => setSelectedType(tab.value)}
               className={cn(
-                "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
+                "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all",
                 selectedType === tab.value
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-foreground hover:bg-accent",
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
               {tab.label}
+              {!isLoading && tab.value === selectedType && prompts && (
+                <span className="ml-1.5 rounded-full bg-primary-foreground/20 px-1.5 text-[10px]">
+                  {prompts.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -115,25 +143,33 @@ function PromptsPage() {
         {isLoading ? (
           <ListSkeleton count={3} />
         ) : prompts.length === 0 ? (
-          <EmptyState
-            icon={FileText}
-            title={selectedType !== "all" ? "No prompts found" : "No prompts yet"}
-            description={
-              selectedType !== "all"
-                ? "No prompts match the selected type filter."
-                : "Create your first prompt template to get started with research."
-            }
-            action={
-              selectedType === "all" ? (
-                <Button size="sm" onClick={openAdd}>
-                  <Plus className="size-4" />
-                  New Prompt
-                </Button>
-              ) : undefined
-            }
-          />
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-12 text-center">
+            <div className="flex size-11 items-center justify-center rounded-full bg-muted">
+              {selectedType !== "all" ? (
+                <FileText className="size-5 text-muted-foreground" />
+              ) : (
+                <Sparkles className="size-5 text-muted-foreground" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-medium">
+                {selectedType !== "all" ? "No prompts found" : "No prompts yet"}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {selectedType !== "all"
+                  ? "No prompts match the selected type filter."
+                  : "Create your first prompt template to get started."}
+              </p>
+            </div>
+            {selectedType === "all" && (
+              <Button size="sm" variant="outline" onClick={openAdd} className="mt-1">
+                <Plus className="size-4" />
+                New Prompt
+              </Button>
+            )}
+          </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {prompts.map((prompt) => (
               <PromptCard
                 key={prompt._id}
@@ -192,59 +228,79 @@ function PromptCard({
   onDelete: () => void;
   onClone: () => void;
 }) {
+  const config = TYPE_CONFIG[prompt.type];
+  const TypeIcon = config.icon;
+
   return (
-    <Card className="py-3">
-      <CardContent className="flex items-start gap-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">{prompt.name}</span>
-            {prompt.isBuiltIn && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                Built-in
-              </Badge>
-            )}
-          </div>
-          <span className="text-sm text-muted-foreground line-clamp-2">
-            {prompt.description}
-          </span>
-          <div className="flex items-center gap-2 mt-0.5">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {TYPE_LABELS[prompt.type]}
-            </Badge>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onClone}
-            title="Clone prompt"
-          >
-            <Copy className="size-3.5" />
-            <span className="sr-only">Clone</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onEdit}
-            title="Edit prompt"
-          >
-            <Pencil className="size-3.5" />
-            <span className="sr-only">Edit</span>
-          </Button>
-          {!prompt.isBuiltIn && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onDelete}
-              title="Delete prompt"
+    <div className="group flex h-16 items-center gap-3 rounded-xl px-3 transition-all hover:bg-accent">
+      {/* Type icon */}
+      <div
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-lg",
+          config.color,
+        )}
+      >
+        <TypeIcon className="size-4" />
+      </div>
+
+      {/* Content — two rows */}
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium">{prompt.name}</span>
+          {prompt.isBuiltIn && (
+            <Badge
+              variant="secondary"
+              className="shrink-0 rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
             >
-              <Trash2 className="size-3.5 text-destructive" />
-              <span className="sr-only">Delete</span>
-            </Button>
+              Built-in
+            </Badge>
           )}
         </div>
-      </CardContent>
-    </Card>
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className="rounded-md px-1.5 py-0 text-[10px] font-semibold tracking-wide"
+          >
+            {TYPE_LABELS[prompt.type]}
+          </Badge>
+          <span className="truncate text-xs text-muted-foreground">
+            {prompt.description}
+          </span>
+        </div>
+      </div>
+
+      {/* Actions — visible on hover */}
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onClone}
+          title="Clone prompt"
+        >
+          <Copy className="size-3.5" />
+          <span className="sr-only">Clone</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onEdit}
+          title="Edit prompt"
+        >
+          <Pencil className="size-3.5" />
+          <span className="sr-only">Edit</span>
+        </Button>
+        {!prompt.isBuiltIn && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onDelete}
+            title="Delete prompt"
+          >
+            <Trash2 className="size-3.5 text-destructive" />
+            <span className="sr-only">Delete</span>
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
