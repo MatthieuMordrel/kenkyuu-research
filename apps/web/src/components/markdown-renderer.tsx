@@ -68,15 +68,15 @@ const baseComponents: Components = {
   },
   pre: ({ children, ...props }) => (
     <pre
-      className="bg-muted mb-3 overflow-x-auto rounded-lg p-4 text-sm"
+      className="bg-muted mb-3 overflow-hidden rounded-lg p-4 text-sm whitespace-pre-wrap break-words"
       {...props}
     >
       {children}
     </pre>
   ),
   table: ({ children, ...props }) => (
-    <div className="mb-3 overflow-x-auto">
-      <table className="w-full border-collapse text-sm" {...props}>
+    <div className="mb-3 overflow-hidden">
+      <table className="w-full border-collapse text-sm table-fixed" {...props}>
         {children}
       </table>
     </div>
@@ -95,7 +95,7 @@ const baseComponents: Components = {
     </th>
   ),
   td: ({ children, ...props }) => (
-    <td className="border-border border px-3 py-2" {...props}>
+    <td className="border-border border px-3 py-2 break-words" {...props}>
       {children}
     </td>
   ),

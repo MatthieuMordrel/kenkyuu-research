@@ -246,7 +246,7 @@ function ResultDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm whitespace-pre-wrap">{job.error}</p>
+              <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">{job.error}</p>
             </CardContent>
           </Card>
         )}
@@ -273,7 +273,7 @@ function ResultDetailPage() {
               <CardTitle className="text-base">Prompt Used</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="bg-muted overflow-x-auto rounded-lg p-4 text-xs whitespace-pre-wrap">
+              <pre className="bg-muted overflow-hidden rounded-lg p-4 text-xs whitespace-pre-wrap break-words">
                 {job.promptSnapshot}
               </pre>
             </CardContent>
