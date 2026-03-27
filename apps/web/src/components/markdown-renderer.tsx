@@ -147,11 +147,27 @@ function parseSections(markdown: string): ParsedMarkdown {
   }
   if (current) flat.push(current);
 
+  // Deduplicate sections with near-identical titles (e.g. AI models sometimes
+  // output a summary outline followed by the full sections). Normalize titles
+  // by collapsing dashes/whitespace, then keep the *last* occurrence (usually
+  // the more detailed version).
+  const seen = new Map<string, number>();
+  for (let idx = 0; idx < flat.length; idx++) {
+    const key = flat[idx].title
+      .toLowerCase()
+      .replace(/[\u2013\u2014\u2015\u2012-]/g, "-") // normalize all dash variants
+      .replace(/\s+/g, " ")
+      .trim();
+    seen.set(key, idx); // last occurrence wins
+  }
+  const keepIndices = new Set(seen.values());
+  const deduped = flat.filter((_, idx) => keepIndices.has(idx));
+
   // Treat the first h1 like an h2 for tree-building (so it's collapsible)
   // but keep its original display level for styling
-  const firstIsH1 = flat.length > 0 && flat[0].level === 1;
+  const firstIsH1 = deduped.length > 0 && deduped[0].level === 1;
   if (firstIsH1) {
-    flat[0].level = 2;
+    deduped[0].level = 2;
   }
 
   // Build tree: nest sections by heading level
@@ -186,7 +202,7 @@ function parseSections(markdown: string): ParsedMarkdown {
     return result;
   }
 
-  return { preamble: preamble.trim(), sections: buildTree(flat) };
+  return { preamble: preamble.trim(), sections: buildTree(deduped) };
 }
 
 // --- Heading styles ---
