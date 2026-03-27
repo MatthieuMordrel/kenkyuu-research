@@ -130,7 +130,7 @@ function ResultDetailPage() {
   const costStr = job.costUsd != null ? `$${job.costUsd.toFixed(2)}` : undefined;
 
   return (
-    <div className="flex flex-col gap-4 overflow-x-hidden">
+    <div className="flex flex-col gap-4">
       {/* Back link */}
       <div className="px-4 pt-4 md:px-6">
         <Button variant="ghost" size="sm" asChild>

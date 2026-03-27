@@ -100,7 +100,7 @@ function PromptsPage() {
   const isLoading = prompts === undefined;
 
   return (
-    <div className="flex flex-col gap-4 overflow-x-hidden">
+    <div className="flex flex-col gap-4">
       <PageHeader
         title="Prompts"
         description="Manage research prompt templates"

@@ -40,7 +40,7 @@ function DashboardPage() {
   const quickActions = useQuickActions();
 
   return (
-    <div className="flex flex-col gap-4 overflow-x-hidden">
+    <div className="flex flex-col gap-4">
       <PageHeader
         title="Dashboard"
         description="Overview of your research activity and costs"

@@ -116,7 +116,7 @@ function StocksPage() {
   const isLoading = stocks === undefined;
 
   return (
-    <div className="flex flex-col gap-4 overflow-x-hidden">
+    <div className="flex flex-col gap-4">
       <PageHeader
         title="Stocks"
         description="Manage your stock watchlist"

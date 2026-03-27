@@ -97,7 +97,7 @@ function StockDetailPage() {
   });
 
   return (
-    <div className="flex flex-col gap-4 overflow-x-hidden">
+    <div className="flex flex-col gap-4">
       <div className="px-4 pt-4 md:px-6">
         <Button variant="ghost" size="sm" asChild>
           <Link to="/stocks">
