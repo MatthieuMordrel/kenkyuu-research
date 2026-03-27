@@ -15,6 +15,7 @@ import { useResearchFlow } from "@/hooks/use-research-flow";
 import { usePrompts, usePrompt } from "@/hooks/use-prompts";
 import { useStocks, useTags } from "@/hooks/use-stocks";
 import { useActiveJobs } from "@/hooks/use-research";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -426,9 +427,7 @@ function PromptPreview({
       </button>
       {open && (
         <div className="max-h-64 overflow-y-auto border-t border-border bg-muted/30 px-3 py-3">
-          <pre className="text-xs leading-relaxed text-foreground whitespace-pre-wrap break-words font-mono">
-            {resolvedPrompt}
-          </pre>
+          <MarkdownRenderer content={resolvedPrompt} collapsible={false} />
         </div>
       )}
     </div>
