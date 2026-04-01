@@ -76,7 +76,7 @@ const baseComponents: Components = {
   ),
   table: ({ children, ...props }) => (
     <div className="mb-3 overflow-x-auto">
-      <table className="w-full border-collapse text-sm table-fixed" {...props}>
+      <table className="border-collapse text-sm w-max min-w-full" {...props}>
         {children}
       </table>
     </div>
@@ -88,7 +88,7 @@ const baseComponents: Components = {
   ),
   th: ({ children, ...props }) => (
     <th
-      className="border-border border px-3 py-2 text-left font-semibold"
+      className="border-border border px-3 py-2 text-left font-semibold whitespace-nowrap"
       {...props}
     >
       {children}
@@ -108,6 +108,107 @@ const baseComponents: Components = {
 };
 
 const remarkPlugins = [remarkGfm];
+
+// --- Fix malformed markdown tables ---
+// AI models (especially OpenAI deep research) sometimes output tables with
+// mismatched column counts between the header, separator, and data rows.
+// Markdown parsers silently fail and render these as plain text.
+// This function detects table blocks and repairs them.
+
+function fixMarkdownTables(markdown: string): string {
+  const lines = markdown.split("\n");
+  const result: string[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    // Detect start of a potential table: a line with at least two pipe characters
+    if (isPipeRow(lines[i])) {
+      // Collect the full table block (consecutive pipe rows)
+      const tableLines: string[] = [];
+      while (i < lines.length && isPipeRow(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+
+      // A valid table needs at least 2 rows (header + separator).
+      // Try to find and fix the separator row.
+      if (tableLines.length >= 2) {
+        const repaired = repairTable(tableLines);
+        result.push(...repaired);
+      } else {
+        result.push(...tableLines);
+      }
+    } else {
+      result.push(lines[i]);
+      i++;
+    }
+  }
+
+  return result.join("\n");
+}
+
+function isPipeRow(line: string): boolean {
+  if (!line) return false;
+  const trimmed = line.trim();
+  return trimmed.startsWith("|") && trimmed.endsWith("|") && trimmed.length > 1;
+}
+
+function splitPipeCells(line: string): string[] {
+  const trimmed = line.trim();
+  // Remove leading and trailing pipes, then split
+  const inner = trimmed.replace(/^\|/, "").replace(/\|$/, "");
+  return inner.split("|");
+}
+
+function isSeparatorRow(line: string): boolean {
+  const cells = splitPipeCells(line);
+  return cells.every((c) => /^\s*:?-+:?\s*$/.test(c.trim()));
+}
+
+function repairTable(tableLines: string[]): string[] {
+  // Find the separator row (usually row index 1, but be flexible)
+  let sepIndex = -1;
+  for (let j = 0; j < Math.min(3, tableLines.length); j++) {
+    if (isSeparatorRow(tableLines[j])) {
+      sepIndex = j;
+      break;
+    }
+  }
+
+  // No separator found — not a real table, return as-is
+  if (sepIndex === -1) return tableLines;
+
+  // The header is the row just before the separator
+  const headerIndex = sepIndex > 0 ? sepIndex - 1 : 0;
+  const headerCols = splitPipeCells(tableLines[headerIndex]).length;
+
+  // Find the max column count across all rows (in case header is short too)
+  let maxCols = headerCols;
+  for (const line of tableLines) {
+    if (!isSeparatorRow(line)) {
+      maxCols = Math.max(maxCols, splitPipeCells(line).length);
+    }
+  }
+
+  // Repair each row to match maxCols
+  return tableLines.map((line) => {
+    const cells = splitPipeCells(line);
+    const isSep = isSeparatorRow(line);
+
+    if (cells.length === maxCols) return line;
+
+    // Pad missing columns
+    while (cells.length < maxCols) {
+      cells.push(isSep ? "---" : "");
+    }
+    // Trim excess columns (less common, but possible)
+    if (cells.length > maxCols) {
+      cells.length = maxCols;
+    }
+
+    return "| " + cells.map((c) => c.trim()).join(" | ") + " |";
+  });
+}
 
 // --- Section parsing (hierarchical) ---
 
@@ -290,7 +391,8 @@ export function MarkdownRenderer({
   className,
   collapsible = true,
 }: MarkdownRendererProps) {
-  const { preamble, sections } = useMemo(() => parseSections(content), [content]);
+  const fixedContent = useMemo(() => fixMarkdownTables(content), [content]);
+  const { preamble, sections } = useMemo(() => parseSections(fixedContent), [fixedContent]);
   const hasCollapsibleSections = collapsible && sections.length > 0;
 
   // Collect all keys from the tree for expand-all
@@ -335,7 +437,7 @@ export function MarkdownRenderer({
     return (
       <div className={cn("text-foreground text-sm leading-relaxed break-words overflow-hidden min-w-0", className)}>
         <ReactMarkdown remarkPlugins={remarkPlugins} components={baseComponents}>
-          {content}
+          {fixedContent}
         </ReactMarkdown>
       </div>
     );
