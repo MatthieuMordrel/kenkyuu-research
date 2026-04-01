@@ -208,6 +208,11 @@ export const scheduleNextRun = internalAction({
       return;
     }
 
+    // Earnings-type schedules are driven by the hourly cron, not self-rescheduling
+    if (schedule.triggerType === "earnings") {
+      return;
+    }
+
     // Check global pause
     const globalPaused = await ctx.runQuery(internal.schedules.getGlobalPauseStatusInternal, {});
     if (globalPaused) {
@@ -216,6 +221,9 @@ export const scheduleNextRun = internalAction({
 
     // Compute next run time
     const now = Date.now();
+    if (!schedule.cron) {
+      return;
+    }
     const nextRunAt = computeNextRunAt(schedule.cron, schedule.timezone, now);
 
     // Schedule the execution action at that time
@@ -249,6 +257,11 @@ export const executeScheduledRun = internalAction({
     });
 
     if (!schedule || !schedule.enabled) {
+      return;
+    }
+
+    // Earnings-type schedules are driven by the hourly cron, not self-rescheduling
+    if (schedule.triggerType === "earnings") {
       return;
     }
 

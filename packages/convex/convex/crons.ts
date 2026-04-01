@@ -18,4 +18,13 @@ crons.interval(
   internal.researchActions.recoverStaleJobs,
 );
 
+// Check earnings-based schedule triggers every hour.
+// Evaluates all earnings-type schedules against current earnings data
+// and creates research jobs for stocks with matching earnings dates.
+crons.interval(
+  "check-earnings-triggers",
+  { hours: 1 },
+  internal.earningsTriggerActions.checkEarningsTriggers,
+);
+
 export default crons;

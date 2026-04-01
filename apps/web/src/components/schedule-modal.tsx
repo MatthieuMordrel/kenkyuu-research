@@ -18,9 +18,11 @@ import {
   validateScheduleForm,
   hasErrors,
   describeCron,
+  describeEarningsTrigger,
   COMMON_TIMEZONES,
   type ScheduleFormData,
   type ScheduleFormErrors,
+  type EarningsConfigFormData,
 } from "@/lib/schedule-validation";
 import { cn } from "@/lib/utils";
 import type { Doc, Id } from "@repo/convex/dataModel";
@@ -52,14 +54,35 @@ const STOCK_MODE_OPTIONS: {
   { value: "none", label: "None", description: "Discovery prompt, no stocks needed" },
 ];
 
+const INITIAL_EARNINGS_CONFIG: EarningsConfigFormData = {
+  offsetDays: 0,
+  runTimeUTC: "10:00",
+  adjustForHour: true,
+};
+
 const INITIAL_FORM: ScheduleFormData = {
   name: "",
   promptId: "",
   stockSelection: { type: "all" },
+  triggerType: "cron",
   cron: "@daily",
+  earningsConfig: { ...INITIAL_EARNINGS_CONFIG },
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   enabled: true,
 };
+
+const OFFSET_OPTIONS = [
+  { value: -3, label: "3 days before" },
+  { value: -2, label: "2 days before" },
+  { value: -1, label: "1 day before" },
+  { value: 0, label: "On earnings day" },
+  { value: 1, label: "1 day after" },
+  { value: 2, label: "2 days after" },
+  { value: 3, label: "3 days after" },
+  { value: 5, label: "5 days after" },
+  { value: 7, label: "7 days after" },
+  { value: 14, label: "14 days after" },
+] as const;
 
 export function ScheduleModal({
   open,
@@ -82,18 +105,25 @@ export function ScheduleModal({
   useEffect(() => {
     if (open) {
       if (schedule) {
+        const triggerType = (schedule.triggerType ?? "cron") as "cron" | "earnings";
         setForm({
           name: schedule.name,
           promptId: schedule.promptId,
           stockSelection: { ...schedule.stockSelection },
-          cron: schedule.cron,
+          triggerType,
+          cron: schedule.cron ?? "@daily",
+          earningsConfig: schedule.earningsConfig
+            ? { ...schedule.earningsConfig }
+            : { ...INITIAL_EARNINGS_CONFIG },
           timezone: schedule.timezone,
           enabled: schedule.enabled,
         });
-        const isPreset = FREQUENCY_PRESETS.some(
-          (p) => p.value === schedule.cron,
-        );
-        setFrequencyMode(isPreset ? schedule.cron : "custom");
+        if (triggerType === "cron") {
+          const isPreset = FREQUENCY_PRESETS.some(
+            (p) => p.value === schedule.cron,
+          );
+          setFrequencyMode(isPreset ? (schedule.cron ?? "@daily") : "custom");
+        }
       } else {
         setForm(INITIAL_FORM);
         setFrequencyMode("@daily");
@@ -158,25 +188,31 @@ export function ScheduleModal({
 
     setSubmitting(true);
     try {
+      const commonFields = {
+        name: form.name.trim(),
+        promptId: form.promptId as Id<"prompts">,
+        stockSelection: form.stockSelection as Doc<"schedules">["stockSelection"],
+        timezone: form.timezone,
+        enabled: form.enabled,
+        triggerType: form.triggerType as "cron" | "earnings",
+      };
+
+      const triggerFields =
+        form.triggerType === "earnings"
+          ? { earningsConfig: form.earningsConfig }
+          : { cron: form.cron };
+
       if (isEditing && schedule) {
         await updateSchedule({
           id: schedule._id,
-          name: form.name.trim(),
-          promptId: form.promptId as Id<"prompts">,
-          stockSelection: form.stockSelection as Doc<"schedules">["stockSelection"],
-          cron: form.cron,
-          timezone: form.timezone,
-          enabled: form.enabled,
+          ...commonFields,
+          ...triggerFields,
         });
       } else {
         await createSchedule({
-          name: form.name.trim(),
-          promptId: form.promptId as Id<"prompts">,
-          stockSelection: form.stockSelection as Doc<"schedules">["stockSelection"],
+          ...commonFields,
+          ...triggerFields,
           provider: "openai",
-          cron: form.cron,
-          timezone: form.timezone,
-          enabled: form.enabled,
         });
       }
       onOpenChange(false);
@@ -378,52 +414,205 @@ export function ScheduleModal({
             )}
           </div>
 
-          {/* Frequency */}
+          {/* Trigger Type */}
           <div className="flex flex-col gap-2">
-            <Label>Frequency *</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {FREQUENCY_PRESETS.map((preset) => (
-                <button
-                  key={preset.value}
-                  type="button"
-                  onClick={() => handleFrequencyChange(preset.value)}
+            <Label>Trigger Type *</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => updateField("triggerType", "cron")}
+                className={cn(
+                  "flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left transition-colors",
+                  form.triggerType === "cron"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-accent",
+                )}
+              >
+                <span className="text-sm font-medium">Time-based</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Run on a fixed cron schedule
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateField("triggerType", "earnings")}
+                className={cn(
+                  "flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left transition-colors",
+                  form.triggerType === "earnings"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-accent",
+                )}
+              >
+                <span className="text-sm font-medium">Earnings-based</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Run relative to earnings dates
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Frequency (cron-type only) */}
+          {form.triggerType === "cron" && (
+            <div className="flex flex-col gap-2">
+              <Label>Frequency *</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {FREQUENCY_PRESETS.map((preset) => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => handleFrequencyChange(preset.value)}
+                    className={cn(
+                      "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                      frequencyMode === preset.value
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-foreground hover:bg-accent",
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {frequencyMode === "custom" && (
+                <div className="flex flex-col gap-1.5">
+                  <Input
+                    placeholder="e.g. 0 9 * * 1-5 (weekdays at 9am)"
+                    value={form.cron}
+                    onChange={(e) => updateField("cron", e.target.value)}
+                    aria-invalid={!!errors.cron}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Format: minute hour day-of-month month day-of-week
+                  </p>
+                </div>
+              )}
+
+              {form.cron && !errors.cron && (
+                <p className="text-xs text-muted-foreground">
+                  {describeCron(form.cron)}
+                </p>
+              )}
+
+              {errors.cron && (
+                <p className="text-xs text-destructive">{errors.cron}</p>
+              )}
+            </div>
+          )}
+
+          {/* Earnings Config (earnings-type only) */}
+          {form.triggerType === "earnings" && (
+            <div className="flex flex-col gap-3">
+              {/* Offset selector */}
+              <div className="flex flex-col gap-2">
+                <Label>Timing Relative to Earnings *</Label>
+                <select
+                  value={form.earningsConfig.offsetDays}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      earningsConfig: {
+                        ...prev.earningsConfig,
+                        offsetDays: Number(e.target.value),
+                      },
+                    }))
+                  }
                   className={cn(
-                    "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                    frequencyMode === preset.value
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-foreground hover:bg-accent",
+                    "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-xs transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                   )}
                 >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
+                  {OFFSET_OPTIONS.map((opt) => (
+                    <option
+                      key={opt.value}
+                      value={opt.value}
+                      className="bg-background text-foreground"
+                    >
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {frequencyMode === "custom" && (
-              <div className="flex flex-col gap-1.5">
+              {/* Run time */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="earnings-run-time">Run Time (UTC) *</Label>
                 <Input
-                  placeholder="e.g. 0 9 * * 1-5 (weekdays at 9am)"
-                  value={form.cron}
-                  onChange={(e) => updateField("cron", e.target.value)}
-                  aria-invalid={!!errors.cron}
-                  className="font-mono text-sm"
+                  id="earnings-run-time"
+                  type="time"
+                  value={form.earningsConfig.runTimeUTC}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      earningsConfig: {
+                        ...prev.earningsConfig,
+                        runTimeUTC: e.target.value,
+                      },
+                    }))
+                  }
+                  className="w-32"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Format: minute hour day-of-month month day-of-week
+                  Time in UTC when research should run on the trigger day
                 </p>
               </div>
-            )}
 
-            {form.cron && !errors.cron && (
+              {/* Adjust for AMC toggle */}
+              <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium">
+                    Adjust for after-market-close
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    For AMC earnings on day 0, delay research to the next day
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      earningsConfig: {
+                        ...prev.earningsConfig,
+                        adjustForHour: !prev.earningsConfig.adjustForHour,
+                      },
+                    }))
+                  }
+                  className={cn(
+                    "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                    form.earningsConfig.adjustForHour
+                      ? "bg-primary"
+                      : "bg-muted",
+                  )}
+                  aria-label={
+                    form.earningsConfig.adjustForHour
+                      ? "Disable AMC adjustment"
+                      : "Enable AMC adjustment"
+                  }
+                >
+                  <span
+                    className={cn(
+                      "pointer-events-none inline-block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform",
+                      form.earningsConfig.adjustForHour
+                        ? "translate-x-4"
+                        : "translate-x-0",
+                    )}
+                  />
+                </button>
+              </div>
+
+              {/* Preview description */}
               <p className="text-xs text-muted-foreground">
-                {describeCron(form.cron)}
+                {describeEarningsTrigger(form.earningsConfig)}
               </p>
-            )}
 
-            {errors.cron && (
-              <p className="text-xs text-destructive">{errors.cron}</p>
-            )}
-          </div>
+              {errors.earningsConfig && (
+                <p className="text-xs text-destructive">
+                  {errors.earningsConfig}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Timezone */}
           <div className="flex flex-col gap-2">

@@ -33,7 +33,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { describeCron } from "@/lib/schedule-validation";
+import { describeCron, describeEarningsTrigger } from "@/lib/schedule-validation";
 import type { Doc } from "@repo/convex/dataModel";
 
 export const Route = createFileRoute("/_authenticated/schedules")({
@@ -262,11 +262,20 @@ function ScheduleCard({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span>{describeCron(schedule.cron)}</span>
+            {schedule.triggerType === "earnings" && schedule.earningsConfig ? (
+              <>
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  Earnings
+                </Badge>
+                <span>{describeEarningsTrigger(schedule.earningsConfig)}</span>
+              </>
+            ) : (
+              <span>{describeCron(schedule.cron ?? "")}</span>
+            )}
             <span>{schedule.timezone}</span>
             <StockSelectionLabel selection={schedule.stockSelection} />
           </div>
-          {schedule.nextRunAt && isActive && (
+          {schedule.triggerType !== "earnings" && schedule.nextRunAt && isActive && (
             <span className="text-xs text-muted-foreground">
               Next: {formatRelativeTime(schedule.nextRunAt)}
             </span>

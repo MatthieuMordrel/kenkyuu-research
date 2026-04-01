@@ -17,6 +17,8 @@ import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as earnings from "../earnings.js";
 import type * as earningsActions from "../earningsActions.js";
+import type * as earningsTriggerActions from "../earningsTriggerActions.js";
+import type * as earningsTriggers from "../earningsTriggers.js";
 import type * as http from "../http.js";
 import type * as notifications from "../notifications.js";
 import type * as prompts from "../prompts.js";
@@ -45,6 +47,8 @@ declare const fullApi: ApiFromModules<{
   dashboard: typeof dashboard;
   earnings: typeof earnings;
   earningsActions: typeof earningsActions;
+  earningsTriggerActions: typeof earningsTriggerActions;
+  earningsTriggers: typeof earningsTriggers;
   http: typeof http;
   notifications: typeof notifications;
   prompts: typeof prompts;

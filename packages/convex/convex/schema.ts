@@ -76,15 +76,42 @@ export default defineSchema({
       stockIds: v.optional(v.array(v.id("stocks"))),
     }),
     provider: v.literal("openai"),
-    cron: v.string(),
     timezone: v.string(),
     enabled: v.boolean(),
     lastRunAt: v.optional(v.number()),
+    createdAt: v.number(),
+
+    // Trigger type: "cron" (default/legacy) or "earnings"
+    triggerType: v.optional(
+      v.union(v.literal("cron"), v.literal("earnings")),
+    ),
+
+    // Cron-specific fields (used when triggerType is "cron" or missing)
+    cron: v.optional(v.string()),
     nextRunAt: v.optional(v.number()),
     nextScheduledFunctionId: v.optional(v.string()),
-    createdAt: v.number(),
+
+    // Earnings-specific fields (used when triggerType is "earnings")
+    earningsConfig: v.optional(
+      v.object({
+        offsetDays: v.number(), // -7 to +14. 0 = earnings day, 1 = day after, -1 = day before
+        runTimeUTC: v.string(), // "HH:MM" format
+        adjustForHour: v.boolean(), // if true, amc earnings at offset=0 delay to next morning
+      }),
+    ),
   })
     .index("by_enabled_nextRunAt", ["enabled", "nextRunAt"]),
+
+  earningsTriggeredRuns: defineTable({
+    scheduleId: v.id("schedules"),
+    earningsId: v.id("earnings"),
+    stockId: v.id("stocks"),
+    earningsDate: v.string(), // YYYY-MM-DD
+    triggeredAt: v.number(),
+    jobId: v.optional(v.id("researchJobs")),
+  })
+    .index("by_schedule_earnings", ["scheduleId", "earningsId"])
+    .index("by_schedule_date", ["scheduleId", "earningsDate"]),
 
   settings: defineTable({
     key: v.string(),

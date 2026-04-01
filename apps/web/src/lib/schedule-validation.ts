@@ -2,6 +2,12 @@ import type { GenericId } from "convex/values";
 
 // --- Form Data ---
 
+export interface EarningsConfigFormData {
+  offsetDays: number;
+  runTimeUTC: string;
+  adjustForHour: boolean;
+}
+
 export interface ScheduleFormData {
   name: string;
   promptId: string;
@@ -10,7 +16,9 @@ export interface ScheduleFormData {
     tags?: string[];
     stockIds?: GenericId<"stocks">[];
   };
+  triggerType: "cron" | "earnings";
   cron: string;
+  earningsConfig: EarningsConfigFormData;
   timezone: string;
   enabled: boolean;
 }
@@ -22,6 +30,7 @@ export interface ScheduleFormErrors {
   promptId?: string;
   stockSelection?: string;
   cron?: string;
+  earningsConfig?: string;
   timezone?: string;
 }
 
@@ -199,6 +208,23 @@ export function validateStockSelection(stockSelection: ScheduleFormData["stockSe
   return undefined;
 }
 
+// --- Earnings Config Validation ---
+
+const RUN_TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+export function validateEarningsConfig(config: EarningsConfigFormData): string | undefined {
+  if (!Number.isInteger(config.offsetDays)) {
+    return "Offset days must be a whole number";
+  }
+  if (config.offsetDays < -7 || config.offsetDays > 14) {
+    return "Offset days must be between -7 and 14";
+  }
+  if (!RUN_TIME_REGEX.test(config.runTimeUTC)) {
+    return "Run time must be in HH:MM format (00:00 - 23:59)";
+  }
+  return undefined;
+}
+
 // --- Combined Validator ---
 
 export function validateScheduleForm(data: ScheduleFormData): ScheduleFormErrors {
@@ -213,8 +239,18 @@ export function validateScheduleForm(data: ScheduleFormData): ScheduleFormErrors
   const stockError = validateStockSelection(data.stockSelection);
   if (stockError) errors.stockSelection = stockError;
 
-  const cronError = validateCron(data.cron);
-  if (cronError) errors.cron = cronError;
+  if (data.triggerType === "earnings") {
+    const earningsError = validateEarningsConfig(data.earningsConfig);
+    if (earningsError) errors.earningsConfig = earningsError;
+
+    // Earnings triggers require stock selection
+    if (data.stockSelection.type === "none") {
+      errors.stockSelection = "Earnings-based schedules require stock selection";
+    }
+  } else {
+    const cronError = validateCron(data.cron);
+    if (cronError) errors.cron = cronError;
+  }
 
   const tzError = validateTimezone(data.timezone);
   if (tzError) errors.timezone = tzError;
@@ -227,6 +263,28 @@ export function hasErrors(errors: ScheduleFormErrors): boolean {
 }
 
 // --- Cron Display Helpers ---
+
+export function describeEarningsTrigger(config: EarningsConfigFormData): string {
+  const offset = config.offsetDays;
+  let timing: string;
+
+  if (offset === 0) {
+    timing = "On earnings day";
+  } else if (offset === 1) {
+    timing = "1 day after earnings";
+  } else if (offset === -1) {
+    timing = "1 day before earnings";
+  } else if (offset > 0) {
+    timing = `${offset} days after earnings`;
+  } else {
+    timing = `${Math.abs(offset)} days before earnings`;
+  }
+
+  const time = config.runTimeUTC;
+  const amcNote = config.adjustForHour ? " (AMC delayed to next day)" : "";
+
+  return `${timing} at ${time} UTC${amcNote}`;
+}
 
 export function describeCron(cron: string): string {
   const trimmed = cron.trim();

@@ -7,7 +7,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
-import { validateScheduleInput } from "./validation";
+import { validateScheduleInput, validateEarningsConfig } from "./validation";
 import { logAuditEvent } from "./auditLog";
 
 const stockSelectionValidator = v.object({
@@ -23,20 +23,45 @@ const stockSelectionValidator = v.object({
 
 // --- Mutations ---
 
+const earningsConfigValidator = v.object({
+  offsetDays: v.number(),
+  runTimeUTC: v.string(),
+  adjustForHour: v.boolean(),
+});
+
 export const createSchedule = mutation({
   args: {
     name: v.string(),
     promptId: v.id("prompts"),
     stockSelection: stockSelectionValidator,
     provider: v.literal("openai"),
-    cron: v.string(),
+    cron: v.optional(v.string()),
     timezone: v.string(),
     enabled: v.boolean(),
+    triggerType: v.optional(v.union(v.literal("cron"), v.literal("earnings"))),
+    earningsConfig: v.optional(earningsConfigValidator),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
     validateScheduleInput(args);
+
+    const effectiveTriggerType = args.triggerType ?? "cron";
+
+    // Validate trigger-specific fields
+    if (effectiveTriggerType === "cron") {
+      if (!args.cron) {
+        throw new Error("Cron expression is required for time-based schedules");
+      }
+    } else if (effectiveTriggerType === "earnings") {
+      if (!args.earningsConfig) {
+        throw new Error("Earnings config is required for earnings-based schedules");
+      }
+      validateEarningsConfig(args.earningsConfig);
+      if (args.stockSelection.type === "none") {
+        throw new Error("Stock selection is required for earnings-based schedules");
+      }
+    }
 
     const prompt = await ctx.db.get(args.promptId);
     if (!prompt) {
@@ -52,19 +77,28 @@ export const createSchedule = mutation({
     }
 
     const now = Date.now();
-    const scheduleId = await ctx.db.insert("schedules", {
+    const scheduleData: Record<string, unknown> = {
       name: args.name,
       promptId: args.promptId,
       stockSelection: args.stockSelection,
       provider: args.provider,
-      cron: args.cron,
       timezone: args.timezone,
       enabled: args.enabled,
       createdAt: now,
-    });
+    };
 
-    // If enabled, compute nextRunAt and schedule the first run
-    if (args.enabled) {
+    if (effectiveTriggerType === "earnings") {
+      scheduleData.triggerType = "earnings";
+      scheduleData.earningsConfig = args.earningsConfig;
+    } else {
+      scheduleData.triggerType = "cron";
+      scheduleData.cron = args.cron;
+    }
+
+    const scheduleId = await ctx.db.insert("schedules", scheduleData as never);
+
+    // Only cron schedules use self-rescheduling; earnings schedules are driven by the hourly cron
+    if (args.enabled && effectiveTriggerType === "cron") {
       await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
         scheduleId,
       });
@@ -85,6 +119,8 @@ export const updateSchedule = mutation({
     cron: v.optional(v.string()),
     timezone: v.optional(v.string()),
     enabled: v.optional(v.boolean()),
+    triggerType: v.optional(v.union(v.literal("cron"), v.literal("earnings"))),
+    earningsConfig: v.optional(earningsConfigValidator),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -94,6 +130,11 @@ export const updateSchedule = mutation({
     const schedule = await ctx.db.get(args.id);
     if (!schedule) {
       throw new Error("Schedule not found");
+    }
+
+    // Validate earnings config if provided
+    if (args.earningsConfig) {
+      validateEarningsConfig(args.earningsConfig);
     }
 
     const { id, token: _token, ...updates } = args;
@@ -110,37 +151,53 @@ export const updateSchedule = mutation({
     if (updates.cron !== undefined) patch.cron = updates.cron;
     if (updates.timezone !== undefined) patch.timezone = updates.timezone;
     if (updates.enabled !== undefined) patch.enabled = updates.enabled;
+    if (updates.triggerType !== undefined) patch.triggerType = updates.triggerType;
+    if (updates.earningsConfig !== undefined) patch.earningsConfig = updates.earningsConfig;
 
     await ctx.db.patch(id, patch);
 
-    // If schedule config changed or was re-enabled, reschedule
+    const oldTriggerType = schedule.triggerType ?? "cron";
+    const newTriggerType = updates.triggerType ?? oldTriggerType;
     const wasEnabled = schedule.enabled;
     const isNowEnabled = updates.enabled ?? schedule.enabled;
     const cronChanged = updates.cron !== undefined && updates.cron !== schedule.cron;
     const timezoneChanged = updates.timezone !== undefined && updates.timezone !== schedule.timezone;
+    const switchedToCron = oldTriggerType === "earnings" && newTriggerType === "cron";
+    const switchedToEarnings = oldTriggerType === "cron" && newTriggerType === "earnings";
 
-    if (isNowEnabled && (!wasEnabled || cronChanged || timezoneChanged)) {
-      // Cancel existing scheduled function if any
-      if (schedule.nextScheduledFunctionId) {
-        try {
-          await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
-        } catch {
-          // May already have executed or been cancelled
-        }
-      }
-      await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
-        scheduleId: id,
-      });
-    } else if (!isNowEnabled && wasEnabled) {
-      // Cancel existing scheduled function
-      if (schedule.nextScheduledFunctionId) {
-        try {
-          await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
-        } catch {
-          // May already have executed or been cancelled
-        }
+    // If switching to earnings, cancel any pending cron scheduled function
+    if (switchedToEarnings && schedule.nextScheduledFunctionId) {
+      try {
+        await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
+      } catch {
+        // May already have executed or been cancelled
       }
       await ctx.db.patch(id, { nextRunAt: undefined, nextScheduledFunctionId: undefined });
+    }
+
+    // Only manage self-rescheduling for cron-type schedules
+    if (newTriggerType === "cron") {
+      if (isNowEnabled && (!wasEnabled || cronChanged || timezoneChanged || switchedToCron)) {
+        if (schedule.nextScheduledFunctionId) {
+          try {
+            await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
+          } catch {
+            // May already have executed or been cancelled
+          }
+        }
+        await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
+          scheduleId: id,
+        });
+      } else if (!isNowEnabled && wasEnabled) {
+        if (schedule.nextScheduledFunctionId) {
+          try {
+            await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
+          } catch {
+            // May already have executed or been cancelled
+          }
+        }
+        await ctx.db.patch(id, { nextRunAt: undefined, nextScheduledFunctionId: undefined });
+      }
     }
 
     return id;
@@ -198,20 +255,25 @@ export const toggleSchedule = mutation({
       .unique();
     const isGloballyPaused = globalPause?.value === "true";
 
-    if (newEnabled && !isGloballyPaused) {
-      await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
-        scheduleId: args.id,
-      });
-    } else if (!newEnabled) {
-      if (schedule.nextScheduledFunctionId) {
-        try {
-          await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
-        } catch {
-          // May already have executed or been cancelled
+    const isCronType = (schedule.triggerType ?? "cron") === "cron";
+
+    if (isCronType) {
+      if (newEnabled && !isGloballyPaused) {
+        await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
+          scheduleId: args.id,
+        });
+      } else if (!newEnabled) {
+        if (schedule.nextScheduledFunctionId) {
+          try {
+            await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
+          } catch {
+            // May already have executed or been cancelled
+          }
         }
+        await ctx.db.patch(args.id, { nextRunAt: undefined, nextScheduledFunctionId: undefined });
       }
-      await ctx.db.patch(args.id, { nextRunAt: undefined, nextScheduledFunctionId: undefined });
     }
+    // Earnings-type schedules: just toggling enabled is enough; the hourly cron checks enabled status
 
     return { id: args.id, enabled: newEnabled };
   },
@@ -240,7 +302,7 @@ export const toggleGlobalPause = mutation({
     }
 
     if (newValue) {
-      // Pausing: cancel all enabled scheduled functions
+      // Pausing: cancel all enabled cron-type scheduled functions
       const enabledSchedules = await ctx.db
         .query("schedules")
         .withIndex("by_enabled_nextRunAt", (q) => q.eq("enabled", true))
@@ -258,14 +320,16 @@ export const toggleGlobalPause = mutation({
           });
         }
       }
+      // Earnings-type schedules: hourly cron checks global pause status, no action needed
     } else {
-      // Unpausing: reschedule all enabled schedules
+      // Unpausing: reschedule all enabled cron-type schedules
       const enabledSchedules = await ctx.db
         .query("schedules")
         .withIndex("by_enabled_nextRunAt", (q) => q.eq("enabled", true))
         .take(200);
       for (const schedule of enabledSchedules) {
-        {
+        const isCronType = (schedule.triggerType ?? "cron") === "cron";
+        if (isCronType) {
           await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
             scheduleId: schedule._id,
           });
