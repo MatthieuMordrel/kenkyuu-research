@@ -67,10 +67,16 @@ function StocksPage() {
 
   const backendSortBy = sortBy === "nextEarnings" ? undefined : sortBy;
   const backendSortOrder = sortBy === "nextEarnings" ? undefined : sortOrder;
-  const stocks = useStocks({ search, tag: selectedTag, sortBy: backendSortBy, sortOrder: backendSortOrder });
+  const allStocks = useStocks({ search, sortBy: backendSortBy, sortOrder: backendSortOrder });
   const tags = useTags();
   const deleteStock = useDeleteStock();
   const earningsSummary = useEarningsSummary();
+
+  const stocks = allStocks
+    ? selectedTag
+      ? allStocks.filter((s) => s.tags.includes(selectedTag))
+      : allStocks
+    : undefined;
 
   const sortedStocks = useMemo(() => {
     if (!stocks || sortBy !== "nextEarnings" || !earningsSummary) return stocks;
@@ -154,9 +160,16 @@ function StocksPage() {
               )}
             >
               All
-              {!isLoading && !selectedTag && stocks && (
-                <span className="ml-1.5 rounded-full bg-primary-foreground/20 px-1.5 text-[10px]">
-                  {stocks.length}
+              {!isLoading && allStocks && (
+                <span
+                  className={cn(
+                    "ml-1.5 rounded-full px-1.5 text-[10px]",
+                    !selectedTag
+                      ? "bg-primary-foreground/20"
+                      : "bg-foreground/5",
+                  )}
+                >
+                  {allStocks.length}
                 </span>
               )}
             </button>
@@ -175,6 +188,18 @@ function StocksPage() {
                 )}
               >
                 {tag}
+                {!isLoading && allStocks && (
+                  <span
+                    className={cn(
+                      "ml-1.5 rounded-full px-1.5 text-[10px]",
+                      selectedTag === tag
+                        ? "bg-primary-foreground/20"
+                        : "bg-foreground/5",
+                    )}
+                  >
+                    {allStocks.filter((s) => s.tags.includes(tag)).length}
+                  </span>
+                )}
               </button>
             ))}
           </div>

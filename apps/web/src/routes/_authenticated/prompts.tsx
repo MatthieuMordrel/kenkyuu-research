@@ -68,12 +68,15 @@ function PromptsPage() {
   const [editingPrompt, setEditingPrompt] = useState<Doc<"prompts"> | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Doc<"prompts"> | null>(null);
 
-  const prompts = usePrompts({
-    type: selectedType === "all" ? undefined : selectedType,
-  });
+  const allPrompts = usePrompts();
   const deletePrompt = useDeletePrompt();
   const clonePrompt = useClonePrompt();
 
+  const prompts = allPrompts
+    ? selectedType === "all"
+      ? allPrompts
+      : allPrompts.filter((p) => p.type === selectedType)
+    : undefined;
   function openEdit(prompt: Doc<"prompts">) {
     setEditingPrompt(prompt);
     setModalOpen(true);
@@ -128,9 +131,18 @@ function PromptsPage() {
               )}
             >
               {tab.label}
-              {!isLoading && tab.value === selectedType && prompts && (
-                <span className="ml-1.5 rounded-full bg-primary-foreground/20 px-1.5 text-[10px]">
-                  {prompts.length}
+              {!isLoading && allPrompts && (
+                <span
+                  className={cn(
+                    "ml-1.5 rounded-full px-1.5 text-[10px]",
+                    selectedType === tab.value
+                      ? "bg-primary-foreground/20"
+                      : "bg-foreground/5",
+                  )}
+                >
+                  {tab.value === "all"
+                    ? allPrompts.length
+                    : allPrompts.filter((p) => p.type === tab.value).length}
                 </span>
               )}
             </button>
