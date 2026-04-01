@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   useSchedules,
@@ -8,6 +8,8 @@ import {
   useDeleteSchedule,
   useRunScheduleNow,
 } from "@/hooks/use-schedules";
+import { useEarningsSummary } from "@/hooks/use-earnings";
+import { useStocks } from "@/hooks/use-stocks";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { ListSkeleton } from "@/components/loading-skeleton";
@@ -54,6 +56,77 @@ function SchedulesPage() {
   const deleteSchedule = useDeleteSchedule();
   const runScheduleNow = useRunScheduleNow();
   const [runningId, setRunningId] = useState<string | null>(null);
+
+  const earningsSummary = useEarningsSummary();
+  const stocks = useStocks();
+
+  // Compute next earnings run date for each earnings schedule
+  const earningsNextRunMap = useMemo(() => {
+    const map: Record<string, { date: Date; label: string; runTimeUTC?: string }> = {};
+    if (!earningsSummary || !stocks || !data?.schedules) return map;
+
+    for (const schedule of data.schedules) {
+      if (schedule.triggerType !== "earnings" || !schedule.earningsConfig) continue;
+
+      // Resolve stock IDs based on stockSelection
+      let stockIds: string[];
+      const sel = schedule.stockSelection;
+      if (sel.type === "all") {
+        stockIds = stocks.map((s) => s._id);
+      } else if (sel.type === "tagged") {
+        const selectedTags = sel.tags ?? [];
+        if (selectedTags.length === 0) continue;
+        stockIds = stocks
+          .filter((s) => s.tags?.some((t: string) => selectedTags.includes(t)))
+          .map((s) => s._id);
+      } else if (sel.type === "specific") {
+        stockIds = (sel.stockIds ?? []) as string[];
+      } else {
+        continue;
+      }
+
+      if (stockIds.length === 0) continue;
+
+      const mode = schedule.earningsConfig.earningsMode ?? "each";
+      const offset = schedule.earningsConfig.offsetDays ?? 0;
+
+      const nextDates: string[] = [];
+      for (const id of stockIds) {
+        const summary = earningsSummary[id];
+        if (summary?.next?.date) nextDates.push(summary.next.date);
+      }
+      if (nextDates.length === 0) continue;
+      nextDates.sort();
+
+      let result: { date: Date; label: string } | null = null;
+      if (mode === "each") {
+        const d = new Date(nextDates[0]!);
+        d.setDate(d.getDate() + offset);
+        result = {
+          date: d,
+          label: `Earliest of ${nextDates.length} stock${nextDates.length > 1 ? "s" : ""}`,
+        };
+      } else if (mode === "before_first") {
+        const d = new Date(nextDates[0]!);
+        d.setDate(d.getDate() + offset);
+        result = { date: d, label: "Triggers at first earnings date" };
+      } else if (mode === "after_last") {
+        const d = new Date(nextDates[nextDates.length - 1]!);
+        d.setDate(d.getDate() + offset);
+        const missing = stockIds.length - nextDates.length;
+        const note = missing > 0 ? ` (${missing} without date)` : "";
+        result = { date: d, label: `After last earnings date${note}` };
+      }
+
+      if (result) {
+        map[schedule._id] = {
+          ...result,
+          runTimeUTC: schedule.earningsConfig.runTimeUTC,
+        };
+      }
+    }
+    return map;
+  }, [earningsSummary, stocks, data?.schedules]);
 
   function openEdit(schedule: Doc<"schedules">) {
     setEditingSchedule(schedule);
@@ -166,6 +239,7 @@ function SchedulesPage() {
                 key={schedule._id}
                 schedule={schedule}
                 globalPaused={globalPaused}
+                earningsNextRun={earningsNextRunMap[schedule._id]}
                 onToggle={() => toggleSchedule({ id: schedule._id })}
                 onRunNow={async () => {
                   setRunningId(schedule._id);
@@ -222,6 +296,7 @@ function SchedulesPage() {
 function ScheduleCard({
   schedule,
   globalPaused,
+  earningsNextRun,
   onToggle,
   onRunNow,
   isRunning,
@@ -230,6 +305,7 @@ function ScheduleCard({
 }: {
   schedule: Doc<"schedules">;
   globalPaused: boolean;
+  earningsNextRun?: { date: Date; label: string; runTimeUTC?: string };
   onToggle: () => void;
   onRunNow: () => void;
   isRunning: boolean;
@@ -294,9 +370,22 @@ function ScheduleCard({
           </div>
           {isActive && (
             schedule.triggerType === "earnings" ? (
-              <span className="text-xs text-muted-foreground">
-                Checked hourly · triggers on matching earnings dates
-              </span>
+              earningsNextRun ? (
+                <span className="text-xs text-muted-foreground">
+                  Next: {earningsNextRun.date.toLocaleDateString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  {earningsNextRun.runTimeUTC ? ` at ${earningsNextRun.runTimeUTC} UTC` : ""}
+                  {" · "}
+                  {earningsNextRun.label}
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Checked hourly · no upcoming earnings dates found
+                </span>
+              )
             ) : schedule.nextRunAt ? (
               <span className="text-xs text-muted-foreground">
                 Next: {formatRelativeTime(schedule.nextRunAt)}
