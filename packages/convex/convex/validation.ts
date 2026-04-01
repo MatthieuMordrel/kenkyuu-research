@@ -131,11 +131,8 @@ export function validateScheduleInput(args: {
 
 // --- Earnings Config Validation ---
 
-const RUN_TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
 export function validateEarningsConfig(config: {
   offsetDays: number;
-  runTimeUTC: string;
   adjustForHour: boolean;
   earningsMode?: "each" | "after_last" | "before_first";
 }): void {
@@ -144,9 +141,6 @@ export function validateEarningsConfig(config: {
   }
   if (config.offsetDays < -7 || config.offsetDays > 14) {
     throw new Error("Offset days must be between -7 and 14");
-  }
-  if (!RUN_TIME_REGEX.test(config.runTimeUTC)) {
-    throw new Error("Run time must be in HH:MM format (00:00 - 23:59)");
   }
 }
 

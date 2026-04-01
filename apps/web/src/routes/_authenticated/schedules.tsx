@@ -62,7 +62,7 @@ function SchedulesPage() {
 
   // Compute next earnings run date for each earnings schedule
   const earningsNextRunMap = useMemo(() => {
-    const map: Record<string, { date: Date; label: string; runTimeUTC?: string }> = {};
+    const map: Record<string, { date: Date; label: string }> = {};
     if (!earningsSummary || !stocks || !data?.schedules) return map;
 
     for (const schedule of data.schedules) {
@@ -119,10 +119,7 @@ function SchedulesPage() {
       }
 
       if (result) {
-        map[schedule._id] = {
-          ...result,
-          runTimeUTC: schedule.earningsConfig.runTimeUTC,
-        };
+        map[schedule._id] = result;
       }
     }
     return map;
@@ -305,7 +302,7 @@ function ScheduleCard({
 }: {
   schedule: Doc<"schedules">;
   globalPaused: boolean;
-  earningsNextRun?: { date: Date; label: string; runTimeUTC?: string };
+  earningsNextRun?: { date: Date; label: string };
   onToggle: () => void;
   onRunNow: () => void;
   isRunning: boolean;
@@ -377,7 +374,6 @@ function ScheduleCard({
                     month: "short",
                     day: "numeric",
                   })}
-                  {earningsNextRun.runTimeUTC ? ` at ${earningsNextRun.runTimeUTC} UTC` : ""}
                   {" · "}
                   {earningsNextRun.label}
                 </span>

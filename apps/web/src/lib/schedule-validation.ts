@@ -6,7 +6,6 @@ export type EarningsMode = "each" | "after_last" | "before_first";
 
 export interface EarningsConfigFormData {
   offsetDays: number;
-  runTimeUTC: string;
   adjustForHour: boolean;
   earningsMode?: EarningsMode;
 }
@@ -258,17 +257,12 @@ export function validateStockSelection(stockSelection: ScheduleFormData["stockSe
 
 // --- Earnings Config Validation ---
 
-const RUN_TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
 export function validateEarningsConfig(config: EarningsConfigFormData): string | undefined {
   if (!Number.isInteger(config.offsetDays)) {
     return "Offset days must be a whole number";
   }
   if (config.offsetDays < -7 || config.offsetDays > 14) {
     return "Offset days must be between -7 and 14";
-  }
-  if (!RUN_TIME_REGEX.test(config.runTimeUTC)) {
-    return "Run time must be in HH:MM format (00:00 - 23:59)";
   }
   return undefined;
 }
@@ -516,7 +510,6 @@ export function describeEarningsTrigger(config: EarningsConfigFormData): string 
     timing = `${Math.abs(offset)} days before earnings`;
   }
 
-  const time = config.runTimeUTC;
   const amcNote = config.adjustForHour ? " (AMC delayed to next day)" : "";
 
   const modeLabels: Record<string, string> = {
@@ -526,7 +519,7 @@ export function describeEarningsTrigger(config: EarningsConfigFormData): string 
   };
   const modeNote = modeLabels[config.earningsMode ?? "each"] ?? "";
 
-  return `${timing} at ${time} UTC${amcNote}${modeNote}`;
+  return `${timing}${amcNote}${modeNote}`;
 }
 
 export function describeCron(cron: string): string {

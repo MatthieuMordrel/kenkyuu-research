@@ -95,7 +95,6 @@ export default defineSchema({
     earningsConfig: v.optional(
       v.object({
         offsetDays: v.number(), // -7 to +14. 0 = earnings day, 1 = day after, -1 = day before
-        runTimeUTC: v.string(), // "HH:MM" format
         adjustForHour: v.boolean(), // if true, amc earnings at offset=0 delay to next morning
         // For multi-stock: "each" = per stock (default), "after_last" = after last stock reports, "before_first" = before first stock reports
         earningsMode: v.optional(

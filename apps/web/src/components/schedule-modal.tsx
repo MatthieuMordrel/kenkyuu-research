@@ -61,7 +61,6 @@ const STOCK_MODE_OPTIONS: {
 
 const INITIAL_EARNINGS_CONFIG: EarningsConfigFormData = {
   offsetDays: 0,
-  runTimeUTC: "10:00",
   adjustForHour: true,
   earningsMode: "each",
 };
@@ -855,28 +854,6 @@ export function ScheduleModal({
                     </select>
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="earnings-run-time">Run Time (UTC) *</Label>
-                    <Input
-                      id="earnings-run-time"
-                      type="time"
-                      value={form.earningsConfig.runTimeUTC}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          earningsConfig: {
-                            ...prev.earningsConfig,
-                            runTimeUTC: e.target.value,
-                          },
-                        }))
-                      }
-                      className="w-32"
-                    />
-                    <p className="text-[11px] text-muted-foreground">
-                      Time in UTC when research should run on the trigger day
-                    </p>
-                  </div>
-
                   <div className="flex items-center justify-between rounded-lg border px-3 py-2">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-sm font-medium">
@@ -1096,7 +1073,6 @@ function NextRunPreview({
                   day: "numeric",
                   year: "numeric",
                 })}
-                {earningsConfig.runTimeUTC ? ` at ${earningsConfig.runTimeUTC} UTC` : ""}
               </span>
               <span className="text-xs text-muted-foreground">
                 {earningsNextRun.label} · Checked hourly
@@ -1106,8 +1082,7 @@ function NextRunPreview({
             <>
               <span className="text-sm font-medium">Triggers based on earnings dates</span>
               <span className="text-xs text-muted-foreground">
-                Checked hourly — runs at {earningsConfig.runTimeUTC} UTC when an earnings date
-                matches
+                Checked hourly — triggers when an earnings date matches
               </span>
             </>
           )}

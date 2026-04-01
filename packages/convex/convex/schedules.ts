@@ -25,7 +25,6 @@ const stockSelectionValidator = v.object({
 
 const earningsConfigValidator = v.object({
   offsetDays: v.number(),
-  runTimeUTC: v.string(),
   adjustForHour: v.boolean(),
   earningsMode: v.optional(
     v.union(v.literal("each"), v.literal("after_last"), v.literal("before_first")),
