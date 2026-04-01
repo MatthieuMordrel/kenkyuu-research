@@ -123,6 +123,7 @@
     scrollbar-width: thin;
     scrollbar-color: oklch(0 0 0 / 15%) transparent;
   }
+  .dark,
   .dark * {
     scrollbar-color: oklch(1 0 0 / 35%) transparent;
   }
@@ -142,10 +143,12 @@
   *::-webkit-scrollbar-thumb:hover {
     background: oklch(0 0 0 / 30%);
   }
-  .dark *::-webkit-scrollbar-thumb {
+  .dark ::-webkit-scrollbar-thumb,
+  .dark::-webkit-scrollbar-thumb {
     background: oklch(1 0 0 / 35%);
   }
-  .dark *::-webkit-scrollbar-thumb:hover {
+  .dark ::-webkit-scrollbar-thumb:hover,
+  .dark::-webkit-scrollbar-thumb:hover {
     background: oklch(1 0 0 / 55%);
   }
 
