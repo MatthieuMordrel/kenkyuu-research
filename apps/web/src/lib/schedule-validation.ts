@@ -20,7 +20,6 @@ export interface ScheduleFormData {
   cron: string;
   earningsConfig: EarningsConfigFormData;
   timezone: string;
-  enabled: boolean;
 }
 
 // --- Form Errors ---

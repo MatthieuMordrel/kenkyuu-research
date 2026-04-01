@@ -86,6 +86,16 @@ export function useDeleteSchedule() {
   );
 }
 
+export function useRunScheduleNow() {
+  const token = useAuthToken();
+  const mutation = useConvexMutation(api.schedules.runScheduleNow);
+  return useCallback(
+    (args: Omit<Parameters<typeof mutation>[0], "token">) =>
+      mutation({ ...args, token: token ?? undefined }),
+    [mutation, token],
+  );
+}
+
 export function useToggleSchedule() {
   const token = useAuthToken();
   const mutation = useConvexMutation(api.schedules.toggleSchedule);

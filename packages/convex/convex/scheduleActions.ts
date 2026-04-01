@@ -189,6 +189,58 @@ function getUtcTimestampFromTzParts(parts: TzDateParts, timezone: string): numbe
   return roughUtc - roughOffsetMinutes * 60 * 1000;
 }
 
+/**
+ * Execute a schedule immediately on demand ("Run Now").
+ * Does not check enabled/global-pause, does not self-reschedule.
+ */
+export const executeRunNow = internalAction({
+  args: {
+    scheduleId: v.id("schedules"),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const schedule = await ctx.runQuery(internal.schedules.getScheduleInternal, {
+      id: args.scheduleId,
+    });
+    if (!schedule) return;
+
+    // Resolve stock IDs based on stock selection mode
+    let stockIds: Id<"stocks">[] = [];
+
+    if (schedule.stockSelection.type === "none") {
+      stockIds = [];
+    } else if (schedule.stockSelection.type === "specific") {
+      stockIds = (schedule.stockSelection.stockIds ?? []) as Id<"stocks">[];
+    } else {
+      const allStocks = await ctx.runQuery(internal.schedules.listStocksInternal, {});
+      if (schedule.stockSelection.type === "all") {
+        stockIds = allStocks.map((s) => s._id);
+      } else if (schedule.stockSelection.type === "tagged" && schedule.stockSelection.tags) {
+        const tagSet = new Set(schedule.stockSelection.tags);
+        stockIds = allStocks
+          .filter((s) => s.tags.some((t: string) => tagSet.has(t)))
+          .map((s) => s._id);
+      }
+    }
+
+    try {
+      await ctx.runMutation(internal.schedules.createScheduledJob, {
+        promptId: schedule.promptId,
+        stockIds,
+        provider: schedule.provider,
+        scheduleId: args.scheduleId,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error(`Run Now failed for schedule ${args.scheduleId}: ${message}`);
+    }
+
+    await ctx.runMutation(internal.schedules.updateScheduleNextRun, {
+      id: args.scheduleId,
+      lastRunAt: Date.now(),
+    });
+  },
+});
+
 // --- Actions ---
 
 /**

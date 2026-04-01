@@ -6,6 +6,7 @@ import {
   useToggleSchedule,
   useToggleGlobalPause,
   useDeleteSchedule,
+  useRunScheduleNow,
 } from "@/hooks/use-schedules";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -31,6 +32,7 @@ import {
   Trash2,
   Calendar,
   AlertTriangle,
+  RotateCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { describeCron, describeEarningsTrigger } from "@/lib/schedule-validation";
@@ -50,6 +52,8 @@ function SchedulesPage() {
   const toggleSchedule = useToggleSchedule();
   const toggleGlobalPause = useToggleGlobalPause();
   const deleteSchedule = useDeleteSchedule();
+  const runScheduleNow = useRunScheduleNow();
+  const [runningId, setRunningId] = useState<string | null>(null);
 
   function openEdit(schedule: Doc<"schedules">) {
     setEditingSchedule(schedule);
@@ -163,6 +167,15 @@ function SchedulesPage() {
                 schedule={schedule}
                 globalPaused={globalPaused}
                 onToggle={() => toggleSchedule({ id: schedule._id })}
+                onRunNow={async () => {
+                  setRunningId(schedule._id);
+                  try {
+                    await runScheduleNow({ id: schedule._id });
+                  } finally {
+                    setRunningId(null);
+                  }
+                }}
+                isRunning={runningId === schedule._id}
                 onEdit={() => openEdit(schedule)}
                 onDelete={() => setDeleteTarget(schedule)}
               />
@@ -210,12 +223,16 @@ function ScheduleCard({
   schedule,
   globalPaused,
   onToggle,
+  onRunNow,
+  isRunning,
   onEdit,
   onDelete,
 }: {
   schedule: Doc<"schedules">;
   globalPaused: boolean;
   onToggle: () => void;
+  onRunNow: () => void;
+  isRunning: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -284,6 +301,19 @@ function ScheduleCard({
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={(e) => {
+              e.preventDefault();
+              onRunNow();
+            }}
+            disabled={isRunning}
+            title="Run now"
+          >
+            <RotateCw className={cn("size-3.5", isRunning && "animate-spin")} />
+            <span className="sr-only">Run now</span>
+          </Button>
           <Button
             variant="ghost"
             size="icon-sm"

@@ -68,7 +68,6 @@ const INITIAL_FORM: ScheduleFormData = {
   cron: "@daily",
   earningsConfig: { ...INITIAL_EARNINGS_CONFIG },
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  enabled: true,
 };
 
 const OFFSET_OPTIONS = [
@@ -116,7 +115,6 @@ export function ScheduleModal({
             ? { ...schedule.earningsConfig }
             : { ...INITIAL_EARNINGS_CONFIG },
           timezone: schedule.timezone,
-          enabled: schedule.enabled,
         });
         if (triggerType === "cron") {
           const isPreset = FREQUENCY_PRESETS.some(
@@ -193,7 +191,7 @@ export function ScheduleModal({
         promptId: form.promptId as Id<"prompts">,
         stockSelection: form.stockSelection as Doc<"schedules">["stockSelection"],
         timezone: form.timezone,
-        enabled: form.enabled,
+        enabled: true,
         triggerType: form.triggerType as "cron" | "earnings",
       };
 
@@ -640,32 +638,6 @@ export function ScheduleModal({
             {errors.timezone && (
               <p className="text-xs text-destructive">{errors.timezone}</p>
             )}
-          </div>
-
-          {/* Enabled toggle */}
-          <div className="flex items-center justify-between rounded-md border px-3 py-2">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">Enable schedule</span>
-              <span className="text-xs text-muted-foreground">
-                Start running immediately after saving
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => updateField("enabled", !form.enabled)}
-              className={cn(
-                "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                form.enabled ? "bg-primary" : "bg-muted",
-              )}
-              aria-label={form.enabled ? "Disable" : "Enable"}
-            >
-              <span
-                className={cn(
-                  "pointer-events-none inline-block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform",
-                  form.enabled ? "translate-x-4" : "translate-x-0",
-                )}
-              />
-            </button>
           </div>
 
           {submitError && (
