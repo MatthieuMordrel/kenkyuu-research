@@ -20,6 +20,7 @@ import type * as earningsActions from "../earningsActions.js";
 import type * as earningsTriggerActions from "../earningsTriggerActions.js";
 import type * as earningsTriggers from "../earningsTriggers.js";
 import type * as http from "../http.js";
+import type * as lib_exchangeTimezones from "../lib/exchangeTimezones.js";
 import type * as notifications from "../notifications.js";
 import type * as prompts from "../prompts.js";
 import type * as researchActions from "../researchActions.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   earningsTriggerActions: typeof earningsTriggerActions;
   earningsTriggers: typeof earningsTriggers;
   http: typeof http;
+  "lib/exchangeTimezones": typeof lib_exchangeTimezones;
   notifications: typeof notifications;
   prompts: typeof prompts;
   researchActions: typeof researchActions;

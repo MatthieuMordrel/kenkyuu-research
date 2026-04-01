@@ -43,6 +43,18 @@ export const checkAlreadyTriggered = internalQuery({
   },
 });
 
+export const getStocksByIds = internalQuery({
+  args: { stockIds: v.array(v.id("stocks")) },
+  handler: async (ctx, args) => {
+    const results = [];
+    for (const stockId of args.stockIds) {
+      const stock = await ctx.db.get(stockId);
+      if (stock) results.push(stock);
+    }
+    return results;
+  },
+});
+
 export const getEarningsForStocks = internalQuery({
   args: { stockIds: v.array(v.id("stocks")) },
   handler: async (ctx, args) => {

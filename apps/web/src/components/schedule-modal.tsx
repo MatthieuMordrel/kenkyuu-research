@@ -216,7 +216,7 @@ export function ScheduleModal({
           earningsConfig: schedule.earningsConfig
             ? { ...schedule.earningsConfig, earningsMode: schedule.earningsConfig.earningsMode ?? "each" }
             : { ...INITIAL_EARNINGS_CONFIG },
-          timezone: schedule.timezone,
+          timezone: schedule.timezone ?? "America/New_York",
         });
         if (triggerType === "cron") {
           const isPreset = FREQUENCY_PRESETS.some(
@@ -351,9 +351,11 @@ export function ScheduleModal({
         name: autoName,
         promptId: form.promptId as Id<"prompts">,
         stockSelection: form.stockSelection as Doc<"schedules">["stockSelection"],
-        timezone: form.timezone,
         enabled: true,
         triggerType: form.triggerType as "cron" | "earnings",
+        // Only include timezone for cron schedules.
+        // Earnings schedules derive timezone from each stock's exchange.
+        ...(form.triggerType === "cron" ? { timezone: form.timezone } : {}),
       };
 
       const triggerFields =
@@ -909,33 +911,39 @@ export function ScheduleModal({
                 </div>
               )}
 
-              {/* Timezone */}
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="schedule-timezone">Timezone *</Label>
-                <select
-                  id="schedule-timezone"
-                  value={form.timezone}
-                  onChange={(e) => updateField("timezone", e.target.value)}
-                  className={cn(
-                    "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-xs transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                    errors.timezone && "border-destructive",
+              {/* Timezone — only for cron schedules */}
+              {form.triggerType === "cron" ? (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="schedule-timezone">Timezone *</Label>
+                  <select
+                    id="schedule-timezone"
+                    value={form.timezone}
+                    onChange={(e) => updateField("timezone", e.target.value)}
+                    className={cn(
+                      "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-xs transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                      errors.timezone && "border-destructive",
+                    )}
+                  >
+                    {COMMON_TIMEZONES.map((tz) => (
+                      <option
+                        key={tz}
+                        value={tz}
+                        className="bg-background text-foreground"
+                      >
+                        {tz}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.timezone && (
+                    <p className="text-xs text-destructive">{errors.timezone}</p>
                   )}
-                >
-                  {COMMON_TIMEZONES.map((tz) => (
-                    <option
-                      key={tz}
-                      value={tz}
-                      className="bg-background text-foreground"
-                    >
-                      {tz}
-                    </option>
-                  ))}
-                </select>
-                {errors.timezone && (
-                  <p className="text-xs text-destructive">{errors.timezone}</p>
-                )}
-              </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Timezone is determined automatically from each stock&apos;s exchange.
+                </p>
+              )}
 
               {/* Next run preview */}
               <NextRunPreview

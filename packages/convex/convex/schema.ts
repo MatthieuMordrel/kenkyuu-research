@@ -76,7 +76,7 @@ export default defineSchema({
       stockIds: v.optional(v.array(v.id("stocks"))),
     }),
     provider: v.literal("openai"),
-    timezone: v.string(),
+    timezone: v.optional(v.string()),
     enabled: v.boolean(),
     lastRunAt: v.optional(v.number()),
     createdAt: v.number(),

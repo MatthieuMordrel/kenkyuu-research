@@ -362,7 +362,7 @@ function ScheduleCard({
             ) : (
               <span>{describeCron(schedule.cron ?? "")}</span>
             )}
-            <span>{schedule.timezone}</span>
+            {schedule.timezone && <span>{schedule.timezone}</span>}
             <StockSelectionLabel selection={schedule.stockSelection} />
           </div>
           {isActive && (

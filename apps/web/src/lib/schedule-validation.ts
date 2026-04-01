@@ -325,8 +325,12 @@ export function validateScheduleForm(
     }
   }
 
-  const tzError = validateTimezone(data.timezone);
-  if (tzError) errors.timezone = tzError;
+  // Timezone is only required for cron schedules.
+  // Earnings schedules derive timezone from each stock's exchange.
+  if (data.triggerType === "cron") {
+    const tzError = validateTimezone(data.timezone);
+    if (tzError) errors.timezone = tzError;
+  }
 
   return errors;
 }

@@ -300,7 +300,7 @@ export const scheduleNextRun = internalAction({
     if (!schedule.cron) {
       return;
     }
-    const nextRunAt = computeNextRunAt(schedule.cron, schedule.timezone, now);
+    const nextRunAt = computeNextRunAt(schedule.cron, schedule.timezone ?? "UTC", now);
 
     // Schedule the execution action at that time
     const delayMs = Math.max(0, nextRunAt - now);

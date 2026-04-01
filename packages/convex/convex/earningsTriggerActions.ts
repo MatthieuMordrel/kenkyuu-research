@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id, Doc } from "./_generated/dataModel";
+import { getMarketTimezone } from "./lib/exchangeTimezones";
 
 // --- Helper: compute today's date string in a timezone ---
 
@@ -45,32 +46,31 @@ function getCurrentReportingQuarter(today: string): { quarter: number; year: num
   return { quarter: 3, year };
 }
 
-/** Resolve all stock IDs from a schedule's stock selection (without requiring earnings on a specific date) */
-async function resolveSelectedStockIds(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ActionCtx = any;
+
+/** Resolve all stock IDs from a schedule's stock selection */
+async function resolveSelectedStocks(
   ctx: ActionCtx,
   schedule: Doc<"schedules">,
-): Promise<Id<"stocks">[]> {
+): Promise<Doc<"stocks">[]> {
   if (schedule.stockSelection.type === "all") {
-    const allStocks: Doc<"stocks">[] = await ctx.runQuery(internal.schedules.listStocksInternal, {});
-    return allStocks.map((s) => s._id);
+    return await ctx.runQuery(internal.schedules.listStocksInternal, {});
   }
   if (schedule.stockSelection.type === "specific") {
-    return schedule.stockSelection.stockIds ?? [];
+    const ids = schedule.stockSelection.stockIds ?? [];
+    if (ids.length === 0) return [];
+    return await ctx.runQuery(internal.earningsTriggers.getStocksByIds, { stockIds: ids });
   }
   if (schedule.stockSelection.type === "tagged") {
     const allStocks: Doc<"stocks">[] = await ctx.runQuery(internal.schedules.listStocksInternal, {});
     const tagSet = new Set(schedule.stockSelection.tags ?? []);
-    return allStocks
-      .filter((s) => s.tags.some((t: string) => tagSet.has(t)))
-      .map((s) => s._id);
+    return allStocks.filter((s) => s.tags.some((t: string) => tagSet.has(t)));
   }
   return [];
 }
 
 // --- Helper: resolve stock IDs from stock selection intersected with earnings ---
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ActionCtx = any;
 
 async function resolveEligibleStocks(
   ctx: ActionCtx,
@@ -123,6 +123,13 @@ async function resolveEligibleStocks(
 /**
  * Hourly cron action that checks all earnings-type schedules and
  * creates research jobs for stocks with earnings matching the configured offset.
+ *
+ * For "each" mode: evaluates each stock's earnings date in that stock's market timezone
+ * (derived from its exchange). Stocks in different markets can trigger on different
+ * UTC days because "today" is computed per-stock.
+ *
+ * For "after_last"/"before_first" modes: uses the anchor stock's market timezone
+ * to determine "today" for the aggregate trigger decision.
  */
 export const checkEarningsTriggers = internalAction({
   args: {},
@@ -149,31 +156,205 @@ export const checkEarningsTriggers = internalAction({
     for (const schedule of schedules) {
       const config = schedule.earningsConfig!;
       const earningsMode = config.earningsMode ?? "each";
-      const today = getTodayInTimezone(schedule.timezone);
 
       if (earningsMode === "each") {
-        // --- "each" mode: trigger per stock as each reports (original behavior) ---
-        const targetEarningsDate = addDays(today, -config.offsetDays);
-        const earningsRecords = await ctx.runQuery(
-          internal.earningsTriggers.getEarningsByDate,
-          { date: targetEarningsDate },
+        // --- "each" mode: trigger per stock using per-stock market timezone ---
+        await handleEachMode(ctx, schedule, config);
+      } else {
+        // --- "after_last" or "before_first" mode: aggregate trigger ---
+        await handleAggregateMode(ctx, schedule, config, earningsMode);
+      }
+    }
+  },
+});
+
+/**
+ * "each" mode: For each selected stock, compute "today" in that stock's
+ * market timezone, derive the target earnings date, and trigger if matched.
+ */
+async function handleEachMode(
+  ctx: ActionCtx,
+  schedule: Doc<"schedules">,
+  config: NonNullable<Doc<"schedules">["earningsConfig"]>,
+) {
+  const selectedStocks = await resolveSelectedStocks(ctx, schedule);
+  if (selectedStocks.length === 0) return;
+
+  // Group stocks by market timezone to minimize date computations
+  const tzGroups = new Map<string, Doc<"stocks">[]>();
+  for (const stock of selectedStocks) {
+    const tz = getMarketTimezone(stock.exchange);
+    const group = tzGroups.get(tz) ?? [];
+    group.push(stock);
+    tzGroups.set(tz, group);
+  }
+
+  let triggeredAny = false;
+
+  for (const [tz, stocks] of tzGroups) {
+    const today = getTodayInTimezone(tz);
+    const targetEarningsDate = addDays(today, -config.offsetDays);
+
+    // Query earnings on this target date
+    const earningsRecords: Doc<"earnings">[] = await ctx.runQuery(
+      internal.earningsTriggers.getEarningsByDate,
+      { date: targetEarningsDate },
+    );
+    if (earningsRecords.length === 0) continue;
+
+    // Filter to only stocks in this timezone group
+    const stockIdSet = new Set(stocks.map((s) => s._id as string));
+    const eligible = earningsRecords.filter((e) => stockIdSet.has(e.stockId as string));
+
+    for (const earnings of eligible) {
+      if (config.adjustForHour && config.offsetDays === 0 && earnings.hour === "amc") continue;
+
+      const alreadyTriggered = await ctx.runQuery(
+        internal.earningsTriggers.checkAlreadyTriggered,
+        { scheduleId: schedule._id, earningsId: earnings._id },
+      );
+      if (alreadyTriggered) continue;
+
+      try {
+        const jobId = await ctx.runMutation(
+          internal.schedules.createScheduledJob,
+          {
+            promptId: schedule.promptId,
+            stockIds: [earnings.stockId],
+            provider: schedule.provider,
+            scheduleId: schedule._id,
+          },
         );
-        if (earningsRecords.length === 0) continue;
+        await ctx.runMutation(
+          internal.earningsTriggers.recordTriggeredRun,
+          {
+            scheduleId: schedule._id,
+            earningsId: earnings._id,
+            stockId: earnings.stockId,
+            earningsDate: earnings.date,
+            jobId: jobId as Id<"researchJobs">,
+          },
+        );
+        triggeredAny = true;
+        console.log(
+          `Earnings trigger [each]: job for stock ${earnings.stockId} (${earnings.date}, tz=${tz}, schedule "${schedule.name}")`,
+        );
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error(`Earnings trigger failed for stock ${earnings.stockId}, schedule "${schedule.name}": ${message}`);
+        if (message.includes("concurrent jobs")) break;
+      }
+    }
+  }
 
-        const eligible = await resolveEligibleStocks(ctx, schedule, earningsRecords);
-        let triggeredAny = false;
+  if (triggeredAny) {
+    await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, { id: schedule._id });
+  }
+}
 
-        for (const { stockId, earningsId, earningsDate, hour } of eligible) {
-          if (config.adjustForHour && config.offsetDays === 0 && hour === "amc") continue;
+/**
+ * "after_last" and "before_first" modes: aggregate trigger that waits for
+ * all/first stock(s) to report. Uses the anchor stock's market timezone.
+ */
+async function handleAggregateMode(
+  ctx: ActionCtx,
+  schedule: Doc<"schedules">,
+  config: NonNullable<Doc<"schedules">["earningsConfig"]>,
+  earningsMode: "after_last" | "before_first",
+) {
+  const selectedStocks = await resolveSelectedStocks(ctx, schedule);
+  if (selectedStocks.length === 0) return;
 
-          const alreadyTriggered = await ctx.runQuery(
-            internal.earningsTriggers.checkAlreadyTriggered,
-            { scheduleId: schedule._id, earningsId },
-          );
-          if (alreadyTriggered) continue;
+  const selectedStockIds = selectedStocks.map((s) => s._id);
+  const stockTimezoneMap = new Map<string, string>();
+  for (const stock of selectedStocks) {
+    stockTimezoneMap.set(stock._id as string, getMarketTimezone(stock.exchange));
+  }
 
+  // Check prompt type for single-stock handling
+  const prompt = await ctx.runQuery(internal.prompts.getPromptInternal, {
+    id: schedule.promptId,
+  });
+  const isSingleStock = prompt?.type === "single-stock";
+
+  // Get all earnings for selected stocks
+  const allEarnings: Doc<"earnings">[] = await ctx.runQuery(
+    internal.earningsTriggers.getEarningsForStocks,
+    { stockIds: selectedStockIds },
+  );
+
+  // Use the most common market timezone among selected stocks for "today" computation.
+  // This is the timezone of the majority of stocks — a reasonable anchor for aggregate modes.
+  const tzCounts = new Map<string, number>();
+  for (const tz of stockTimezoneMap.values()) {
+    tzCounts.set(tz, (tzCounts.get(tz) ?? 0) + 1);
+  }
+  const anchorTz = [...tzCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "America/New_York";
+  const today = getTodayInTimezone(anchorTz);
+
+  // Find the current reporting quarter
+  const { quarter, year } = getCurrentReportingQuarter(today);
+  const qKey = getQuarterKey(quarter, year);
+
+  // Check dedup: already triggered for this quarter?
+  const alreadyTriggered = await ctx.runQuery(
+    internal.earningsTriggers.checkAlreadyTriggeredForQuarter,
+    { scheduleId: schedule._id, quarterKey: qKey },
+  );
+  if (alreadyTriggered) return;
+
+  // Filter earnings to this quarter
+  const quarterEarnings = allEarnings.filter(
+    (e) => e.quarter === quarter && e.year === year,
+  );
+
+  if (quarterEarnings.length === 0) return;
+
+  // Group by stockId to find each stock's earnings date
+  const stockEarningsMap = new Map<string, Doc<"earnings">>();
+  for (const e of quarterEarnings) {
+    const existing = stockEarningsMap.get(e.stockId as string);
+    // Keep the latest entry per stock if multiple exist
+    if (!existing || e.date > existing.date) {
+      stockEarningsMap.set(e.stockId as string, e);
+    }
+  }
+
+  if (earningsMode === "after_last") {
+    // Need ALL selected stocks to have reported
+    const allHaveEarnings = selectedStockIds.every((id) =>
+      stockEarningsMap.has(id as string),
+    );
+
+    // Deadline: if we're past quarter-end + 45 days, trigger anyway with whatever we have
+    const quarterEndMonth = quarter * 3; // Q1->3, Q2->6, Q3->9, Q4->12
+    const quarterEndYear = quarter === 4 ? year + 1 : year;
+    const deadlineDate = addDays(
+      `${quarterEndYear}-${String(quarterEndMonth).padStart(2, "0")}-28`,
+      45,
+    );
+    const pastDeadline = today >= deadlineDate;
+
+    if (!allHaveEarnings && !pastDeadline) return;
+
+    // Find the latest earnings date among stocks that have reported
+    const reportedEarnings = [...stockEarningsMap.values()];
+    const latestDate = reportedEarnings.reduce(
+      (max, e) => (e.date > max ? e.date : max),
+      reportedEarnings[0]!.date,
+    );
+
+    // Check if today >= latestDate + offset
+    const triggerDate = addDays(latestDate, config.offsetDays);
+    if (today < triggerDate && !pastDeadline) return;
+
+    // Trigger
+    const anchorEarnings = reportedEarnings.find((e) => e.date === latestDate)!;
+    try {
+      if (isSingleStock) {
+        for (const stockId of selectedStockIds) {
           try {
-            const jobId = await ctx.runMutation(
+            await ctx.runMutation(
               internal.schedules.createScheduledJob,
               {
                 promptId: schedule.promptId,
@@ -182,218 +363,107 @@ export const checkEarningsTriggers = internalAction({
                 scheduleId: schedule._id,
               },
             );
-            await ctx.runMutation(
-              internal.earningsTriggers.recordTriggeredRun,
-              { scheduleId: schedule._id, earningsId, stockId, earningsDate, jobId: jobId as Id<"researchJobs"> },
-            );
-            triggeredAny = true;
-            console.log(`Earnings trigger [each]: job for stock ${stockId} (${earningsDate}, schedule "${schedule.name}")`);
           } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Unknown error";
-            console.error(`Earnings trigger failed for stock ${stockId}, schedule "${schedule.name}": ${message}`);
+            console.error(`Earnings trigger [after_last] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`);
             if (message.includes("concurrent jobs")) break;
           }
         }
+      } else {
+        await ctx.runMutation(
+          internal.schedules.createScheduledJob,
+          {
+            promptId: schedule.promptId,
+            stockIds: selectedStockIds,
+            provider: schedule.provider,
+            scheduleId: schedule._id,
+          },
+        );
+      }
+      await ctx.runMutation(
+        internal.earningsTriggers.recordTriggeredRun,
+        {
+          scheduleId: schedule._id,
+          earningsId: anchorEarnings._id,
+          stockId: anchorEarnings.stockId,
+          earningsDate: latestDate,
+          jobId: undefined,
+          quarterKey: qKey,
+        },
+      );
+      console.log(`Earnings trigger [after_last]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, tz=${anchorTz}, schedule "${schedule.name}")`);
+      await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, { id: schedule._id });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error(`Earnings trigger [after_last] failed for schedule "${schedule.name}": ${message}`);
+    }
+  } else {
+    // "before_first" mode
+    const reportedEarnings = [...stockEarningsMap.values()];
+    const earliestDate = reportedEarnings.reduce(
+      (min, e) => (e.date < min ? e.date : min),
+      reportedEarnings[0]!.date,
+    );
 
-        if (triggeredAny) {
-          await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, { id: schedule._id });
+    // Check if today >= earliestDate + offset (offset is typically negative for "before")
+    const triggerDate = addDays(earliestDate, config.offsetDays);
+    if (today < triggerDate) return;
+
+    const anchorEarnings = reportedEarnings.find((e) => e.date === earliestDate)!;
+    try {
+      if (isSingleStock) {
+        for (const stockId of selectedStockIds) {
+          try {
+            await ctx.runMutation(
+              internal.schedules.createScheduledJob,
+              {
+                promptId: schedule.promptId,
+                stockIds: [stockId],
+                provider: schedule.provider,
+                scheduleId: schedule._id,
+              },
+            );
+          } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            console.error(`Earnings trigger [before_first] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`);
+            if (message.includes("concurrent jobs")) break;
+          }
         }
       } else {
-        // --- "after_last" or "before_first" mode: aggregate trigger ---
-        const selectedStockIds = await resolveSelectedStockIds(ctx, schedule);
-        if (selectedStockIds.length === 0) continue;
-
-        // Check prompt type for single-stock handling
-        const prompt = await ctx.runQuery(internal.prompts.getPromptInternal, {
-          id: schedule.promptId,
-        });
-        const isSingleStock = prompt?.type === "single-stock";
-
-        // Get all earnings for selected stocks
-        const allEarnings: Doc<"earnings">[] = await ctx.runQuery(
-          internal.earningsTriggers.getEarningsForStocks,
-          { stockIds: selectedStockIds },
+        await ctx.runMutation(
+          internal.schedules.createScheduledJob,
+          {
+            promptId: schedule.promptId,
+            stockIds: selectedStockIds,
+            provider: schedule.provider,
+            scheduleId: schedule._id,
+          },
         );
-
-        // Find the current reporting quarter
-        const { quarter, year } = getCurrentReportingQuarter(today);
-        const qKey = getQuarterKey(quarter, year);
-
-        // Check dedup: already triggered for this quarter?
-        const alreadyTriggered = await ctx.runQuery(
-          internal.earningsTriggers.checkAlreadyTriggeredForQuarter,
-          { scheduleId: schedule._id, quarterKey: qKey },
-        );
-        if (alreadyTriggered) continue;
-
-        // Filter earnings to this quarter
-        const quarterEarnings = allEarnings.filter(
-          (e) => e.quarter === quarter && e.year === year,
-        );
-
-        if (quarterEarnings.length === 0) continue;
-
-        // Group by stockId to find each stock's earnings date
-        const stockEarningsMap = new Map<string, Doc<"earnings">>();
-        for (const e of quarterEarnings) {
-          const existing = stockEarningsMap.get(e.stockId as string);
-          // Keep the latest entry per stock if multiple exist
-          if (!existing || e.date > existing.date) {
-            stockEarningsMap.set(e.stockId as string, e);
-          }
-        }
-
-        if (earningsMode === "after_last") {
-          // Need ALL selected stocks to have reported
-          const allHaveEarnings = selectedStockIds.every((id) =>
-            stockEarningsMap.has(id as string),
-          );
-
-          // Deadline: if we're past quarter-end + 45 days, trigger anyway with whatever we have
-          const quarterEndMonth = quarter * 3; // Q1->3, Q2->6, Q3->9, Q4->12
-          const quarterEndYear = quarter === 4 ? year + 1 : year;
-          const deadlineDate = addDays(
-            `${quarterEndYear}-${String(quarterEndMonth).padStart(2, "0")}-28`,
-            45,
-          );
-          const pastDeadline = today >= deadlineDate;
-
-          if (!allHaveEarnings && !pastDeadline) continue;
-
-          // Find the latest earnings date among stocks that have reported
-          const reportedEarnings = [...stockEarningsMap.values()];
-          const latestDate = reportedEarnings.reduce(
-            (max, e) => (e.date > max ? e.date : max),
-            reportedEarnings[0]!.date,
-          );
-
-          // Check if today >= latestDate + offset
-          const triggerDate = addDays(latestDate, config.offsetDays);
-          if (today < triggerDate && !pastDeadline) continue;
-
-          // Trigger: single-stock creates one job per stock, multi-stock creates one job with all
-          const anchorEarnings = reportedEarnings.find((e) => e.date === latestDate)!;
-          try {
-            if (isSingleStock) {
-              for (const stockId of selectedStockIds) {
-                try {
-                  await ctx.runMutation(
-                    internal.schedules.createScheduledJob,
-                    {
-                      promptId: schedule.promptId,
-                      stockIds: [stockId],
-                      provider: schedule.provider,
-                      scheduleId: schedule._id,
-                    },
-                  );
-                } catch (error: unknown) {
-                  const message = error instanceof Error ? error.message : "Unknown error";
-                  console.error(`Earnings trigger [after_last] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`);
-                  if (message.includes("concurrent jobs")) break;
-                }
-              }
-            } else {
-              await ctx.runMutation(
-                internal.schedules.createScheduledJob,
-                {
-                  promptId: schedule.promptId,
-                  stockIds: selectedStockIds,
-                  provider: schedule.provider,
-                  scheduleId: schedule._id,
-                },
-              );
-            }
-            await ctx.runMutation(
-              internal.earningsTriggers.recordTriggeredRun,
-              {
-                scheduleId: schedule._id,
-                earningsId: anchorEarnings._id,
-                stockId: anchorEarnings.stockId,
-                earningsDate: latestDate,
-                jobId: undefined,
-                quarterKey: qKey,
-              },
-            );
-            console.log(`Earnings trigger [after_last]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, schedule "${schedule.name}")`);
-            await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, { id: schedule._id });
-          } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "Unknown error";
-            console.error(`Earnings trigger [after_last] failed for schedule "${schedule.name}": ${message}`);
-          }
-        } else {
-          // "before_first" mode
-          // Find the earliest earnings date among selected stocks for this quarter
-          const reportedEarnings = [...stockEarningsMap.values()];
-          const earliestDate = reportedEarnings.reduce(
-            (min, e) => (e.date < min ? e.date : min),
-            reportedEarnings[0]!.date,
-          );
-
-          // Check if today >= earliestDate + offset (offset is typically negative for "before")
-          const triggerDate = addDays(earliestDate, config.offsetDays);
-          if (today < triggerDate) continue;
-
-          const anchorEarnings = reportedEarnings.find((e) => e.date === earliestDate)!;
-          try {
-            if (isSingleStock) {
-              for (const stockId of selectedStockIds) {
-                try {
-                  await ctx.runMutation(
-                    internal.schedules.createScheduledJob,
-                    {
-                      promptId: schedule.promptId,
-                      stockIds: [stockId],
-                      provider: schedule.provider,
-                      scheduleId: schedule._id,
-                    },
-                  );
-                } catch (error: unknown) {
-                  const message = error instanceof Error ? error.message : "Unknown error";
-                  console.error(`Earnings trigger [before_first] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`);
-                  if (message.includes("concurrent jobs")) break;
-                }
-              }
-            } else {
-              await ctx.runMutation(
-                internal.schedules.createScheduledJob,
-                {
-                  promptId: schedule.promptId,
-                  stockIds: selectedStockIds,
-                  provider: schedule.provider,
-                  scheduleId: schedule._id,
-                },
-              );
-            }
-            await ctx.runMutation(
-              internal.earningsTriggers.recordTriggeredRun,
-              {
-                scheduleId: schedule._id,
-                earningsId: anchorEarnings._id,
-                stockId: anchorEarnings.stockId,
-                earningsDate: earliestDate,
-                jobId: undefined,
-                quarterKey: qKey,
-              },
-            );
-            console.log(`Earnings trigger [before_first]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, schedule "${schedule.name}")`);
-            await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, { id: schedule._id });
-          } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "Unknown error";
-            console.error(`Earnings trigger [before_first] failed for schedule "${schedule.name}": ${message}`);
-          }
-        }
       }
+      await ctx.runMutation(
+        internal.earningsTriggers.recordTriggeredRun,
+        {
+          scheduleId: schedule._id,
+          earningsId: anchorEarnings._id,
+          stockId: anchorEarnings.stockId,
+          earningsDate: earliestDate,
+          jobId: undefined,
+          quarterKey: qKey,
+        },
+      );
+      console.log(`Earnings trigger [before_first]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, tz=${anchorTz}, schedule "${schedule.name}")`);
+      await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, { id: schedule._id });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error(`Earnings trigger [before_first] failed for schedule "${schedule.name}": ${message}`);
     }
-  },
-});
+  }
+}
 
 /**
  * Test/dry-run action that simulates the earnings trigger for a given date.
- * - overrideDate: pretend "today" is this date (YYYY-MM-DD)
- * - dryRun: if true, logs what would happen without creating jobs or recording runs
- *
- * Invoke via Convex dashboard or CLI:
- *   npx convex run earningsTriggerActions:testCheckEarningsTriggers '{"overrideDate":"2026-04-15","dryRun":true}'
+ * Uses per-stock market timezones to compute today, but accepts an overrideDate
+ * to simulate a specific day.
  */
 export const testCheckEarningsTriggers = internalAction({
   args: {

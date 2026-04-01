@@ -38,7 +38,7 @@ export const createSchedule = mutation({
     stockSelection: stockSelectionValidator,
     provider: v.literal("openai"),
     cron: v.optional(v.string()),
-    timezone: v.string(),
+    timezone: v.optional(v.string()),
     enabled: v.boolean(),
     triggerType: v.optional(v.union(v.literal("cron"), v.literal("earnings"))),
     earningsConfig: v.optional(earningsConfigValidator),
@@ -54,6 +54,9 @@ export const createSchedule = mutation({
     if (effectiveTriggerType === "cron") {
       if (!args.cron) {
         throw new Error("Cron expression is required for time-based schedules");
+      }
+      if (!args.timezone) {
+        throw new Error("Timezone is required for time-based schedules");
       }
     } else if (effectiveTriggerType === "earnings") {
       if (!args.earningsConfig) {
@@ -95,10 +98,15 @@ export const createSchedule = mutation({
       promptId: args.promptId,
       stockSelection: args.stockSelection,
       provider: args.provider,
-      timezone: args.timezone,
       enabled: args.enabled,
       createdAt: now,
     };
+
+    // Timezone is only stored for cron schedules. Earnings schedules
+    // derive timezone from each stock's exchange via getMarketTimezone().
+    if (args.timezone) {
+      scheduleData.timezone = args.timezone;
+    }
 
     if (effectiveTriggerType === "earnings") {
       scheduleData.triggerType = "earnings";
@@ -183,6 +191,11 @@ export const updateSchedule = mutation({
     if (updates.enabled !== undefined) patch.enabled = updates.enabled;
     if (updates.triggerType !== undefined) patch.triggerType = updates.triggerType;
     if (updates.earningsConfig !== undefined) patch.earningsConfig = updates.earningsConfig;
+
+    // Clear timezone when switching to earnings (timezone is per-stock via exchange)
+    if (updates.triggerType === "earnings" && schedule.timezone) {
+      patch.timezone = undefined;
+    }
 
     await ctx.db.patch(id, patch);
 
@@ -485,7 +498,7 @@ export const getUpcomingRuns = query({
         scheduleName: s.name,
         promptId: s.promptId,
         nextRunAt: s.nextRunAt!,
-        timezone: s.timezone,
+        timezone: s.timezone ?? "UTC",
       }));
 
     return upcoming;

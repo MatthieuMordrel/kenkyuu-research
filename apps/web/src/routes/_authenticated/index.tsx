@@ -406,7 +406,7 @@ function UpcomingSchedulesCard() {
                         },
                       )}
                     </span>
-                    <span>{schedule.timezone}</span>
+                    {schedule.timezone && <span>{schedule.timezone}</span>}
                   </div>
                 </div>
               </div>
