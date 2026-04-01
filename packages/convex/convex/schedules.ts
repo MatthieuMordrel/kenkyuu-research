@@ -68,6 +68,17 @@ export const createSchedule = mutation({
       throw new Error("Prompt not found");
     }
 
+    // Validate prompt type vs stock selection and trigger type
+    if (prompt.type === "discovery" && args.stockSelection.type !== "none") {
+      throw new Error("Discovery prompts should use 'none' stock selection");
+    }
+    if (prompt.type !== "discovery" && args.stockSelection.type === "none") {
+      throw new Error("This prompt type requires stock selection");
+    }
+    if (prompt.type === "discovery" && effectiveTriggerType === "earnings") {
+      throw new Error("Earnings triggers are not compatible with discovery prompts");
+    }
+
     // Validate stock selection
     if (args.stockSelection.type === "tagged" && (!args.stockSelection.tags || args.stockSelection.tags.length === 0)) {
       throw new Error("Tags are required when stock selection type is 'tagged'");
@@ -147,6 +158,23 @@ export const updateSchedule = mutation({
       patch.promptId = updates.promptId;
     }
     if (updates.stockSelection !== undefined) patch.stockSelection = updates.stockSelection;
+
+    // Cross-validate prompt type vs stock selection and trigger type
+    const effectivePromptId = updates.promptId ?? schedule.promptId;
+    const effectiveStockSelection = updates.stockSelection ?? schedule.stockSelection;
+    const effectiveTriggerType = updates.triggerType ?? (schedule.triggerType ?? "cron");
+    const effectivePrompt = await ctx.db.get(effectivePromptId);
+    if (effectivePrompt) {
+      if (effectivePrompt.type === "discovery" && effectiveStockSelection.type !== "none") {
+        throw new Error("Discovery prompts should use 'none' stock selection");
+      }
+      if (effectivePrompt.type !== "discovery" && effectiveStockSelection.type === "none") {
+        throw new Error("This prompt type requires stock selection");
+      }
+      if (effectivePrompt.type === "discovery" && effectiveTriggerType === "earnings") {
+        throw new Error("Earnings triggers are not compatible with discovery prompts");
+      }
+    }
     if (updates.provider !== undefined) patch.provider = updates.provider;
     if (updates.cron !== undefined) patch.cron = updates.cron;
     if (updates.timezone !== undefined) patch.timezone = updates.timezone;

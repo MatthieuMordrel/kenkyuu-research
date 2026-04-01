@@ -19,10 +19,12 @@ import {
   hasErrors,
   describeCron,
   describeEarningsTrigger,
+  getAllowedStockModes,
   COMMON_TIMEZONES,
   type ScheduleFormData,
   type ScheduleFormErrors,
   type EarningsConfigFormData,
+  type PromptType,
 } from "@/lib/schedule-validation";
 import { cn } from "@/lib/utils";
 import type { Doc, Id } from "@repo/convex/dataModel";
@@ -100,6 +102,36 @@ export function ScheduleModal({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [frequencyMode, setFrequencyMode] = useState<string>("@daily");
+
+  // Derive prompt type from selected prompt
+  const selectedPrompt = prompts?.find((p) => p._id === form.promptId) ?? null;
+  const selectedPromptType: PromptType | null = selectedPrompt?.type ?? null;
+  const allowedStockModes = getAllowedStockModes(selectedPromptType);
+
+  // Auto-correct stock selection and trigger type when prompt type changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!selectedPromptType) return;
+
+    const allowed = getAllowedStockModes(selectedPromptType);
+
+    // If current stock mode is not allowed, reset to the default
+    if (!allowed.includes(form.stockSelection.type)) {
+      const defaultMode = allowed[0];
+      if (defaultMode) {
+        updateStockSelection({
+          type: defaultMode,
+          tags: defaultMode === "tagged" ? [] : undefined,
+          stockIds: defaultMode === "specific" ? [] : undefined,
+        });
+      }
+    }
+
+    // Discovery prompts can't use earnings triggers
+    if (selectedPromptType === "discovery" && form.triggerType === "earnings") {
+      updateField("triggerType", "cron");
+    }
+  }, [selectedPromptType]);
 
   useEffect(() => {
     if (open) {
@@ -180,7 +212,7 @@ export function ScheduleModal({
     e.preventDefault();
     setSubmitError(null);
 
-    const validationErrors = validateScheduleForm(form);
+    const validationErrors = validateScheduleForm(form, selectedPromptType);
     setErrors(validationErrors);
     if (hasErrors(validationErrors)) return;
 
@@ -297,114 +329,129 @@ export function ScheduleModal({
           {/* Stock selection mode */}
           <div className="flex flex-col gap-2">
             <Label>Stock Selection *</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {STOCK_MODE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() =>
-                    updateStockSelection({
-                      type: option.value,
-                      tags: option.value === "tagged" ? (form.stockSelection.tags ?? []) : undefined,
-                      stockIds: option.value === "specific" ? (form.stockSelection.stockIds ?? []) : undefined,
-                    })
-                  }
-                  className={cn(
-                    "flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left transition-colors",
-                    form.stockSelection.type === option.value
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:bg-accent",
-                  )}
-                >
-                  <span className="text-sm font-medium">{option.label}</span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {option.description}
-                  </span>
-                </button>
-              ))}
-            </div>
 
-            {/* Tag selector */}
-            {form.stockSelection.type === "tagged" && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-muted-foreground">
-                  Select tags:
-                </span>
-                {tags && tags.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {tags.map((tag) => {
-                      const selected = form.stockSelection.tags?.includes(tag) ?? false;
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => toggleTag(tag)}
-                          className={cn(
-                            "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
-                            selected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-background text-foreground hover:bg-accent",
-                          )}
-                        >
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    No tags available. Tag your stocks first.
-                  </p>
-                )}
-              </div>
-            )}
+            {!form.promptId ? (
+              <p className="text-sm text-muted-foreground py-2">
+                Select a prompt first
+              </p>
+            ) : selectedPromptType === "discovery" ? (
+              <p className="text-sm text-muted-foreground rounded-md border border-dashed p-3">
+                This is a discovery prompt — no stock selection needed.
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {STOCK_MODE_OPTIONS
+                    .filter((opt) => allowedStockModes.includes(opt.value))
+                    .map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        updateStockSelection({
+                          type: option.value,
+                          tags: option.value === "tagged" ? (form.stockSelection.tags ?? []) : undefined,
+                          stockIds: option.value === "specific" ? (form.stockSelection.stockIds ?? []) : undefined,
+                        })
+                      }
+                      className={cn(
+                        "flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left transition-colors",
+                        form.stockSelection.type === option.value
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:bg-accent",
+                      )}
+                    >
+                      <span className="text-sm font-medium">{option.label}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {option.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
 
-            {/* Specific stock selector */}
-            {form.stockSelection.type === "specific" && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-muted-foreground">
-                  Select stocks:
-                </span>
-                {stocks && stocks.length > 0 ? (
-                  <div className="flex flex-col gap-1 max-h-32 overflow-y-auto rounded-md border p-2">
-                    {stocks.map((stock) => {
-                      const selected = form.stockSelection.stockIds?.includes(stock._id) ?? false;
-                      return (
-                        <button
-                          key={stock._id}
-                          type="button"
-                          onClick={() => toggleStock(stock._id)}
-                          className={cn(
-                            "flex items-center gap-2 rounded px-2 py-1 text-left text-sm transition-colors",
-                            selected
-                              ? "bg-primary/10 text-primary"
-                              : "hover:bg-accent",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "flex size-4 shrink-0 items-center justify-center rounded border text-[10px]",
-                              selected
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border",
-                            )}
-                          >
-                            {selected && "✓"}
-                          </span>
-                          <span className="font-medium">{stock.ticker}</span>
-                          <span className="text-xs text-muted-foreground truncate">
-                            {stock.companyName}
-                          </span>
-                        </button>
-                      );
-                    })}
+                {/* Tag selector */}
+                {form.stockSelection.type === "tagged" && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs text-muted-foreground">
+                      Select tags:
+                    </span>
+                    {tags && tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {tags.map((tag) => {
+                          const selected = form.stockSelection.tags?.includes(tag) ?? false;
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => toggleTag(tag)}
+                              className={cn(
+                                "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
+                                selected
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border bg-background text-foreground hover:bg-accent",
+                              )}
+                            >
+                              {tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        No tags available. Tag your stocks first.
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    No stocks available. Add stocks first.
-                  </p>
                 )}
-              </div>
+
+                {/* Specific stock selector */}
+                {form.stockSelection.type === "specific" && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs text-muted-foreground">
+                      Select stocks:
+                    </span>
+                    {stocks && stocks.length > 0 ? (
+                      <div className="flex flex-col gap-1 max-h-32 overflow-y-auto rounded-md border p-2">
+                        {stocks.map((stock) => {
+                          const selected = form.stockSelection.stockIds?.includes(stock._id) ?? false;
+                          return (
+                            <button
+                              key={stock._id}
+                              type="button"
+                              onClick={() => toggleStock(stock._id)}
+                              className={cn(
+                                "flex items-center gap-2 rounded px-2 py-1 text-left text-sm transition-colors",
+                                selected
+                                  ? "bg-primary/10 text-primary"
+                                  : "hover:bg-accent",
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "flex size-4 shrink-0 items-center justify-center rounded border text-[10px]",
+                                  selected
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border",
+                                )}
+                              >
+                                {selected && "✓"}
+                              </span>
+                              <span className="font-medium">{stock.ticker}</span>
+                              <span className="text-xs text-muted-foreground truncate">
+                                {stock.companyName}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        No stocks available. Add stocks first.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
             )}
 
             {errors.stockSelection && (
@@ -433,17 +480,21 @@ export function ScheduleModal({
               </button>
               <button
                 type="button"
+                disabled={selectedPromptType === "discovery"}
                 onClick={() => updateField("triggerType", "earnings")}
                 className={cn(
                   "flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left transition-colors",
                   form.triggerType === "earnings"
                     ? "border-primary bg-primary/5"
                     : "border-border hover:bg-accent",
+                  selectedPromptType === "discovery" && "opacity-50 cursor-not-allowed",
                 )}
               >
                 <span className="text-sm font-medium">Earnings-based</span>
                 <span className="text-[11px] text-muted-foreground">
-                  Run relative to earnings dates
+                  {selectedPromptType === "discovery"
+                    ? "Not available for discovery prompts"
+                    : "Run relative to earnings dates"}
                 </span>
               </button>
             </div>

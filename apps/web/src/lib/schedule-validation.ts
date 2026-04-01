@@ -226,7 +226,26 @@ export function validateEarningsConfig(config: EarningsConfigFormData): string |
 
 // --- Combined Validator ---
 
-export function validateScheduleForm(data: ScheduleFormData): ScheduleFormErrors {
+export type PromptType = "single-stock" | "multi-stock" | "discovery";
+
+export function getAllowedStockModes(
+  promptType: PromptType | null,
+): Array<"all" | "tagged" | "specific" | "none"> {
+  switch (promptType) {
+    case "discovery":
+      return ["none"];
+    case "single-stock":
+    case "multi-stock":
+      return ["all", "tagged", "specific"];
+    default:
+      return [];
+  }
+}
+
+export function validateScheduleForm(
+  data: ScheduleFormData,
+  promptType?: PromptType | null,
+): ScheduleFormErrors {
   const errors: ScheduleFormErrors = {};
 
   const nameError = validateName(data.name);
@@ -249,6 +268,19 @@ export function validateScheduleForm(data: ScheduleFormData): ScheduleFormErrors
   } else {
     const cronError = validateCron(data.cron);
     if (cronError) errors.cron = cronError;
+  }
+
+  // Prompt-type-aware cross-validation
+  if (promptType) {
+    if (promptType === "discovery" && data.stockSelection.type !== "none") {
+      errors.stockSelection = "Discovery prompts do not use stock selection";
+    }
+    if ((promptType === "single-stock" || promptType === "multi-stock") && data.stockSelection.type === "none") {
+      errors.stockSelection = "This prompt type requires stock selection";
+    }
+    if (promptType === "discovery" && data.triggerType === "earnings") {
+      errors.earningsConfig = "Earnings triggers require stocks; not compatible with discovery prompts";
+    }
   }
 
   const tzError = validateTimezone(data.timezone);
