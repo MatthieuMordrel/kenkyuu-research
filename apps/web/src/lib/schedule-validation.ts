@@ -2,10 +2,13 @@ import type { GenericId } from "convex/values";
 
 // --- Form Data ---
 
+export type EarningsMode = "each" | "after_last" | "before_first";
+
 export interface EarningsConfigFormData {
   offsetDays: number;
   runTimeUTC: string;
   adjustForHour: boolean;
+  earningsMode?: EarningsMode;
 }
 
 export interface ScheduleFormData {
@@ -293,6 +296,163 @@ export function hasErrors(errors: ScheduleFormErrors): boolean {
   return Object.values(errors).some(Boolean);
 }
 
+// --- Next Run Computation (client-side, pure functions) ---
+
+type FieldSpec = { type: "any" } | { type: "values"; values: Set<number> };
+
+interface CronFields {
+  minute: FieldSpec;
+  hour: FieldSpec;
+  dayOfMonth: FieldSpec;
+  month: FieldSpec;
+  dayOfWeek: FieldSpec;
+}
+
+function parseCronField(field: string, min: number, max: number): FieldSpec {
+  if (field === "*") return { type: "any" };
+  const values = new Set<number>();
+  for (const segment of field.split(",")) {
+    if (segment.includes("/")) {
+      const [rangeStr, stepStr] = segment.split("/");
+      const step = Number.parseInt(stepStr!, 10);
+      let start = min, end = max;
+      if (rangeStr !== "*") {
+        if (rangeStr!.includes("-")) {
+          const [rStart, rEnd] = rangeStr!.split("-").map((s) => Number.parseInt(s, 10));
+          start = rStart!; end = rEnd!;
+        } else {
+          start = Number.parseInt(rangeStr!, 10);
+        }
+      }
+      for (let i = start; i <= end; i += step) values.add(i);
+    } else if (segment.includes("-")) {
+      const [start, end] = segment.split("-").map((s) => Number.parseInt(s, 10));
+      for (let i = start!; i <= end!; i++) values.add(i);
+    } else {
+      values.add(Number.parseInt(segment, 10));
+    }
+  }
+  return { type: "values", values };
+}
+
+function parseCronExpr(expr: string): CronFields {
+  const trimmed = expr.trim();
+  if (trimmed === "@daily" || trimmed === "@midnight") return parseCronExpr("0 0 * * *");
+  if (trimmed === "@weekly") return parseCronExpr("0 0 * * 0");
+  if (trimmed === "@monthly") return parseCronExpr("0 0 1 * *");
+  if (trimmed === "@hourly") return parseCronExpr("0 * * * *");
+  const parts = trimmed.split(/\s+/);
+  if (parts.length !== 5) throw new Error("Invalid cron");
+  return {
+    minute: parseCronField(parts[0]!, 0, 59),
+    hour: parseCronField(parts[1]!, 0, 23),
+    dayOfMonth: parseCronField(parts[2]!, 1, 31),
+    month: parseCronField(parts[3]!, 1, 12),
+    dayOfWeek: parseCronField(parts[4]!, 0, 6),
+  };
+}
+
+function matchesCronField(spec: FieldSpec, value: number): boolean {
+  return spec.type === "any" || spec.values.has(value);
+}
+
+interface TzParts {
+  year: number; month: number; dayOfMonth: number;
+  dayOfWeek: number; hour: number; minute: number;
+}
+
+function getPartsInTz(date: Date, tz: string): TzParts {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, year: "numeric", month: "numeric", day: "numeric",
+    weekday: "short", hour: "numeric", minute: "numeric", hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const get = (type: string) => Number.parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
+  const wdStr = parts.find((p) => p.type === "weekday")?.value ?? "Sun";
+  const wdMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const h = get("hour");
+  return { year: get("year"), month: get("month"), dayOfMonth: get("day"), dayOfWeek: wdMap[wdStr] ?? 0, hour: h === 24 ? 0 : h, minute: get("minute") };
+}
+
+function tzPartsToUtc(p: TzParts, tz: string): number {
+  const iso = `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.dayOfMonth).padStart(2, "0")}T${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}:00`;
+  const roughUtc = new Date(iso + "Z").getTime();
+  const rp = getPartsInTz(new Date(roughUtc), tz);
+  const offsetMin = (rp.hour * 60 + rp.minute) - (p.hour * 60 + p.minute);
+  return roughUtc - offsetMin * 60_000;
+}
+
+/**
+ * Compute the next cron run time after `afterMs` in the given timezone.
+ * Returns a UTC timestamp, or null if computation fails.
+ */
+export function computeNextCronRun(cronExpr: string, timezone: string, afterMs?: number): number | null {
+  try {
+    const parsed = parseCronExpr(cronExpr);
+    const after = new Date(afterMs ?? Date.now());
+    const candidate = new Date(after);
+    candidate.setSeconds(0, 0);
+    candidate.setMinutes(candidate.getMinutes() + 1);
+
+    // Check up to 7 days of minutes (covers monthly edge cases too for common usage)
+    const maxIter = 7 * 24 * 60;
+    for (let i = 0; i < maxIter; i++) {
+      const tp = getPartsInTz(candidate, timezone);
+      if (
+        matchesCronField(parsed.minute, tp.minute) &&
+        matchesCronField(parsed.hour, tp.hour) &&
+        matchesCronField(parsed.dayOfMonth, tp.dayOfMonth) &&
+        matchesCronField(parsed.month, tp.month) &&
+        matchesCronField(parsed.dayOfWeek, tp.dayOfWeek)
+      ) {
+        return tzPartsToUtc(tp, timezone);
+      }
+      candidate.setMinutes(candidate.getMinutes() + 1);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Format a UTC timestamp as a human-readable "next run" string.
+ */
+export function formatNextRun(timestamp: number, timezone: string): string {
+  const now = Date.now();
+  const diff = timestamp - now;
+
+  if (diff < 0) return "overdue";
+
+  const minutes = Math.floor(diff / 60_000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  let relative: string;
+  if (minutes < 1) {
+    relative = "in less than a minute";
+  } else if (minutes < 60) {
+    relative = `in ${minutes}m`;
+  } else if (hours < 24) {
+    relative = `in ${hours}h ${minutes % 60}m`;
+  } else if (days < 7) {
+    relative = `in ${days}d ${hours % 24}h`;
+  } else {
+    relative = new Date(timestamp).toLocaleDateString();
+  }
+
+  // Also show the actual time in the schedule's timezone
+  const timeStr = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(timestamp));
+
+  return `${relative} (${timeStr})`;
+}
+
 // --- Cron Display Helpers ---
 
 export function describeEarningsTrigger(config: EarningsConfigFormData): string {
@@ -314,7 +474,14 @@ export function describeEarningsTrigger(config: EarningsConfigFormData): string 
   const time = config.runTimeUTC;
   const amcNote = config.adjustForHour ? " (AMC delayed to next day)" : "";
 
-  return `${timing} at ${time} UTC${amcNote}`;
+  const modeLabels: Record<string, string> = {
+    each: "",
+    after_last: " · After last stock reports",
+    before_first: " · Before first stock reports",
+  };
+  const modeNote = modeLabels[config.earningsMode ?? "each"] ?? "";
+
+  return `${timing} at ${time} UTC${amcNote}${modeNote}`;
 }
 
 export function describeCron(cron: string): string {

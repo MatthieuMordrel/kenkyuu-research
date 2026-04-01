@@ -19,11 +19,14 @@ import {
   describeCron,
   describeEarningsTrigger,
   getAllowedStockModes,
+  computeNextCronRun,
+  formatNextRun,
   COMMON_TIMEZONES,
   type ScheduleFormData,
   type ScheduleFormErrors,
   type EarningsConfigFormData,
   type PromptType,
+  type EarningsMode,
 } from "@/lib/schedule-validation";
 import { cn } from "@/lib/utils";
 import type { Doc, Id } from "@repo/convex/dataModel";
@@ -58,7 +61,18 @@ const INITIAL_EARNINGS_CONFIG: EarningsConfigFormData = {
   offsetDays: 0,
   runTimeUTC: "10:00",
   adjustForHour: true,
+  earningsMode: "each",
 };
+
+const EARNINGS_MODE_OPTIONS: {
+  value: EarningsMode;
+  label: string;
+  description: string;
+}[] = [
+  { value: "each", label: "Each Earning", description: "Trigger once per stock as it reports" },
+  { value: "after_last", label: "After Last", description: "Wait until all stocks have reported" },
+  { value: "before_first", label: "Before First", description: "Trigger on the earliest report date" },
+];
 
 const INITIAL_FORM: ScheduleFormData = {
   name: "",
@@ -175,6 +189,14 @@ export function ScheduleModal({
     if (selectedPromptType === "discovery" && form.triggerType === "earnings") {
       updateField("triggerType", "cron");
     }
+
+    // Single-stock: force earningsMode to "each" (aggregate modes don't make sense)
+    if (selectedPromptType === "single-stock" && form.earningsConfig.earningsMode !== "each") {
+      setForm((prev) => ({
+        ...prev,
+        earningsConfig: { ...prev.earningsConfig, earningsMode: "each" },
+      }));
+    }
   }, [selectedPromptType]);
 
   useEffect(() => {
@@ -188,7 +210,7 @@ export function ScheduleModal({
           triggerType,
           cron: schedule.cron ?? "@daily",
           earningsConfig: schedule.earningsConfig
-            ? { ...schedule.earningsConfig }
+            ? { ...schedule.earningsConfig, earningsMode: schedule.earningsConfig.earningsMode ?? "each" }
             : { ...INITIAL_EARNINGS_CONFIG },
           timezone: schedule.timezone,
         });
@@ -815,6 +837,41 @@ export function ScheduleModal({
               {/* Earnings Config */}
               {form.triggerType === "earnings" && (
                 <div className="flex flex-col gap-3">
+                  {/* Earnings mode — only meaningful for multi-stock */}
+                  {selectedPromptType === "multi-stock" && (
+                    <div className="flex flex-col gap-2">
+                      <Label>Trigger Mode *</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {EARNINGS_MODE_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                earningsConfig: {
+                                  ...prev.earningsConfig,
+                                  earningsMode: option.value,
+                                },
+                              }))
+                            }
+                            className={cn(
+                              "flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left transition-all",
+                              form.earningsConfig.earningsMode === option.value
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                : "border-border hover:border-foreground/20 hover:bg-accent/50",
+                            )}
+                          >
+                            <span className="text-sm font-medium">{option.label}</span>
+                            <span className="text-[11px] leading-tight text-muted-foreground">
+                              {option.description}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-2">
                     <Label>Timing Relative to Earnings *</Label>
                     <select
@@ -950,6 +1007,14 @@ export function ScheduleModal({
                 )}
               </div>
 
+              {/* Next run preview */}
+              <NextRunPreview
+                triggerType={form.triggerType}
+                cron={form.cron}
+                timezone={form.timezone}
+                earningsConfig={form.earningsConfig}
+              />
+
               {submitError && (
                 <p className="text-sm text-destructive">{submitError}</p>
               )}
@@ -997,5 +1062,52 @@ export function ScheduleModal({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function NextRunPreview({
+  triggerType,
+  cron,
+  timezone,
+  earningsConfig,
+}: {
+  triggerType: "cron" | "earnings";
+  cron: string;
+  timezone: string;
+  earningsConfig: EarningsConfigFormData;
+}) {
+  const nextRun = useMemo(() => {
+    if (triggerType !== "cron") return null;
+    return computeNextCronRun(cron, timezone);
+  }, [triggerType, cron, timezone]);
+
+  if (triggerType === "earnings") {
+    return (
+      <div className="flex items-start gap-2 rounded-lg border border-dashed bg-muted/30 px-3 py-2.5">
+        <span className="mt-0.5 text-sm">⏱</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium">Triggers based on earnings dates</span>
+          <span className="text-xs text-muted-foreground">
+            Checked hourly — runs at {earningsConfig.runTimeUTC} UTC when an earnings date matches
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!nextRun) return null;
+
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-dashed bg-muted/30 px-3 py-2.5">
+      <span className="mt-0.5 text-sm">📅</span>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium">
+          Next run: {formatNextRun(nextRun, timezone)}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {describeCron(cron)} · {timezone}
+        </span>
+      </div>
+    </div>
   );
 }

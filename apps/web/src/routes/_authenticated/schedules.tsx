@@ -292,10 +292,16 @@ function ScheduleCard({
             <span>{schedule.timezone}</span>
             <StockSelectionLabel selection={schedule.stockSelection} />
           </div>
-          {schedule.triggerType !== "earnings" && schedule.nextRunAt && isActive && (
-            <span className="text-xs text-muted-foreground">
-              Next: {formatRelativeTime(schedule.nextRunAt)}
-            </span>
+          {isActive && (
+            schedule.triggerType === "earnings" ? (
+              <span className="text-xs text-muted-foreground">
+                Checked hourly · triggers on matching earnings dates
+              </span>
+            ) : schedule.nextRunAt ? (
+              <span className="text-xs text-muted-foreground">
+                Next: {formatRelativeTime(schedule.nextRunAt)}
+              </span>
+            ) : null
           )}
         </div>
 

@@ -137,6 +137,7 @@ export function validateEarningsConfig(config: {
   offsetDays: number;
   runTimeUTC: string;
   adjustForHour: boolean;
+  earningsMode?: "each" | "after_last" | "before_first";
 }): void {
   if (!Number.isInteger(config.offsetDays)) {
     throw new Error("Offset days must be an integer");

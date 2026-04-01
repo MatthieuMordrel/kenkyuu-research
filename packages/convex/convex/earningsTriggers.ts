@@ -43,6 +43,37 @@ export const checkAlreadyTriggered = internalQuery({
   },
 });
 
+export const getEarningsForStocks = internalQuery({
+  args: { stockIds: v.array(v.id("stocks")) },
+  handler: async (ctx, args) => {
+    const results = [];
+    for (const stockId of args.stockIds) {
+      const earnings = await ctx.db
+        .query("earnings")
+        .withIndex("by_stockId", (q) => q.eq("stockId", stockId))
+        .collect();
+      results.push(...earnings);
+    }
+    return results;
+  },
+});
+
+export const checkAlreadyTriggeredForQuarter = internalQuery({
+  args: {
+    scheduleId: v.id("schedules"),
+    quarterKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("earningsTriggeredRuns")
+      .withIndex("by_schedule_quarter", (q) =>
+        q.eq("scheduleId", args.scheduleId).eq("quarterKey", args.quarterKey),
+      )
+      .first();
+    return existing !== null;
+  },
+});
+
 // --- Internal Mutations ---
 
 export const recordTriggeredRun = internalMutation({
@@ -52,6 +83,7 @@ export const recordTriggeredRun = internalMutation({
     stockId: v.id("stocks"),
     earningsDate: v.string(),
     jobId: v.optional(v.id("researchJobs")),
+    quarterKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("earningsTriggeredRuns", {
@@ -61,6 +93,7 @@ export const recordTriggeredRun = internalMutation({
       earningsDate: args.earningsDate,
       triggeredAt: Date.now(),
       jobId: args.jobId,
+      quarterKey: args.quarterKey,
     });
   },
 });

@@ -97,6 +97,10 @@ export default defineSchema({
         offsetDays: v.number(), // -7 to +14. 0 = earnings day, 1 = day after, -1 = day before
         runTimeUTC: v.string(), // "HH:MM" format
         adjustForHour: v.boolean(), // if true, amc earnings at offset=0 delay to next morning
+        // For multi-stock: "each" = per stock (default), "after_last" = after last stock reports, "before_first" = before first stock reports
+        earningsMode: v.optional(
+          v.union(v.literal("each"), v.literal("after_last"), v.literal("before_first")),
+        ),
       }),
     ),
   })
@@ -109,9 +113,11 @@ export default defineSchema({
     earningsDate: v.string(), // YYYY-MM-DD
     triggeredAt: v.number(),
     jobId: v.optional(v.id("researchJobs")),
+    quarterKey: v.optional(v.string()), // e.g. "Q1-2026" for aggregate modes (after_last, before_first)
   })
     .index("by_schedule_earnings", ["scheduleId", "earningsId"])
-    .index("by_schedule_date", ["scheduleId", "earningsDate"]),
+    .index("by_schedule_date", ["scheduleId", "earningsDate"])
+    .index("by_schedule_quarter", ["scheduleId", "quarterKey"]),
 
   settings: defineTable({
     key: v.string(),
