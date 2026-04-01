@@ -252,14 +252,27 @@ function parseSections(markdown: string): ParsedMarkdown {
   // output a summary outline followed by the full sections). Normalize titles
   // by collapsing dashes/whitespace, then keep the *last* occurrence (usually
   // the more detailed version).
+  // Important: scope dedup keys by parent heading so repeated sub-headings
+  // under different parents (e.g. per-stock "Financial Summary") are preserved.
   const seen = new Map<string, number>();
+  const parentStack: string[] = []; // track parent heading titles by level
   for (let idx = 0; idx < flat.length; idx++) {
-    const key = flat[idx].title
+    const { level, title } = flat[idx];
+    const normalizedTitle = title
       .toLowerCase()
-      .replace(/[\u2013\u2014\u2015\u2012-]/g, "-") // normalize all dash variants
+      .replace(/[\u2013\u2014\u2015\u2012-]/g, "-")
       .replace(/\s+/g, " ")
       .trim();
+
+    // Pop parent stack to current level — only parents at strictly lower levels count
+    parentStack.length = Math.max(0, level - 1);
+
+    const parentContext = parentStack.join("/");
+    const key = parentContext ? `${parentContext}/${normalizedTitle}` : normalizedTitle;
     seen.set(key, idx); // last occurrence wins
+
+    // Update parent stack so children of this heading are scoped to it
+    parentStack[level - 1] = normalizedTitle;
   }
   const keepIndices = new Set(seen.values());
   const deduped = flat.filter((_, idx) => keepIndices.has(idx));
