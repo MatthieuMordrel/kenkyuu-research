@@ -222,13 +222,37 @@ export const executeRunNow = internalAction({
       }
     }
 
+    // Check prompt type: single-stock prompts create one job per stock
+    const prompt = await ctx.runQuery(internal.prompts.getPromptInternal, {
+      id: schedule.promptId,
+    });
+    const isSingleStock = prompt?.type === "single-stock";
+
     try {
-      await ctx.runMutation(internal.schedules.createScheduledJob, {
-        promptId: schedule.promptId,
-        stockIds,
-        provider: schedule.provider,
-        scheduleId: args.scheduleId,
-      });
+      if (isSingleStock && stockIds.length > 1) {
+        // Queue one job per stock for single-stock prompts
+        for (const stockId of stockIds) {
+          try {
+            await ctx.runMutation(internal.schedules.createScheduledJob, {
+              promptId: schedule.promptId,
+              stockIds: [stockId],
+              provider: schedule.provider,
+              scheduleId: args.scheduleId,
+            });
+          } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            console.error(`Run Now failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`);
+            if (message.includes("concurrent jobs")) break;
+          }
+        }
+      } else {
+        await ctx.runMutation(internal.schedules.createScheduledJob, {
+          promptId: schedule.promptId,
+          stockIds,
+          provider: schedule.provider,
+          scheduleId: args.scheduleId,
+        });
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       console.error(`Run Now failed for schedule ${args.scheduleId}: ${message}`);
@@ -344,14 +368,38 @@ export const executeScheduledRun = internalAction({
       }
     }
 
-    // Create and start the research job
+    // Check prompt type: single-stock prompts create one job per stock
+    const prompt = await ctx.runQuery(internal.prompts.getPromptInternal, {
+      id: schedule.promptId,
+    });
+    const isSingleStock = prompt?.type === "single-stock";
+
+    // Create and start the research job(s)
     try {
-      await ctx.runMutation(internal.schedules.createScheduledJob, {
-        promptId: schedule.promptId,
-        stockIds,
-        provider: schedule.provider,
-        scheduleId: args.scheduleId,
-      });
+      if (isSingleStock && stockIds.length > 1) {
+        // Queue one job per stock for single-stock prompts
+        for (const stockId of stockIds) {
+          try {
+            await ctx.runMutation(internal.schedules.createScheduledJob, {
+              promptId: schedule.promptId,
+              stockIds: [stockId],
+              provider: schedule.provider,
+              scheduleId: args.scheduleId,
+            });
+          } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            console.error(`Scheduled run failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`);
+            if (message.includes("concurrent jobs")) break;
+          }
+        }
+      } else {
+        await ctx.runMutation(internal.schedules.createScheduledJob, {
+          promptId: schedule.promptId,
+          stockIds,
+          provider: schedule.provider,
+          scheduleId: args.scheduleId,
+        });
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       console.error(`Scheduled run failed for schedule ${args.scheduleId}: ${message}`);

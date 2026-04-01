@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCreateSchedule, useUpdateSchedule } from "@/hooks/use-schedules";
 import { usePrompts } from "@/hooks/use-prompts";
 import { useStocks, useTags } from "@/hooks/use-stocks";
+import { useEarningsSummary } from "@/hooks/use-earnings";
 import {
   validateScheduleForm,
   hasErrors,
@@ -21,6 +22,7 @@ import {
   getAllowedStockModes,
   computeNextCronRun,
   formatNextRun,
+  generateScheduleName,
   COMMON_TIMEZONES,
   type ScheduleFormData,
   type ScheduleFormErrors,
@@ -133,6 +135,7 @@ export function ScheduleModal({
   const prompts = usePrompts();
   const stocks = useStocks();
   const tags = useTags();
+  const earningsSummary = useEarningsSummary();
   const isEditing = !!schedule;
 
   const [form, setForm] = useState<ScheduleFormData>(INITIAL_FORM);
@@ -162,6 +165,21 @@ export function ScheduleModal({
     );
   }, [prompts, promptSearch]);
 
+  // Resolve selected stock IDs for earnings preview
+  const resolvedStockIds = useMemo(() => {
+    if (!stocks) return [];
+    const sel = form.stockSelection;
+    if (sel.type === "all") return stocks.map((s) => s._id);
+    if (sel.type === "tagged") {
+      const selectedTags = sel.tags ?? [];
+      if (selectedTags.length === 0) return [];
+      return stocks
+        .filter((s) => s.tags?.some((t: string) => selectedTags.includes(t)))
+        .map((s) => s._id);
+    }
+    return sel.stockIds ?? [];
+  }, [stocks, form.stockSelection]);
+
   // Auto-correct stock selection and trigger type when prompt type changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -180,22 +198,9 @@ export function ScheduleModal({
       }
     }
 
-    // Single-stock must use "specific" with at most 1 stock
-    if (selectedPromptType === "single-stock" && form.stockSelection.type !== "specific") {
-      updateStockSelection({ type: "specific", stockIds: [] });
-    }
-
     // Discovery prompts can't use earnings triggers
     if (selectedPromptType === "discovery" && form.triggerType === "earnings") {
       updateField("triggerType", "cron");
-    }
-
-    // Single-stock: force earningsMode to "each" (aggregate modes don't make sense)
-    if (selectedPromptType === "single-stock" && form.earningsConfig.earningsMode !== "each") {
-      setForm((prev) => ({
-        ...prev,
-        earningsConfig: { ...prev.earningsConfig, earningsMode: "each" },
-      }));
     }
   }, [selectedPromptType]);
 
@@ -271,11 +276,6 @@ export function ScheduleModal({
   }
 
   function toggleStock(stockId: Id<"stocks">) {
-    if (isSingleStock) {
-      // Radio-style: replace selection
-      updateStockSelection({ stockIds: [stockId] });
-      return;
-    }
     const currentIds = form.stockSelection.stockIds ?? [];
     const newIds = currentIds.includes(stockId)
       ? currentIds.filter((id) => id !== stockId)
@@ -311,9 +311,7 @@ export function ScheduleModal({
       }
       if (form.stockSelection.type === "specific") {
         if (!form.stockSelection.stockIds || form.stockSelection.stockIds.length === 0) {
-          stepErrors.stockSelection = isSingleStock
-            ? "Select a stock to analyze"
-            : "Select at least one stock";
+          stepErrors.stockSelection = "Select at least one stock";
         }
       }
     }
@@ -345,8 +343,13 @@ export function ScheduleModal({
 
     setSubmitting(true);
     try {
+      const autoName = generateScheduleName(
+        selectedPrompt?.name ?? "Untitled",
+        form.stockSelection,
+        stocks ?? undefined,
+      );
       const commonFields = {
-        name: form.name.trim(),
+        name: autoName,
         promptId: form.promptId as Id<"prompts">,
         stockSelection: form.stockSelection as Doc<"schedules">["stockSelection"],
         timezone: form.timezone,
@@ -396,9 +399,7 @@ export function ScheduleModal({
             {step === "prompt"
               ? "Choose a research prompt to run on a schedule."
               : step === "stocks"
-                ? isSingleStock
-                  ? "Pick the stock to analyze."
-                  : "Choose which stocks to include."
+                ? "Choose which stocks to include."
                 : "Configure when this schedule runs."}
           </DialogDescription>
         </DialogHeader>
@@ -550,39 +551,116 @@ export function ScheduleModal({
           {/* Step 2: Stock configuration */}
           {step === "stocks" && (
             <div className="flex flex-col gap-3">
-              {isSingleStock ? (
-                /* Single-stock: radio-style stock picker */
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    This prompt analyzes one stock at a time. Pick the stock to run it on.
+              {isSingleStock && (
+                <p className="text-xs text-muted-foreground">
+                  This prompt analyzes one stock at a time. When multiple stocks are selected, it will run once per stock.
+                </p>
+              )}
+
+              <div className="grid grid-cols-3 gap-2">
+                {STOCK_MODE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() =>
+                      updateStockSelection({
+                        type: option.value,
+                        tags: option.value === "tagged" ? (form.stockSelection.tags ?? []) : undefined,
+                        stockIds: option.value === "specific" ? (form.stockSelection.stockIds ?? []) : undefined,
+                      })
+                    }
+                    className={cn(
+                      "flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left transition-all",
+                      form.stockSelection.type === option.value
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                        : "border-border hover:border-foreground/20 hover:bg-accent/50",
+                    )}
+                  >
+                    <span className="text-sm font-medium">{option.label}</span>
+                    <span className="text-[11px] leading-tight text-muted-foreground">
+                      {option.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* All stocks info */}
+              {form.stockSelection.type === "all" && (
+                <div className="rounded-lg border border-dashed p-3">
+                  <p className="text-sm text-muted-foreground">
+                    The prompt will run on all{" "}
+                    <span className="font-medium text-foreground">
+                      {stocks?.length ?? "..."}
+                    </span>{" "}
+                    stocks in your database.{isSingleStock && " One job will be created per stock."}
                   </p>
+                </div>
+              )}
+
+              {/* Tag selector */}
+              {form.stockSelection.type === "tagged" && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs text-muted-foreground">Select tags:</span>
+                  {tags && tags.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {tags.map((tag) => {
+                        const selected = form.stockSelection.tags?.includes(tag) ?? false;
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={cn(
+                              "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                              selected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background text-foreground hover:bg-accent",
+                            )}
+                          >
+                            {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No tags available. Tag your stocks first.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Specific stock selector */}
+              {form.stockSelection.type === "specific" && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs text-muted-foreground">Select stocks:</span>
                   {stocks && stocks.length > 0 ? (
                     <div className="flex flex-col gap-1">
                       {stocks.map((stock) => {
-                        const isSelected = form.stockSelection.stockIds?.includes(stock._id) ?? false;
+                        const selected = form.stockSelection.stockIds?.includes(stock._id) ?? false;
                         return (
                           <button
                             key={stock._id}
                             type="button"
                             onClick={() => toggleStock(stock._id)}
                             className={cn(
-                              "flex items-center gap-3 rounded-lg border p-2.5 text-left transition-all",
-                              isSelected
+                              "flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-all",
+                              selected
                                 ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                                 : "border-border hover:border-foreground/20 hover:bg-accent/50",
                             )}
                           >
-                            <span className={cn(
-                              "flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                              isSelected
-                                ? "border-primary"
-                                : "border-muted-foreground/30",
-                            )}>
-                              {isSelected && (
-                                <span className="size-2 rounded-full bg-primary" />
+                            <span
+                              className={cn(
+                                "flex size-4 shrink-0 items-center justify-center rounded border text-[10px] transition-colors",
+                                selected
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-muted-foreground/30",
                               )}
+                            >
+                              {selected && "✓"}
                             </span>
-                            <span className="text-sm font-semibold">{stock.ticker}</span>
+                            <span className="font-semibold">{stock.ticker}</span>
                             <span className="truncate text-xs text-muted-foreground">
                               {stock.companyName}
                             </span>
@@ -591,133 +669,11 @@ export function ScheduleModal({
                       })}
                     </div>
                   ) : (
-                    <p className="py-4 text-center text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       No stocks available. Add stocks first.
                     </p>
                   )}
                 </div>
-              ) : (
-                /* Multi-stock: mode selector + sub-pickers */
-                <>
-                  <div className="grid grid-cols-3 gap-2">
-                    {STOCK_MODE_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() =>
-                          updateStockSelection({
-                            type: option.value,
-                            tags: option.value === "tagged" ? (form.stockSelection.tags ?? []) : undefined,
-                            stockIds: option.value === "specific" ? (form.stockSelection.stockIds ?? []) : undefined,
-                          })
-                        }
-                        className={cn(
-                          "flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left transition-all",
-                          form.stockSelection.type === option.value
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                            : "border-border hover:border-foreground/20 hover:bg-accent/50",
-                        )}
-                      >
-                        <span className="text-sm font-medium">{option.label}</span>
-                        <span className="text-[11px] leading-tight text-muted-foreground">
-                          {option.description}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* All stocks info */}
-                  {form.stockSelection.type === "all" && (
-                    <div className="rounded-lg border border-dashed p-3">
-                      <p className="text-sm text-muted-foreground">
-                        The prompt will run on all{" "}
-                        <span className="font-medium text-foreground">
-                          {stocks?.length ?? "..."}
-                        </span>{" "}
-                        stocks in your database.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Tag selector */}
-                  {form.stockSelection.type === "tagged" && (
-                    <div className="flex flex-col gap-2">
-                      <span className="text-xs text-muted-foreground">Select tags:</span>
-                      {tags && tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {tags.map((tag) => {
-                            const selected = form.stockSelection.tags?.includes(tag) ?? false;
-                            return (
-                              <button
-                                key={tag}
-                                type="button"
-                                onClick={() => toggleTag(tag)}
-                                className={cn(
-                                  "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                                  selected
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : "border-border bg-background text-foreground hover:bg-accent",
-                                )}
-                              >
-                                {tag}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          No tags available. Tag your stocks first.
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Specific stock selector */}
-                  {form.stockSelection.type === "specific" && (
-                    <div className="flex flex-col gap-2">
-                      <span className="text-xs text-muted-foreground">Select stocks:</span>
-                      {stocks && stocks.length > 0 ? (
-                        <div className="flex flex-col gap-1">
-                          {stocks.map((stock) => {
-                            const selected = form.stockSelection.stockIds?.includes(stock._id) ?? false;
-                            return (
-                              <button
-                                key={stock._id}
-                                type="button"
-                                onClick={() => toggleStock(stock._id)}
-                                className={cn(
-                                  "flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-all",
-                                  selected
-                                    ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                    : "border-border hover:border-foreground/20 hover:bg-accent/50",
-                                )}
-                              >
-                                <span
-                                  className={cn(
-                                    "flex size-4 shrink-0 items-center justify-center rounded border text-[10px] transition-colors",
-                                    selected
-                                      ? "border-primary bg-primary text-primary-foreground"
-                                      : "border-muted-foreground/30",
-                                  )}
-                                >
-                                  {selected && "✓"}
-                                </span>
-                                <span className="font-semibold">{stock.ticker}</span>
-                                <span className="truncate text-xs text-muted-foreground">
-                                  {stock.companyName}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          No stocks available. Add stocks first.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </>
               )}
 
               {errors.stockSelection && (
@@ -729,19 +685,16 @@ export function ScheduleModal({
           {/* Step 3: Schedule configuration */}
           {step === "schedule" && (
             <div className="flex flex-col gap-4">
-              {/* Name */}
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="schedule-name">Schedule Name *</Label>
-                <Input
-                  id="schedule-name"
-                  placeholder="e.g. Weekly Portfolio Review"
-                  value={form.name}
-                  onChange={(e) => updateField("name", e.target.value)}
-                  aria-invalid={!!errors.name}
-                />
-                {errors.name && (
-                  <p className="text-xs text-destructive">{errors.name}</p>
-                )}
+              {/* Auto-generated name preview */}
+              <div className="rounded-lg border border-dashed bg-muted/30 px-3 py-2.5">
+                <p className="text-xs text-muted-foreground">Schedule name</p>
+                <p className="text-sm font-medium">
+                  {generateScheduleName(
+                    selectedPrompt?.name ?? "Untitled",
+                    form.stockSelection,
+                    stocks ?? undefined,
+                  )}
+                </p>
               </div>
 
               {/* Trigger Type */}
@@ -837,8 +790,8 @@ export function ScheduleModal({
               {/* Earnings Config */}
               {form.triggerType === "earnings" && (
                 <div className="flex flex-col gap-3">
-                  {/* Earnings mode — only meaningful for multi-stock */}
-                  {selectedPromptType === "multi-stock" && (
+                  {/* Earnings mode — shown for both single-stock and multi-stock */}
+                  {(selectedPromptType === "multi-stock" || selectedPromptType === "single-stock") && (
                     <div className="flex flex-col gap-2">
                       <Label>Trigger Mode *</Label>
                       <div className="grid grid-cols-3 gap-2">
@@ -1013,6 +966,8 @@ export function ScheduleModal({
                 cron={form.cron}
                 timezone={form.timezone}
                 earningsConfig={form.earningsConfig}
+                resolvedStockIds={resolvedStockIds}
+                earningsSummary={earningsSummary}
               />
 
               {submitError && (
@@ -1065,31 +1020,97 @@ export function ScheduleModal({
   );
 }
 
+type EarningsSummaryMap = Record<
+  string,
+  { previous?: { date: string }; next?: { date: string }; nextNext?: { date: string } }
+>;
+
 function NextRunPreview({
   triggerType,
   cron,
   timezone,
   earningsConfig,
+  resolvedStockIds,
+  earningsSummary,
 }: {
   triggerType: "cron" | "earnings";
   cron: string;
   timezone: string;
   earningsConfig: EarningsConfigFormData;
+  resolvedStockIds: string[];
+  earningsSummary: EarningsSummaryMap | undefined;
 }) {
   const nextRun = useMemo(() => {
     if (triggerType !== "cron") return null;
     return computeNextCronRun(cron, timezone);
   }, [triggerType, cron, timezone]);
 
+  const earningsNextRun = useMemo(() => {
+    if (triggerType !== "earnings" || !earningsSummary || resolvedStockIds.length === 0) return null;
+    const mode = earningsConfig.earningsMode ?? "each";
+    const offset = earningsConfig.offsetDays ?? 0;
+
+    const nextDates: string[] = [];
+    for (const id of resolvedStockIds) {
+      const summary = earningsSummary[id];
+      if (summary?.next?.date) nextDates.push(summary.next.date);
+    }
+    if (nextDates.length === 0) return null;
+    nextDates.sort();
+
+    if (mode === "each") {
+      const d = new Date(nextDates[0]!);
+      d.setDate(d.getDate() + offset);
+      return {
+        date: d,
+        label: `Earliest of ${nextDates.length} stock${nextDates.length > 1 ? "s" : ""}`,
+      };
+    }
+    if (mode === "before_first") {
+      const d = new Date(nextDates[0]!);
+      d.setDate(d.getDate() + offset);
+      return { date: d, label: "Triggers at first earnings date" };
+    }
+    if (mode === "after_last") {
+      const d = new Date(nextDates[nextDates.length - 1]!);
+      d.setDate(d.getDate() + offset);
+      const missing = resolvedStockIds.length - nextDates.length;
+      const note = missing > 0 ? ` (${missing} without date)` : "";
+      return { date: d, label: `Triggers after last earnings date${note}` };
+    }
+    return null;
+  }, [triggerType, earningsSummary, resolvedStockIds, earningsConfig]);
+
   if (triggerType === "earnings") {
     return (
       <div className="flex items-start gap-2 rounded-lg border border-dashed bg-muted/30 px-3 py-2.5">
         <span className="mt-0.5 text-sm">⏱</span>
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium">Triggers based on earnings dates</span>
-          <span className="text-xs text-muted-foreground">
-            Checked hourly — runs at {earningsConfig.runTimeUTC} UTC when an earnings date matches
-          </span>
+          {earningsNextRun ? (
+            <>
+              <span className="text-sm font-medium">
+                Next run:{" "}
+                {earningsNextRun.date.toLocaleDateString(undefined, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+                {earningsConfig.runTimeUTC ? ` at ${earningsConfig.runTimeUTC} UTC` : ""}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {earningsNextRun.label} · Checked hourly
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-medium">Triggers based on earnings dates</span>
+              <span className="text-xs text-muted-foreground">
+                Checked hourly — runs at {earningsConfig.runTimeUTC} UTC when an earnings date
+                matches
+              </span>
+            </>
+          )}
         </div>
       </div>
     );
@@ -1101,9 +1122,7 @@ function NextRunPreview({
     <div className="flex items-start gap-2 rounded-lg border border-dashed bg-muted/30 px-3 py-2.5">
       <span className="mt-0.5 text-sm">📅</span>
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium">
-          Next run: {formatNextRun(nextRun, timezone)}
-        </span>
+        <span className="text-sm font-medium">Next run: {formatNextRun(nextRun, timezone)}</span>
         <span className="text-xs text-muted-foreground">
           {describeCron(cron)} · {timezone}
         </span>

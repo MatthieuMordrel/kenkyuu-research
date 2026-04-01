@@ -203,6 +203,12 @@ export const checkEarningsTriggers = internalAction({
         const selectedStockIds = await resolveSelectedStockIds(ctx, schedule);
         if (selectedStockIds.length === 0) continue;
 
+        // Check prompt type for single-stock handling
+        const prompt = await ctx.runQuery(internal.prompts.getPromptInternal, {
+          id: schedule.promptId,
+        });
+        const isSingleStock = prompt?.type === "single-stock";
+
         // Get all earnings for selected stocks
         const allEarnings: Doc<"earnings">[] = await ctx.runQuery(
           internal.earningsTriggers.getEarningsForStocks,
@@ -265,18 +271,38 @@ export const checkEarningsTriggers = internalAction({
           const triggerDate = addDays(latestDate, config.offsetDays);
           if (today < triggerDate && !pastDeadline) continue;
 
-          // Trigger with all selected stock IDs
+          // Trigger: single-stock creates one job per stock, multi-stock creates one job with all
           const anchorEarnings = reportedEarnings.find((e) => e.date === latestDate)!;
           try {
-            const jobId = await ctx.runMutation(
-              internal.schedules.createScheduledJob,
-              {
-                promptId: schedule.promptId,
-                stockIds: selectedStockIds,
-                provider: schedule.provider,
-                scheduleId: schedule._id,
-              },
-            );
+            if (isSingleStock) {
+              for (const stockId of selectedStockIds) {
+                try {
+                  await ctx.runMutation(
+                    internal.schedules.createScheduledJob,
+                    {
+                      promptId: schedule.promptId,
+                      stockIds: [stockId],
+                      provider: schedule.provider,
+                      scheduleId: schedule._id,
+                    },
+                  );
+                } catch (error: unknown) {
+                  const message = error instanceof Error ? error.message : "Unknown error";
+                  console.error(`Earnings trigger [after_last] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`);
+                  if (message.includes("concurrent jobs")) break;
+                }
+              }
+            } else {
+              await ctx.runMutation(
+                internal.schedules.createScheduledJob,
+                {
+                  promptId: schedule.promptId,
+                  stockIds: selectedStockIds,
+                  provider: schedule.provider,
+                  scheduleId: schedule._id,
+                },
+              );
+            }
             await ctx.runMutation(
               internal.earningsTriggers.recordTriggeredRun,
               {
@@ -284,11 +310,11 @@ export const checkEarningsTriggers = internalAction({
                 earningsId: anchorEarnings._id,
                 stockId: anchorEarnings.stockId,
                 earningsDate: latestDate,
-                jobId: jobId as Id<"researchJobs">,
+                jobId: undefined,
                 quarterKey: qKey,
               },
             );
-            console.log(`Earnings trigger [after_last]: job for ${selectedStockIds.length} stocks (${qKey}, schedule "${schedule.name}")`);
+            console.log(`Earnings trigger [after_last]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, schedule "${schedule.name}")`);
             await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, { id: schedule._id });
           } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Unknown error";
@@ -309,15 +335,35 @@ export const checkEarningsTriggers = internalAction({
 
           const anchorEarnings = reportedEarnings.find((e) => e.date === earliestDate)!;
           try {
-            const jobId = await ctx.runMutation(
-              internal.schedules.createScheduledJob,
-              {
-                promptId: schedule.promptId,
-                stockIds: selectedStockIds,
-                provider: schedule.provider,
-                scheduleId: schedule._id,
-              },
-            );
+            if (isSingleStock) {
+              for (const stockId of selectedStockIds) {
+                try {
+                  await ctx.runMutation(
+                    internal.schedules.createScheduledJob,
+                    {
+                      promptId: schedule.promptId,
+                      stockIds: [stockId],
+                      provider: schedule.provider,
+                      scheduleId: schedule._id,
+                    },
+                  );
+                } catch (error: unknown) {
+                  const message = error instanceof Error ? error.message : "Unknown error";
+                  console.error(`Earnings trigger [before_first] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`);
+                  if (message.includes("concurrent jobs")) break;
+                }
+              }
+            } else {
+              await ctx.runMutation(
+                internal.schedules.createScheduledJob,
+                {
+                  promptId: schedule.promptId,
+                  stockIds: selectedStockIds,
+                  provider: schedule.provider,
+                  scheduleId: schedule._id,
+                },
+              );
+            }
             await ctx.runMutation(
               internal.earningsTriggers.recordTriggeredRun,
               {
@@ -325,11 +371,11 @@ export const checkEarningsTriggers = internalAction({
                 earningsId: anchorEarnings._id,
                 stockId: anchorEarnings.stockId,
                 earningsDate: earliestDate,
-                jobId: jobId as Id<"researchJobs">,
+                jobId: undefined,
                 quarterKey: qKey,
               },
             );
-            console.log(`Earnings trigger [before_first]: job for ${selectedStockIds.length} stocks (${qKey}, schedule "${schedule.name}")`);
+            console.log(`Earnings trigger [before_first]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, schedule "${schedule.name}")`);
             await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, { id: schedule._id });
           } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Unknown error";

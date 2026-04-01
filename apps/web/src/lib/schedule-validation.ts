@@ -189,6 +189,52 @@ export function validateName(name: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Auto-generate a descriptive schedule name from the selected prompt and stock configuration.
+ * Examples:
+ *   "Earnings Analysis — AAPL"
+ *   "Portfolio Review — All Stocks"
+ *   "Sector Compare — #tech (3 stocks)"
+ *   "Market Discovery"
+ */
+export function generateScheduleName(
+  promptName: string,
+  stockSelection: ScheduleFormData["stockSelection"],
+  stocks?: Array<{ _id: GenericId<"stocks">; ticker: string }>,
+): string {
+  if (stockSelection.type === "none") {
+    return promptName;
+  }
+
+  if (stockSelection.type === "all") {
+    return `${promptName} — All Stocks`;
+  }
+
+  if (stockSelection.type === "tagged") {
+    const tags = stockSelection.tags ?? [];
+    if (tags.length === 0) return promptName;
+    const tagStr = tags.map((t) => `#${t}`).join(", ");
+    return `${promptName} — ${tagStr}`;
+  }
+
+  if (stockSelection.type === "specific") {
+    const ids = stockSelection.stockIds ?? [];
+    if (ids.length === 0) return promptName;
+    if (stocks) {
+      const tickers = ids
+        .map((id) => stocks.find((s) => s._id === id)?.ticker)
+        .filter(Boolean) as string[];
+      if (tickers.length <= 3) {
+        return `${promptName} — ${tickers.join(", ")}`;
+      }
+      return `${promptName} — ${tickers.length} stocks`;
+    }
+    return `${promptName} — ${ids.length} stock${ids.length === 1 ? "" : "s"}`;
+  }
+
+  return promptName;
+}
+
 export function validatePromptId(promptId: string): string | undefined {
   if (!promptId) {
     return "Prompt is required";
@@ -251,8 +297,7 @@ export function validateScheduleForm(
 ): ScheduleFormErrors {
   const errors: ScheduleFormErrors = {};
 
-  const nameError = validateName(data.name);
-  if (nameError) errors.name = nameError;
+  // Name is auto-generated, no validation needed
 
   const promptError = validatePromptId(data.promptId);
   if (promptError) errors.promptId = promptError;

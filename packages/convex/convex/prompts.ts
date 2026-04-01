@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
 import { validatePromptInput } from "./validation";
 import { logAuditEvent } from "./auditLog";
@@ -160,6 +160,13 @@ export const getPrompt = query({
   args: { id: v.id("prompts"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const getPromptInternal = internalQuery({
+  args: { id: v.id("prompts") },
+  handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
   },
 });
