@@ -41,7 +41,7 @@ export function PromptPreviewDialog({
         </Button>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="!max-w-[calc(100vw-2rem)] w-full max-h-[95vh] h-[95vh] flex flex-col">
+        <DialogContent className="!max-w-[calc(100%-2rem)] w-full max-h-[min(95dvh,95svh)] flex flex-col">
           <DialogHeader>
             <DialogTitle>{label}</DialogTitle>
           </DialogHeader>

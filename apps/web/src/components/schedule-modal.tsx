@@ -180,27 +180,43 @@ export function ScheduleModal({
   }, [stocks, form.stockSelection]);
 
   // Auto-correct stock selection and trigger type when prompt type changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!selectedPromptType) return;
 
     const allowed = getAllowedStockModes(selectedPromptType);
+    let stockModeCorrected = false;
 
-    if (!allowed.includes(form.stockSelection.type)) {
-      const defaultMode = allowed[0];
-      if (defaultMode) {
-        updateStockSelection({
-          type: defaultMode,
-          tags: defaultMode === "tagged" ? [] : undefined,
-          stockIds: defaultMode === "specific" ? [] : undefined,
-        });
+    setForm((prev) => {
+      let next = prev;
+
+      if (!allowed.includes(prev.stockSelection.type)) {
+        const defaultMode = allowed[0];
+        if (defaultMode) {
+          stockModeCorrected = true;
+          next = {
+            ...next,
+            stockSelection: {
+              ...next.stockSelection,
+              type: defaultMode,
+              tags: defaultMode === "tagged" ? [] : undefined,
+              stockIds: defaultMode === "specific" ? [] : undefined,
+            },
+          };
+        }
       }
-    }
 
-    // Discovery prompts can't use earnings triggers
-    if (selectedPromptType === "discovery" && form.triggerType === "earnings") {
-      updateField("triggerType", "cron");
-    }
+      if (selectedPromptType === "discovery" && next.triggerType === "earnings") {
+        next = { ...next, triggerType: "cron" };
+      }
+
+      return next === prev ? prev : next;
+    });
+
+    setErrors((prev) => {
+      if (!stockModeCorrected) return prev;
+      if (!prev.stockSelection) return prev;
+      return { ...prev, stockSelection: undefined };
+    });
   }, [selectedPromptType]);
 
   useEffect(() => {
@@ -558,7 +574,7 @@ export function ScheduleModal({
                 </p>
               )}
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {STOCK_MODE_OPTIONS.map((option) => (
                   <button
                     key={option.value}
@@ -795,7 +811,7 @@ export function ScheduleModal({
                   {(selectedPromptType === "multi-stock" || selectedPromptType === "single-stock") && (
                     <div className="flex flex-col gap-2">
                       <Label>Trigger Mode *</Label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                         {EARNINGS_MODE_OPTIONS.map((option) => (
                           <button
                             key={option.value}
