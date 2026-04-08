@@ -221,7 +221,7 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
             <Label htmlFor="exchange">Exchange *</Label>
             <Select
               value={form.exchange || null}
-              onValueChange={(value) => updateField("exchange", value)}
+              onValueChange={(value) => updateField("exchange", value ?? "")}
             >
               <SelectTrigger
                 id="exchange"

@@ -375,7 +375,6 @@ export const startResearch = internalAction({
     const validStocks = stocks.filter(
       (s): s is NonNullable<typeof s> => s !== null,
     );
-    const stockTickers = validStocks.map((s) => s.ticker);
 
     // Build the final prompt with variable injection
     let resolvedPrompt = job.promptSnapshot;

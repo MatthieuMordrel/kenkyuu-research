@@ -23,7 +23,7 @@ export function PageHeader({
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-2xl font-bold tracking-tight">{title}</h1>
         {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="break-words text-sm text-muted-foreground">{description}</p>
         )}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2 mt-2 md:mt-0">{actions}</div>}

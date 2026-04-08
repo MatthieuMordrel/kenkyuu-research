@@ -439,18 +439,18 @@ function ResultCard({
   return (
     <Card
       className={cn(
-        "h-[88px] py-3 transition-colors hover:bg-accent/30",
+        "min-h-[88px] py-3 transition-colors hover:bg-accent/30",
         isActive && "border-primary/30 bg-primary/[0.02]",
       )}
     >
-      <CardContent className="flex h-full items-center gap-3 min-w-0">
+      <CardContent className="flex min-h-0 min-w-0 flex-col gap-3 sm:h-full sm:flex-row sm:items-center sm:gap-3">
         <Link
           to="/research/$jobId"
           params={{ jobId: job._id }}
           className="flex min-w-0 flex-1 flex-col justify-center gap-1.5"
         >
           {/* Row 1: Stocks + status */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {stockTickers.length > 0 ? (
               <div className="flex items-center gap-1.5 flex-wrap">
                 {stockTickers.map((ticker) => (
@@ -467,7 +467,7 @@ function ResultCard({
                 {job.stockIds.length} stock{job.stockIds.length !== 1 ? "s" : ""}
               </span>
             )}
-            <div className="flex items-center gap-1.5 ml-auto shrink-0">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:ml-auto">
               <span className={cn("size-1.5 rounded-full", config.dotClass)} />
               <span className="text-[11px] text-muted-foreground">
                 {config.label}
@@ -479,7 +479,7 @@ function ResultCard({
           </div>
 
           {/* Row 2: Meta info + snippet */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0 overflow-hidden">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground sm:flex-nowrap sm:overflow-hidden">
             <span className="shrink-0 whitespace-nowrap">{createdDate} {createdTime}</span>
             {promptName && (
               <>
@@ -503,7 +503,7 @@ function ResultCard({
         </Link>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center justify-end gap-1 sm:justify-start">
           <button
             type="button"
             onClick={(e) => {
