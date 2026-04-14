@@ -461,6 +461,28 @@ export const dispatchBatchNotification = internalAction({
   },
 });
 
+// --- Test Telegram ---
+
+export const sendTestTelegram = action({
+  args: { token: v.string() },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ sent: boolean; reason?: string }> => {
+    const session = await ctx.runQuery(
+      internal.authHelpers.validateSessionInternal,
+      { token: args.token },
+    );
+    if (!session.valid) {
+      throw new Error("Unauthorized");
+    }
+
+    return await ctx.runAction(internal.notifications.sendTelegramMessage, {
+      text: "✅ *Kenkyuu - Test Message*\n\nIf you're reading this, your Telegram notifications are working correctly.",
+    });
+  },
+});
+
 // --- Test Email ---
 
 export const sendTestEmail = action({

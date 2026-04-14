@@ -224,6 +224,41 @@ function ApiKeysSection() {
 }
 
 function TelegramSection() {
+  const token = useAuthToken();
+  const sendTestTelegram = useAction(api.notifications.sendTestTelegram);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  async function handleTestTelegram() {
+    if (!token) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const result = await sendTestTelegram({ token });
+      if (result.sent) {
+        setTestResult({ type: "success", message: "Test message sent! Check your Telegram." });
+      } else {
+        setTestResult({
+          type: "error",
+          message: result.reason === "not_configured"
+            ? "Telegram not configured. Please set your bot token and chat ID above."
+            : `Failed to send: ${result.reason}`,
+        });
+      }
+    } catch (err) {
+      setTestResult({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to send test message",
+      });
+    } finally {
+      setTesting(false);
+      setTimeout(() => setTestResult(null), 5000);
+    }
+  }
+
   return (
     <Card className="py-4">
       <CardHeader>
@@ -248,6 +283,29 @@ function TelegramSection() {
             label="Chat ID"
             placeholder="Your chat ID"
           />
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestTelegram}
+              disabled={testing || !token}
+              className="self-start"
+            >
+              <Send className="mr-2 size-4" />
+              {testing ? "Sending..." : "Send Test Message"}
+            </Button>
+            {testResult && (
+              <p
+                className={`text-sm ${
+                  testResult.type === "success"
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-destructive"
+                }`}
+              >
+                {testResult.message}
+              </p>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
