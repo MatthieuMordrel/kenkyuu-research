@@ -226,11 +226,38 @@ function ApiKeysSection() {
 function TelegramSection() {
   const token = useAuthToken();
   const sendTestTelegram = useAction(api.notifications.sendTestTelegram);
+  const detectChatId = useAction(api.notifications.detectTelegramChatId);
+  const updateSetting = useUpdateSetting();
+  const chatIdValue = useSettings("telegram_chat_id");
   const [testing, setTesting] = useState(false);
+  const [detecting, setDetecting] = useState(false);
   const [testResult, setTestResult] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  async function handleDetectChatId() {
+    if (!token) return;
+    setDetecting(true);
+    setTestResult(null);
+    try {
+      const result = await detectChatId({ token });
+      if (result.found && result.chatId) {
+        await updateSetting({ key: "telegram_chat_id", value: result.chatId });
+        setTestResult({ type: "success", message: `Chat ID detected and saved: ${result.chatId}` });
+      } else {
+        setTestResult({ type: "error", message: result.reason ?? "Could not detect chat ID." });
+      }
+    } catch (err) {
+      setTestResult({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to detect chat ID",
+      });
+    } finally {
+      setDetecting(false);
+      setTimeout(() => setTestResult(null), 5000);
+    }
+  }
 
   async function handleTestTelegram() {
     if (!token) return;
@@ -278,11 +305,29 @@ function TelegramSection() {
             placeholder="123456789:ABC..."
             type="password"
           />
-          <SettingField
-            settingKey="telegram_chat_id"
-            label="Chat ID"
-            placeholder="Your chat ID"
-          />
+          <div className="flex flex-col gap-2">
+            <Label>Chat ID</Label>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={chatIdValue ?? ""}
+                placeholder="Click detect to auto-fill"
+                className="flex-1 bg-muted/50"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDetectChatId}
+                disabled={detecting || !token}
+                className="shrink-0"
+              >
+                {detecting ? "Detecting..." : "Detect"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Send /start to your bot on Telegram, then click Detect.
+            </p>
+          </div>
           <div className="flex flex-col gap-2">
             <Button
               variant="outline"
