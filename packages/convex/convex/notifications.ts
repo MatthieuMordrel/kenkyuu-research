@@ -43,7 +43,14 @@ export const sendTelegramMessage = internalAction({
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Telegram API error (${response.status}): ${errorText}`);
-      return { sent: false, reason: `api_error: ${response.status}` };
+      let description = `${response.status}`;
+      try {
+        const body = JSON.parse(errorText);
+        if (body.description) description = body.description;
+      } catch {
+        // use status code as fallback
+      }
+      return { sent: false, reason: description };
     }
 
     return { sent: true };
@@ -478,7 +485,7 @@ export const sendTestTelegram = action({
     }
 
     return await ctx.runAction(internal.notifications.sendTelegramMessage, {
-      text: "✅ *Kenkyuu - Test Message*\n\nIf you're reading this, your Telegram notifications are working correctly.",
+      text: "✅ Kenkyuu Test Message\n\nIf you're reading this, your Telegram notifications are working correctly.",
     });
   },
 });
