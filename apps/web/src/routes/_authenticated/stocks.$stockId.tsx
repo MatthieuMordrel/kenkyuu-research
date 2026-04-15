@@ -193,7 +193,11 @@ function StockDetailPage() {
 
         {/* Details + Earnings Grid */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border bg-card p-5">
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="rounded-xl border bg-card p-5 text-left cursor-pointer hover:border-foreground/20 transition-colors"
+          >
             <SectionHeader icon={Building2} title="Details" color="blue" />
             <dl className="flex flex-col gap-3 text-sm">
               <DetailRow label="Ticker" value={stock.ticker} />
@@ -202,7 +206,7 @@ function StockDetailPage() {
               <DetailRow label="Added" value={addedDate} />
               <DetailRow label="Updated" value={updatedDate} />
             </dl>
-          </div>
+          </button>
 
           <EarningsSection earnings={earnings} />
         </div>
@@ -531,14 +535,22 @@ function NotesEditor({ stock }: { stock: Doc<"stocks"> }) {
             </Button>
           </div>
         </div>
-      ) : stock.notes ? (
-        <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">
-          {stock.notes}
-        </p>
       ) : (
-        <p className="text-sm text-muted-foreground italic">
-          No notes yet. Click &ldquo;Add&rdquo; to write notes about this stock.
-        </p>
+        <button
+          type="button"
+          onClick={startEditing}
+          className="w-full text-left cursor-pointer rounded-lg p-2 -m-2 hover:bg-muted/50 transition-colors"
+        >
+          {stock.notes ? (
+            <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">
+              {stock.notes}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              No notes yet. Tap to add notes.
+            </p>
+          )}
+        </button>
       )}
     </div>
   );
