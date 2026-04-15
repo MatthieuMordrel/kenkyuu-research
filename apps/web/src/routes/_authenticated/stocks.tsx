@@ -417,8 +417,8 @@ function StockRow({
         </div>
       )}
 
-      {/* Actions — visible on hover */}
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+      {/* Actions — always visible on mobile, hover-reveal on desktop */}
+      <div className="flex shrink-0 items-center gap-0.5 transition-opacity md:opacity-0 md:group-hover:opacity-100">
         <Button
           variant="ghost"
           size="icon-sm"
