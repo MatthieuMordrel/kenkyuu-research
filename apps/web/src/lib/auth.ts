@@ -52,8 +52,8 @@ const useAuthStore = create<AuthStore>()(
           state.setHasHydrated(true);
         }
       },
-    },
-  ),
+    }
+  )
 );
 
 // Atomic selectors
@@ -67,7 +67,7 @@ export const useAuthActions = () =>
     useShallow((s) => ({
       loggedIn: s.loggedIn,
       loggedOut: s.loggedOut,
-    })),
+    }))
   );
 
 // Direct store access for non-React contexts (e.g., router beforeLoad)

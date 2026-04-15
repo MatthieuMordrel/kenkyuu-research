@@ -1,15 +1,6 @@
 {
   "name": "base-repo",
   "private": true,
-  "catalog": {
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "convex": "^1.31.6",
-    "typescript": "^5.9.3",
-    "@types/node": "^25.0.10",
-    "@types/react": "^19.2.9",
-    "@types/react-dom": "^19.2.3"
-  },
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -31,11 +22,20 @@
     "deps:update": "bun update --filter '*'"
   },
   "devDependencies": {
-    "@typescript/native-preview": "^7.0.0-dev.20260122.4",
+    "@typescript/native-preview": "^7.0.0-dev.20260415.1",
     "concurrently": "^9.2.1",
-    "oxfmt": "^0.26.0",
-    "oxlint": "^1.41.0",
-    "serve": "^14.2.5",
-    "typescript": "catalog:"
+    "oxfmt": "^0.45.0",
+    "oxlint": "^1.60.0",
+    "serve": "^14.2.6",
+    "typescript": "^5.9.3"
+  },
+  "catalog": {
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "convex": "^1.31.6",
+    "typescript": "^5.9.3",
+    "@types/node": "^25.0.10",
+    "@types/react": "^19.2.9",
+    "@types/react-dom": "^19.2.3"
   }
 }

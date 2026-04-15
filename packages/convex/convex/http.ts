@@ -56,12 +56,12 @@ http.route({
       secretBytes.buffer as ArrayBuffer,
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"],
+      ["sign"]
     );
     const signatureBytes = await crypto.subtle.sign(
       "HMAC",
       key,
-      encoder.encode(signedContent),
+      encoder.encode(signedContent)
     );
     const expectedSignature =
       "v1," + uint8ArrayToBase64(new Uint8Array(signatureBytes));
@@ -97,7 +97,7 @@ export function uint8ArrayToBase64(bytes: Uint8Array): string {
 
 async function handleWebhookPayload(
   ctx: Parameters<Parameters<typeof httpAction>[0]>[0],
-  body: string,
+  body: string
 ): Promise<Response> {
   type ResponseWebhookEvent =
     | ResponseCompletedWebhookEvent
@@ -137,7 +137,7 @@ async function handleWebhookPayload(
   await ctx.scheduler.runAfter(
     0,
     internal.researchActions.processWebhookEvent,
-    { jobId: job._id, eventType: event.type },
+    { jobId: job._id, eventType: event.type }
   );
 
   return new Response("OK", { status: 200 });

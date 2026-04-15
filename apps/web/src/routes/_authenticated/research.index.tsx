@@ -86,7 +86,7 @@ function ResearchPage() {
   const toggleFavorite = useToggleFavorite();
   const deleteJob = useDeleteJob();
   const [deleteTarget, setDeleteTarget] = useState<Doc<"researchJobs"> | null>(
-    null,
+    null
   );
 
   // Build stock lookup map
@@ -206,7 +206,7 @@ function ResearchPage() {
                       "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
                       statusFilter === opt.value
                         ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background text-foreground hover:bg-accent",
+                        : "border-border bg-background text-foreground hover:bg-accent"
                     )}
                   >
                     {opt.label}
@@ -225,7 +225,7 @@ function ResearchPage() {
                     setStockFilter(
                       e.target.value
                         ? (e.target.value as GenericId<"stocks">)
-                        : undefined,
+                        : undefined
                     )
                   }
                   className="w-full appearance-none rounded-md border border-border bg-background px-3 py-1.5 pr-8 text-sm"
@@ -253,7 +253,7 @@ function ResearchPage() {
                     setPromptFilter(
                       e.target.value
                         ? (e.target.value as GenericId<"prompts">)
-                        : undefined,
+                        : undefined
                     )
                   }
                   className="w-full appearance-none rounded-md border border-border bg-background px-3 py-1.5 pr-8 text-sm"
@@ -385,10 +385,22 @@ const statusConfig: Record<
     dotClass: string;
   }
 > = {
-  completed: { variant: "secondary", label: "Completed", dotClass: "bg-green-500" },
+  completed: {
+    variant: "secondary",
+    label: "Completed",
+    dotClass: "bg-green-500",
+  },
   failed: { variant: "destructive", label: "Failed", dotClass: "bg-red-500" },
-  running: { variant: "outline", label: "Running", dotClass: "bg-blue-500 animate-pulse" },
-  pending: { variant: "outline", label: "Pending", dotClass: "bg-yellow-500 animate-pulse" },
+  running: {
+    variant: "outline",
+    label: "Running",
+    dotClass: "bg-blue-500 animate-pulse",
+  },
+  pending: {
+    variant: "outline",
+    label: "Pending",
+    dotClass: "bg-yellow-500 animate-pulse",
+  },
 };
 
 /* ─── Result Card ────────────────────────────────────────────── */
@@ -435,12 +447,11 @@ function ResultCard({
     .filter(Boolean)
     .map((s) => s!.ticker);
 
-
   return (
     <Card
       className={cn(
         "h-[88px] py-3 transition-colors hover:bg-accent/30 overflow-hidden",
-        isActive && "border-primary/30 bg-primary/[0.02]",
+        isActive && "border-primary/30 bg-primary/[0.02]"
       )}
     >
       <CardContent className="flex h-full min-w-0 items-center gap-3">
@@ -463,7 +474,8 @@ function ResultCard({
                 ))
               ) : (
                 <span className="text-sm font-medium whitespace-nowrap">
-                  {job.stockIds.length} stock{job.stockIds.length !== 1 ? "s" : ""}
+                  {job.stockIds.length} stock
+                  {job.stockIds.length !== 1 ? "s" : ""}
                 </span>
               )}
               {stockTickers.length > 3 && (
@@ -477,17 +489,26 @@ function ResultCard({
               <span className="text-[11px] text-muted-foreground">
                 {config.label}
               </span>
-              <Loader2 className={cn("size-3 animate-spin text-primary", !isActive && "invisible")} />
+              <Loader2
+                className={cn(
+                  "size-3 animate-spin text-primary",
+                  !isActive && "invisible"
+                )}
+              />
             </div>
           </div>
 
           {/* Row 2: Meta info */}
           <div className="flex min-w-0 items-center gap-x-2 text-xs text-muted-foreground overflow-hidden">
-            <span className="shrink-0 whitespace-nowrap">{createdDate} {createdTime}</span>
+            <span className="shrink-0 whitespace-nowrap">
+              {createdDate} {createdTime}
+            </span>
             {promptName && (
               <>
                 <span className="shrink-0">·</span>
-                <span className="truncate font-medium text-foreground/70">{promptName}</span>
+                <span className="truncate font-medium text-foreground/70">
+                  {promptName}
+                </span>
               </>
             )}
             {durationStr && (
@@ -523,7 +544,7 @@ function ResultCard({
                 "size-4",
                 job.isFavorited
                   ? "fill-yellow-400 text-yellow-400"
-                  : "text-muted-foreground",
+                  : "text-muted-foreground"
               )}
             />
           </button>
@@ -535,7 +556,7 @@ function ResultCard({
             }}
             className={cn(
               "p-1 rounded-md hover:bg-destructive/10 transition-colors",
-              isActive && "invisible",
+              isActive && "invisible"
             )}
             aria-label="Delete research job"
             tabIndex={isActive ? -1 : undefined}

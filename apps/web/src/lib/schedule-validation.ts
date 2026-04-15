@@ -49,7 +49,7 @@ function validateCronField(
   field: string,
   min: number,
   max: number,
-  fieldName: string,
+  fieldName: string
 ): string | undefined {
   if (field === "*") return undefined;
 
@@ -82,7 +82,7 @@ function validateCronRange(
   range: string,
   min: number,
   max: number,
-  fieldName: string,
+  fieldName: string
 ): string | undefined {
   const [startStr, endStr] = range.split("-");
   const start = Number.parseInt(startStr!, 10);
@@ -199,7 +199,7 @@ export function validateName(name: string): string | undefined {
 export function generateScheduleName(
   promptName: string,
   stockSelection: ScheduleFormData["stockSelection"],
-  stocks?: Array<{ _id: GenericId<"stocks">; ticker: string }>,
+  stocks?: Array<{ _id: GenericId<"stocks">; ticker: string }>
 ): string {
   if (stockSelection.type === "none") {
     return promptName;
@@ -241,7 +241,9 @@ export function validatePromptId(promptId: string): string | undefined {
   return undefined;
 }
 
-export function validateStockSelection(stockSelection: ScheduleFormData["stockSelection"]): string | undefined {
+export function validateStockSelection(
+  stockSelection: ScheduleFormData["stockSelection"]
+): string | undefined {
   if (stockSelection.type === "tagged") {
     if (!stockSelection.tags || stockSelection.tags.length === 0) {
       return "At least one tag is required when using tag-based selection";
@@ -257,7 +259,9 @@ export function validateStockSelection(stockSelection: ScheduleFormData["stockSe
 
 // --- Earnings Config Validation ---
 
-export function validateEarningsConfig(config: EarningsConfigFormData): string | undefined {
+export function validateEarningsConfig(
+  config: EarningsConfigFormData
+): string | undefined {
   if (!Number.isInteger(config.offsetDays)) {
     return "Offset days must be a whole number";
   }
@@ -272,7 +276,7 @@ export function validateEarningsConfig(config: EarningsConfigFormData): string |
 export type PromptType = "single-stock" | "multi-stock" | "discovery";
 
 export function getAllowedStockModes(
-  promptType: PromptType | null,
+  promptType: PromptType | null
 ): Array<"all" | "tagged" | "specific" | "none"> {
   switch (promptType) {
     case "discovery":
@@ -287,7 +291,7 @@ export function getAllowedStockModes(
 
 export function validateScheduleForm(
   data: ScheduleFormData,
-  promptType?: PromptType | null,
+  promptType?: PromptType | null
 ): ScheduleFormErrors {
   const errors: ScheduleFormErrors = {};
 
@@ -305,7 +309,8 @@ export function validateScheduleForm(
 
     // Earnings triggers require stock selection
     if (data.stockSelection.type === "none") {
-      errors.stockSelection = "Earnings-based schedules require stock selection";
+      errors.stockSelection =
+        "Earnings-based schedules require stock selection";
     }
   } else {
     const cronError = validateCron(data.cron);
@@ -317,11 +322,15 @@ export function validateScheduleForm(
     if (promptType === "discovery" && data.stockSelection.type !== "none") {
       errors.stockSelection = "Discovery prompts do not use stock selection";
     }
-    if ((promptType === "single-stock" || promptType === "multi-stock") && data.stockSelection.type === "none") {
+    if (
+      (promptType === "single-stock" || promptType === "multi-stock") &&
+      data.stockSelection.type === "none"
+    ) {
       errors.stockSelection = "This prompt type requires stock selection";
     }
     if (promptType === "discovery" && data.triggerType === "earnings") {
-      errors.earningsConfig = "Earnings triggers require stocks; not compatible with discovery prompts";
+      errors.earningsConfig =
+        "Earnings triggers require stocks; not compatible with discovery prompts";
     }
   }
 
@@ -358,18 +367,24 @@ function parseCronField(field: string, min: number, max: number): FieldSpec {
     if (segment.includes("/")) {
       const [rangeStr, stepStr] = segment.split("/");
       const step = Number.parseInt(stepStr!, 10);
-      let start = min, end = max;
+      let start = min,
+        end = max;
       if (rangeStr !== "*") {
         if (rangeStr!.includes("-")) {
-          const [rStart, rEnd] = rangeStr!.split("-").map((s) => Number.parseInt(s, 10));
-          start = rStart!; end = rEnd!;
+          const [rStart, rEnd] = rangeStr!
+            .split("-")
+            .map((s) => Number.parseInt(s, 10));
+          start = rStart!;
+          end = rEnd!;
         } else {
           start = Number.parseInt(rangeStr!, 10);
         }
       }
       for (let i = start; i <= end; i += step) values.add(i);
     } else if (segment.includes("-")) {
-      const [start, end] = segment.split("-").map((s) => Number.parseInt(s, 10));
+      const [start, end] = segment
+        .split("-")
+        .map((s) => Number.parseInt(s, 10));
       for (let i = start!; i <= end!; i++) values.add(i);
     } else {
       values.add(Number.parseInt(segment, 10));
@@ -380,7 +395,8 @@ function parseCronField(field: string, min: number, max: number): FieldSpec {
 
 function parseCronExpr(expr: string): CronFields {
   const trimmed = expr.trim();
-  if (trimmed === "@daily" || trimmed === "@midnight") return parseCronExpr("0 0 * * *");
+  if (trimmed === "@daily" || trimmed === "@midnight")
+    return parseCronExpr("0 0 * * *");
   if (trimmed === "@weekly") return parseCronExpr("0 0 * * 0");
   if (trimmed === "@monthly") return parseCronExpr("0 0 1 * *");
   if (trimmed === "@hourly") return parseCronExpr("0 * * * *");
@@ -400,28 +416,54 @@ function matchesCronField(spec: FieldSpec, value: number): boolean {
 }
 
 interface TzParts {
-  year: number; month: number; dayOfMonth: number;
-  dayOfWeek: number; hour: number; minute: number;
+  year: number;
+  month: number;
+  dayOfMonth: number;
+  dayOfWeek: number;
+  hour: number;
+  minute: number;
 }
 
 function getPartsInTz(date: Date, tz: string): TzParts {
   const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz, year: "numeric", month: "numeric", day: "numeric",
-    weekday: "short", hour: "numeric", minute: "numeric", hour12: false,
+    timeZone: tz,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
   });
   const parts = formatter.formatToParts(date);
-  const get = (type: string) => Number.parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
+  const get = (type: string) =>
+    Number.parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
   const wdStr = parts.find((p) => p.type === "weekday")?.value ?? "Sun";
-  const wdMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const wdMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
   const h = get("hour");
-  return { year: get("year"), month: get("month"), dayOfMonth: get("day"), dayOfWeek: wdMap[wdStr] ?? 0, hour: h === 24 ? 0 : h, minute: get("minute") };
+  return {
+    year: get("year"),
+    month: get("month"),
+    dayOfMonth: get("day"),
+    dayOfWeek: wdMap[wdStr] ?? 0,
+    hour: h === 24 ? 0 : h,
+    minute: get("minute"),
+  };
 }
 
 function tzPartsToUtc(p: TzParts, tz: string): number {
   const iso = `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.dayOfMonth).padStart(2, "0")}T${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}:00`;
   const roughUtc = new Date(iso + "Z").getTime();
   const rp = getPartsInTz(new Date(roughUtc), tz);
-  const offsetMin = (rp.hour * 60 + rp.minute) - (p.hour * 60 + p.minute);
+  const offsetMin = rp.hour * 60 + rp.minute - (p.hour * 60 + p.minute);
   return roughUtc - offsetMin * 60_000;
 }
 
@@ -429,7 +471,11 @@ function tzPartsToUtc(p: TzParts, tz: string): number {
  * Compute the next cron run time after `afterMs` in the given timezone.
  * Returns a UTC timestamp, or null if computation fails.
  */
-export function computeNextCronRun(cronExpr: string, timezone: string, afterMs?: number): number | null {
+export function computeNextCronRun(
+  cronExpr: string,
+  timezone: string,
+  afterMs?: number
+): number | null {
   try {
     const parsed = parseCronExpr(cronExpr);
     const after = new Date(afterMs ?? Date.now());
@@ -498,7 +544,9 @@ export function formatNextRun(timestamp: number, timezone: string): string {
 
 // --- Cron Display Helpers ---
 
-export function describeEarningsTrigger(config: EarningsConfigFormData): string {
+export function describeEarningsTrigger(
+  config: EarningsConfigFormData
+): string {
   const offset = config.offsetDays;
   let timing: string;
 
@@ -529,7 +577,8 @@ export function describeEarningsTrigger(config: EarningsConfigFormData): string 
 export function describeCron(cron: string): string {
   const trimmed = cron.trim();
 
-  if (trimmed === "@daily" || trimmed === "@midnight") return "Daily at midnight";
+  if (trimmed === "@daily" || trimmed === "@midnight")
+    return "Daily at midnight";
   if (trimmed === "@weekly") return "Weekly on Sunday at midnight";
   if (trimmed === "@monthly") return "Monthly on the 1st at midnight";
   if (trimmed === "@hourly") return "Every hour";
@@ -541,13 +590,31 @@ export function describeCron(cron: string): string {
 
   const pieces: string[] = [];
 
-  if (minute !== "*" && hour !== "*" && dom === "*" && month === "*" && dow === "*") {
+  if (
+    minute !== "*" &&
+    hour !== "*" &&
+    dom === "*" &&
+    month === "*" &&
+    dow === "*"
+  ) {
     pieces.push(`Daily at ${hour}:${minute!.padStart(2, "0")}`);
-  } else if (minute !== "*" && hour !== "*" && dom === "*" && month === "*" && dow !== "*") {
+  } else if (
+    minute !== "*" &&
+    hour !== "*" &&
+    dom === "*" &&
+    month === "*" &&
+    dow !== "*"
+  ) {
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const dayName = days[Number.parseInt(dow!, 10)] ?? dow;
     pieces.push(`Weekly on ${dayName} at ${hour}:${minute!.padStart(2, "0")}`);
-  } else if (minute !== "*" && hour !== "*" && dom !== "*" && month === "*" && dow === "*") {
+  } else if (
+    minute !== "*" &&
+    hour !== "*" &&
+    dom !== "*" &&
+    month === "*" &&
+    dow === "*"
+  ) {
     pieces.push(`Monthly on day ${dom} at ${hour}:${minute!.padStart(2, "0")}`);
   } else {
     pieces.push(trimmed);

@@ -17,7 +17,7 @@ const jobStatus = v.union(
   v.literal("pending"),
   v.literal("running"),
   v.literal("completed"),
-  v.literal("failed"),
+  v.literal("failed")
 );
 
 /** Throws if concurrent job limit is reached. */
@@ -33,7 +33,7 @@ async function enforceConcurrentJobLimit(ctx: MutationCtx) {
 
   if (pendingJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
     throw new Error(
-      `Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed`,
+      `Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed`
     );
   }
 }
@@ -113,7 +113,7 @@ export const createAndStartResearch = mutation({
     await ctx.scheduler.runAfter(
       staggerDelayMs,
       internal.researchActions.startResearch,
-      { jobId },
+      { jobId }
     );
 
     return jobId;
@@ -145,7 +145,8 @@ export const updateJobStatus = internalMutation({
       patch.externalJobId = updates.externalJobId;
     if (updates.resolvedPrompt !== undefined)
       patch.resolvedPrompt = updates.resolvedPrompt;
-    if (updates.result !== undefined) patch.result = truncateResult(updates.result);
+    if (updates.result !== undefined)
+      patch.result = truncateResult(updates.result);
     if (updates.error !== undefined) patch.error = updates.error;
     if (updates.costUsd !== undefined) patch.costUsd = updates.costUsd;
     if (updates.durationMs !== undefined) patch.durationMs = updates.durationMs;
@@ -218,7 +219,11 @@ export const cancelJob = mutation({
       error: "Cancelled by user",
       completedAt: Date.now(),
     });
-    await logAuditEvent(ctx, { action: "job.cancel", resourceType: "researchJobs", resourceId: args.id });
+    await logAuditEvent(ctx, {
+      action: "job.cancel",
+      resourceType: "researchJobs",
+      resourceId: args.id,
+    });
 
     return args.id;
   },
@@ -256,11 +261,9 @@ export const retryJob = mutation({
       completedAt: undefined,
     });
 
-    await ctx.scheduler.runAfter(
-      0,
-      internal.researchActions.startResearch,
-      { jobId: args.id },
-    );
+    await ctx.scheduler.runAfter(0, internal.researchActions.startResearch, {
+      jobId: args.id,
+    });
 
     return args.id;
   },
@@ -280,9 +283,7 @@ export const deleteJob = mutation({
     }
 
     if (job.status === "pending" || job.status === "running") {
-      throw new Error(
-        `Cannot delete a ${job.status} job. Cancel it first.`,
-      );
+      throw new Error(`Cannot delete a ${job.status} job. Cancel it first.`);
     }
 
     // Delete associated cost logs
@@ -297,7 +298,11 @@ export const deleteJob = mutation({
 
     // Delete the job itself
     await ctx.db.delete(args.id);
-    await logAuditEvent(ctx, { action: "job.delete", resourceType: "researchJobs", resourceId: args.id });
+    await logAuditEvent(ctx, {
+      action: "job.delete",
+      resourceType: "researchJobs",
+      resourceId: args.id,
+    });
 
     return args.id;
   },
@@ -442,20 +447,16 @@ export const listResults = query({
       jobsQuery = ctx.db
         .query("researchJobs")
         .withIndex("by_createdAt", (q) =>
-          q.gte("createdAt", args.dateFrom!).lte("createdAt", args.dateTo!),
+          q.gte("createdAt", args.dateFrom!).lte("createdAt", args.dateTo!)
         );
     } else if (args.dateFrom) {
       jobsQuery = ctx.db
         .query("researchJobs")
-        .withIndex("by_createdAt", (q) =>
-          q.gte("createdAt", args.dateFrom!),
-        );
+        .withIndex("by_createdAt", (q) => q.gte("createdAt", args.dateFrom!));
     } else if (args.dateTo) {
       jobsQuery = ctx.db
         .query("researchJobs")
-        .withIndex("by_createdAt", (q) =>
-          q.lte("createdAt", args.dateTo!),
-        );
+        .withIndex("by_createdAt", (q) => q.lte("createdAt", args.dateTo!));
     } else {
       jobsQuery = ctx.db.query("researchJobs");
     }
@@ -558,7 +559,7 @@ export const getStaleRunningJobs = internalQuery({
       .take(50);
 
     return runningJobs.filter(
-      (job) => job.externalJobId && job.createdAt < cutoff,
+      (job) => job.externalJobId && job.createdAt < cutoff
     );
   },
 });
@@ -582,7 +583,7 @@ export const getJobByExternalId = internalQuery({
     return await ctx.db
       .query("researchJobs")
       .withIndex("by_externalJobId", (q) =>
-        q.eq("externalJobId", args.externalJobId),
+        q.eq("externalJobId", args.externalJobId)
       )
       .unique();
   },

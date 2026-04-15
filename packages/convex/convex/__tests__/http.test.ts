@@ -5,9 +5,7 @@ describe("base64Decode", () => {
   it("decodes a simple base64 string", () => {
     // "hello" in base64 is "aGVsbG8="
     const result = base64Decode("aGVsbG8=");
-    expect(result).toEqual(
-      new Uint8Array([104, 101, 108, 108, 111]),
-    );
+    expect(result).toEqual(new Uint8Array([104, 101, 108, 108, 111]));
   });
 
   it("decodes an empty string", () => {

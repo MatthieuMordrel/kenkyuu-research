@@ -10,10 +10,7 @@ export const recentResearch = query({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
-    const jobs = await ctx.db
-      .query("researchJobs")
-      .order("desc")
-      .take(20);
+    const jobs = await ctx.db.query("researchJobs").order("desc").take(20);
 
     // Filter to completed/failed and take 5
     const recent = jobs
@@ -22,21 +19,15 @@ export const recentResearch = query({
 
     // Batch-load unique prompts and stocks to avoid N+1 queries
     const uniquePromptIds = [...new Set(recent.map((j) => j.promptId))];
-    const uniqueStockIds = [
-      ...new Set(recent.flatMap((j) => j.stockIds)),
-    ];
+    const uniqueStockIds = [...new Set(recent.flatMap((j) => j.stockIds))];
 
     const [prompts, stocks] = await Promise.all([
       Promise.all(uniquePromptIds.map((id) => ctx.db.get(id))),
       Promise.all(uniqueStockIds.map((id) => ctx.db.get(id))),
     ]);
 
-    const promptMap = new Map(
-      uniquePromptIds.map((id, i) => [id, prompts[i]]),
-    );
-    const stockMap = new Map(
-      uniqueStockIds.map((id, i) => [id, stocks[i]]),
-    );
+    const promptMap = new Map(uniquePromptIds.map((id, i) => [id, prompts[i]]));
+    const stockMap = new Map(uniqueStockIds.map((id, i) => [id, stocks[i]]));
 
     return recent.map((job) => {
       const prompt = promptMap.get(job.promptId);
@@ -88,7 +79,7 @@ export const upcomingSchedules = query({
         const prompt = await ctx.db.get(s.promptId);
         Object.assign(s, { promptName: prompt?.name ?? "Deleted prompt" });
         return s as typeof s & { promptName: string };
-      }),
+      })
     );
 
     return enriched;
@@ -105,18 +96,18 @@ export const monthlySpend = query({
     const startOfMonth = new Date(
       now.getFullYear(),
       now.getMonth(),
-      1,
+      1
     ).getTime();
     const startOfNextMonth = new Date(
       now.getFullYear(),
       now.getMonth() + 1,
-      1,
+      1
     ).getTime();
 
     const logs = await ctx.db
       .query("costLogs")
       .withIndex("by_timestamp", (q) =>
-        q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth),
+        q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth)
       )
       .collect();
 

@@ -59,7 +59,7 @@ export interface InjectVariablesOptions {
  */
 export function injectVariables(
   template: string,
-  options: InjectVariablesOptions = {},
+  options: InjectVariablesOptions = {}
 ): string {
   const { ticker, stocks, date } = options;
 

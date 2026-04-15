@@ -16,7 +16,7 @@ export const checkBudgetAlert = internalAction({
     // Get the budget threshold from settings
     const thresholdStr: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "budget_threshold" },
+      { key: "budget_threshold" }
     );
 
     if (!thresholdStr) return; // No threshold configured
@@ -27,7 +27,7 @@ export const checkBudgetAlert = internalAction({
     // Get the current month's total cost
     const monthlyCost = await ctx.runQuery(
       internal.costTracking.getMonthlyCostInternal,
-      {},
+      {}
     );
 
     if (monthlyCost.totalCost < threshold) return;
@@ -36,7 +36,7 @@ export const checkBudgetAlert = internalAction({
     const alertSentKey = `budget_alert_sent_${monthlyCost.monthStart}`;
     const alreadySent: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: alertSentKey },
+      { key: alertSentKey }
     );
 
     if (alreadySent === "true") return;
@@ -69,11 +69,11 @@ export const checkBudgetAlert = internalAction({
     // Check enabled channels and send
     const telegramEnabled: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "notification_telegram_enabled" },
+      { key: "notification_telegram_enabled" }
     );
     const emailEnabled: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "notification_email_enabled" },
+      { key: "notification_email_enabled" }
     );
 
     if (telegramEnabled === "true") {

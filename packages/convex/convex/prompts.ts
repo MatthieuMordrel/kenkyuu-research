@@ -7,7 +7,7 @@ import { logAuditEvent } from "./auditLog";
 const promptType = v.union(
   v.literal("single-stock"),
   v.literal("multi-stock"),
-  v.literal("discovery"),
+  v.literal("discovery")
 );
 
 // --- Mutations ---
@@ -37,7 +37,12 @@ export const createPrompt = mutation({
       createdAt: now,
       updatedAt: now,
     });
-    await logAuditEvent(ctx, { action: "prompt.create", resourceType: "prompts", resourceId: id, details: args.name });
+    await logAuditEvent(ctx, {
+      action: "prompt.create",
+      resourceType: "prompts",
+      resourceId: id,
+      details: args.name,
+    });
     return id;
   },
 });
@@ -73,7 +78,11 @@ export const updatePrompt = mutation({
       patch.defaultProvider = updates.defaultProvider;
 
     await ctx.db.patch(id, patch);
-    await logAuditEvent(ctx, { action: "prompt.update", resourceType: "prompts", resourceId: id });
+    await logAuditEvent(ctx, {
+      action: "prompt.update",
+      resourceType: "prompts",
+      resourceId: id,
+    });
     return id;
   },
 });
@@ -93,7 +102,12 @@ export const deletePrompt = mutation({
     }
 
     await ctx.db.delete(args.id);
-    await logAuditEvent(ctx, { action: "prompt.delete", resourceType: "prompts", resourceId: args.id, details: existing.name });
+    await logAuditEvent(ctx, {
+      action: "prompt.delete",
+      resourceType: "prompts",
+      resourceId: args.id,
+      details: existing.name,
+    });
   },
 });
 

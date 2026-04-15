@@ -9,13 +9,17 @@ import { useCallback } from "react";
 
 export function useSchedules() {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.schedules.listSchedules, token ? { token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.schedules.listSchedules, token ? { token } : "skip")
+  );
   return data;
 }
 
 export function useSchedule(id: GenericId<"schedules">) {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.schedules.getSchedule, token ? { id, token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.schedules.getSchedule, token ? { id, token } : "skip")
+  );
   return data;
 }
 
@@ -24,33 +28,31 @@ export function useUpcomingRuns(limit?: number) {
   const { data } = useQuery(
     convexQuery(
       api.schedules.getUpcomingRuns,
-      token
-        ? { limit: limit || undefined, token }
-        : "skip",
-    ),
+      token ? { limit: limit || undefined, token } : "skip"
+    )
   );
   return data;
 }
 
 export function useScheduleHistory(
   scheduleId: GenericId<"schedules">,
-  limit?: number,
+  limit?: number
 ) {
   const token = useAuthToken();
   const { data } = useQuery(
     convexQuery(
       api.schedules.getScheduleHistory,
-      token
-        ? { scheduleId, limit: limit || undefined, token }
-        : "skip",
-    ),
+      token ? { scheduleId, limit: limit || undefined, token } : "skip"
+    )
   );
   return data;
 }
 
 export function useGlobalPauseStatus() {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.schedules.getGlobalPauseStatus, token ? { token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.schedules.getGlobalPauseStatus, token ? { token } : "skip")
+  );
   return data;
 }
 
@@ -62,7 +64,7 @@ export function useCreateSchedule() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -72,7 +74,7 @@ export function useUpdateSchedule() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -82,7 +84,7 @@ export function useDeleteSchedule() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -92,7 +94,7 @@ export function useRunScheduleNow() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -102,7 +104,7 @@ export function useToggleSchedule() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -111,6 +113,6 @@ export function useToggleGlobalPause() {
   const mutation = useConvexMutation(api.schedules.toggleGlobalPause);
   return useCallback(
     () => mutation({ token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }

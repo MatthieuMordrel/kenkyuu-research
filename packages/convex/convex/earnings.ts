@@ -23,7 +23,7 @@ export const upsertEarnings = internalMutation({
         hour: v.optional(v.string()),
         quarter: v.optional(v.number()),
         year: v.optional(v.number()),
-      }),
+      })
     ),
   },
   handler: async (ctx, args) => {
@@ -32,7 +32,7 @@ export const upsertEarnings = internalMutation({
       const existing = await ctx.db
         .query("earnings")
         .withIndex("by_symbol_date", (q) =>
-          q.eq("symbol", args.symbol).eq("date", entry.date),
+          q.eq("symbol", args.symbol).eq("date", entry.date)
         )
         .unique();
 
@@ -71,9 +71,7 @@ export const getEarningsSummaryAll = query({
 
     const allEarnings = await ctx.db
       .query("earnings")
-      .withIndex("by_date", (q) =>
-        q.gte("date", dateFrom).lte("date", dateTo),
-      )
+      .withIndex("by_date", (q) => q.gte("date", dateFrom).lte("date", dateTo))
       .collect();
 
     const byStock: Record<
@@ -99,15 +97,21 @@ export const getEarningsSummaryAll = query({
       const future = sorted.filter((e) => e.date >= today);
 
       byStock[stockId] = {
-        previous: past.length > 0
-          ? { date: past[past.length - 1]!.date, hour: past[past.length - 1]!.hour }
-          : undefined,
-        next: future.length > 0
-          ? { date: future[0]!.date, hour: future[0]!.hour }
-          : undefined,
-        nextNext: future.length > 1
-          ? { date: future[1]!.date, hour: future[1]!.hour }
-          : undefined,
+        previous:
+          past.length > 0
+            ? {
+                date: past[past.length - 1]!.date,
+                hour: past[past.length - 1]!.hour,
+              }
+            : undefined,
+        next:
+          future.length > 0
+            ? { date: future[0]!.date, hour: future[0]!.hour }
+            : undefined,
+        nextNext:
+          future.length > 1
+            ? { date: future[1]!.date, hour: future[1]!.hour }
+            : undefined,
       };
     }
 

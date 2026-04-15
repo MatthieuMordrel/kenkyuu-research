@@ -96,17 +96,17 @@ kenkyuu-research/
 ### Utils
 
 ```typescript
-import { formatDate, sleep, isNonNullable } from '@repo/utils'
+import { formatDate, sleep, isNonNullable } from "@repo/utils";
 ```
 
 ### Brand Colors
 
 ```typescript
 // TypeScript
-import { colors } from '@repo/brand-colors'
+import { colors } from "@repo/brand-colors";
 
 // CSS
-import '@repo/brand-colors/css'
+import "@repo/brand-colors/css";
 ```
 
 ## Convex Backend & Database
@@ -117,14 +117,14 @@ Convex serves as both the database and backend. The schema is defined in `packag
 
 ```typescript
 // Import the generated API
-import { api } from '@repo/convex'
+import { api } from "@repo/convex";
 
 // Use Convex hooks in your components
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation } from "convex/react";
 
 function MyComponent() {
-  const data = useQuery(api.myModule.myQuery)
-  const doSomething = useMutation(api.myModule.myMutation)
+  const data = useQuery(api.myModule.myQuery);
+  const doSomething = useMutation(api.myModule.myMutation);
 }
 ```
 

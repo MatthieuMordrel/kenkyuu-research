@@ -37,7 +37,10 @@ import {
   RotateCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { describeCron, describeEarningsTrigger } from "@/lib/schedule-validation";
+import {
+  describeCron,
+  describeEarningsTrigger,
+} from "@/lib/schedule-validation";
 import type { Doc } from "@repo/convex/dataModel";
 
 export const Route = createFileRoute("/_authenticated/schedules")({
@@ -46,8 +49,11 @@ export const Route = createFileRoute("/_authenticated/schedules")({
 
 function SchedulesPage() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<Doc<"schedules"> | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Doc<"schedules"> | null>(null);
+  const [editingSchedule, setEditingSchedule] =
+    useState<Doc<"schedules"> | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Doc<"schedules"> | null>(
+    null
+  );
 
   const data = useSchedules();
   const upcomingRuns = useUpcomingRuns(5);
@@ -66,7 +72,8 @@ function SchedulesPage() {
     if (!earningsSummary || !stocks || !data?.schedules) return map;
 
     for (const schedule of data.schedules) {
-      if (schedule.triggerType !== "earnings" || !schedule.earningsConfig) continue;
+      if (schedule.triggerType !== "earnings" || !schedule.earningsConfig)
+        continue;
 
       // Resolve stock IDs based on stockSelection
       let stockIds: string[];
@@ -185,7 +192,9 @@ function SchedulesPage() {
       {globalPaused && (
         <div className="mx-4 flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive md:mx-6">
           <AlertTriangle className="size-4 shrink-0" />
-          <span>All schedules are paused. Click &quot;Resume All&quot; to re-enable.</span>
+          <span>
+            All schedules are paused. Click &quot;Resume All&quot; to re-enable.
+          </span>
         </div>
       )}
 
@@ -272,8 +281,8 @@ function SchedulesPage() {
             <DialogTitle>Delete Schedule</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete &quot;{deleteTarget?.name}&quot;?
-              Any pending scheduled runs will be cancelled. This action cannot be
-              undone.
+              Any pending scheduled runs will be cancelled. This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -321,7 +330,7 @@ function ScheduleCard({
           className={cn(
             "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
             isActive ? "bg-primary" : "bg-muted",
-            globalPaused && "opacity-50 cursor-not-allowed",
+            globalPaused && "opacity-50 cursor-not-allowed"
           )}
           disabled={globalPaused}
           aria-label={schedule.enabled ? "Disable schedule" : "Enable schedule"}
@@ -329,7 +338,7 @@ function ScheduleCard({
           <span
             className={cn(
               "pointer-events-none inline-block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform",
-              isActive ? "translate-x-4" : "translate-x-0",
+              isActive ? "translate-x-4" : "translate-x-0"
             )}
           />
         </button>
@@ -346,7 +355,10 @@ function ScheduleCard({
               </Badge>
             )}
             {schedule.enabled && globalPaused && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-destructive border-destructive/50">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 text-destructive border-destructive/50"
+              >
                 Paused
               </Badge>
             )}
@@ -365,11 +377,12 @@ function ScheduleCard({
             {schedule.timezone && <span>{schedule.timezone}</span>}
             <StockSelectionLabel selection={schedule.stockSelection} />
           </div>
-          {isActive && (
-            schedule.triggerType === "earnings" ? (
+          {isActive &&
+            (schedule.triggerType === "earnings" ? (
               earningsNextRun ? (
                 <span className="text-xs text-muted-foreground">
-                  Next: {earningsNextRun.date.toLocaleDateString(undefined, {
+                  Next:{" "}
+                  {earningsNextRun.date.toLocaleDateString(undefined, {
                     weekday: "short",
                     month: "short",
                     day: "numeric",
@@ -386,8 +399,7 @@ function ScheduleCard({
               <span className="text-xs text-muted-foreground">
                 Next: {formatRelativeTime(schedule.nextRunAt)}
               </span>
-            ) : null
-          )}
+            ) : null)}
         </div>
 
         {/* Actions */}

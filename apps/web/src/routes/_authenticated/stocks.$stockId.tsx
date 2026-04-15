@@ -112,7 +112,11 @@ function StockDetailPage() {
         description={`${stock.exchange}${stock.sector ? ` · ${stock.sector}` : ""}`}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditOpen(true)}
+            >
               <Pencil className="size-4" />
               Edit
             </Button>
@@ -192,7 +196,9 @@ function StockDetailPage() {
               </div>
               <h3 className="text-sm font-semibold">Notes</h3>
             </div>
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">{stock.notes}</p>
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">
+              {stock.notes}
+            </p>
           </div>
         )}
 
@@ -222,11 +228,7 @@ function StockDetailPage() {
       </div>
 
       {/* Edit Modal */}
-      <StockModal
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        stock={stock}
-      />
+      <StockModal open={editOpen} onOpenChange={setEditOpen} stock={stock} />
 
       {/* Delete Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -234,7 +236,8 @@ function StockDetailPage() {
           <DialogHeader>
             <DialogTitle>Delete Stock</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {stock.ticker} ({stock.companyName}
+              Are you sure you want to delete {stock.ticker} (
+              {stock.companyName}
               )? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -301,7 +304,11 @@ function EarningsSection({ earnings }: { earnings?: EarningsEntry[] }) {
 
   const keyDates = [
     { label: "Previous", entry: previous, style: "text-muted-foreground" },
-    { label: "Next", entry: next, style: "font-medium text-emerald-600 dark:text-emerald-400" },
+    {
+      label: "Next",
+      entry: next,
+      style: "font-medium text-emerald-600 dark:text-emerald-400",
+    },
     { label: "Following", entry: nextNext, style: "text-muted-foreground" },
   ].filter((d) => d.entry);
 
@@ -314,7 +321,9 @@ function EarningsSection({ earnings }: { earnings?: EarningsEntry[] }) {
         <h3 className="text-sm font-semibold">Earnings</h3>
       </div>
       {keyDates.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No earnings data available.</p>
+        <p className="text-sm text-muted-foreground">
+          No earnings data available.
+        </p>
       ) : (
         <dl className="flex flex-col gap-3 text-sm">
           {keyDates.map(({ label, entry, style }) => (
@@ -341,7 +350,9 @@ function EarningsSection({ earnings }: { earnings?: EarningsEntry[] }) {
             <div className="flex justify-between border-t pt-3">
               <dt className="text-muted-foreground">Last EPS</dt>
               <dd>
-                <span className="font-medium">${previous.epsActual.toFixed(2)}</span>
+                <span className="font-medium">
+                  ${previous.epsActual.toFixed(2)}
+                </span>
                 {previous.epsEstimate != null && (
                   <span className="text-muted-foreground text-xs ml-1">
                     (est. ${previous.epsEstimate.toFixed(2)})

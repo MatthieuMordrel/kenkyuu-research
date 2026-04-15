@@ -12,7 +12,7 @@ export const getEarningsSchedules = internalQuery({
       .take(200);
 
     return allSchedules.filter(
-      (s) => s.triggerType === "earnings" && s.earningsConfig,
+      (s) => s.triggerType === "earnings" && s.earningsConfig
     );
   },
 });
@@ -36,7 +36,7 @@ export const checkAlreadyTriggered = internalQuery({
     const existing = await ctx.db
       .query("earningsTriggeredRuns")
       .withIndex("by_schedule_earnings", (q) =>
-        q.eq("scheduleId", args.scheduleId).eq("earningsId", args.earningsId),
+        q.eq("scheduleId", args.scheduleId).eq("earningsId", args.earningsId)
       )
       .first();
     return existing !== null;
@@ -79,7 +79,7 @@ export const checkAlreadyTriggeredForQuarter = internalQuery({
     const existing = await ctx.db
       .query("earningsTriggeredRuns")
       .withIndex("by_schedule_quarter", (q) =>
-        q.eq("scheduleId", args.scheduleId).eq("quarterKey", args.quarterKey),
+        q.eq("scheduleId", args.scheduleId).eq("quarterKey", args.quarterKey)
       )
       .first();
     return existing !== null;

@@ -30,7 +30,12 @@ export function NextRunPreview({
   }, [triggerType, cron, timezone]);
 
   const earningsNextRun = useMemo(() => {
-    if (triggerType !== "earnings" || !earningsSummary || resolvedStockIds.length === 0) return null;
+    if (
+      triggerType !== "earnings" ||
+      !earningsSummary ||
+      resolvedStockIds.length === 0
+    )
+      return null;
     const mode = earningsConfig.earningsMode ?? "each";
     const offset = earningsConfig.offsetDays ?? 0;
 
@@ -87,7 +92,9 @@ export function NextRunPreview({
             </>
           ) : (
             <>
-              <span className="text-sm font-medium">Triggers based on earnings dates</span>
+              <span className="text-sm font-medium">
+                Triggers based on earnings dates
+              </span>
               <span className="text-xs text-muted-foreground">
                 Checked hourly — triggers when an earnings date matches
               </span>
@@ -104,7 +111,9 @@ export function NextRunPreview({
     <div className="flex items-start gap-2 rounded-lg border border-dashed bg-muted/30 px-3 py-2.5">
       <span className="mt-0.5 text-sm">📅</span>
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium">Next run: {formatNextRun(nextRun, timezone)}</span>
+        <span className="text-sm font-medium">
+          Next run: {formatNextRun(nextRun, timezone)}
+        </span>
         <span className="text-xs text-muted-foreground">
           {describeCron(cron)} · {timezone}
         </span>

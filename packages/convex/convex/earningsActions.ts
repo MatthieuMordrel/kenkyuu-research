@@ -21,11 +21,16 @@ export const fetchAllEarnings = internalAction({
       })) ?? process.env.FINNHUB_API_KEY;
 
     if (!apiKey) {
-      console.error("Finnhub API key not configured. Set 'FINNHUB_API_KEY' as an environment variable or in the settings table.");
+      console.error(
+        "Finnhub API key not configured. Set 'FINNHUB_API_KEY' as an environment variable or in the settings table."
+      );
       return;
     }
 
-    const stocks = await ctx.runQuery(internal.earnings.listAllStocksInternal, {});
+    const stocks = await ctx.runQuery(
+      internal.earnings.listAllStocksInternal,
+      {}
+    );
 
     if (stocks.length === 0) {
       console.warn("No stocks found, skipping earnings fetch.");
@@ -41,7 +46,9 @@ export const fetchAllEarnings = internalAction({
     const fromStr = formatDate(from);
     const toStr = formatDate(to);
 
-    console.info(`Fetching earnings for ${stocks.length} stocks from ${fromStr} to ${toStr}`);
+    console.info(
+      `Fetching earnings for ${stocks.length} stocks from ${fromStr} to ${toStr}`
+    );
 
     for (const stock of stocks) {
       try {
@@ -49,7 +56,9 @@ export const fetchAllEarnings = internalAction({
         const response = await fetch(url);
 
         if (!response.ok) {
-          console.error(`Finnhub API error for ${stock.ticker}: ${response.status} ${response.statusText}`);
+          console.error(
+            `Finnhub API error for ${stock.ticker}: ${response.status} ${response.statusText}`
+          );
           await sleep(1100);
           continue;
         }
@@ -87,7 +96,9 @@ export const fetchAllEarnings = internalAction({
             symbol: stock.ticker,
             entries,
           });
-          console.info(`Upserted ${entries.length} earnings for ${stock.ticker}`);
+          console.info(
+            `Upserted ${entries.length} earnings for ${stock.ticker}`
+          );
         } else {
           console.info(`No earnings found for ${stock.ticker}`);
         }

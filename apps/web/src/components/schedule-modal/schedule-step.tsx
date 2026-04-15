@@ -39,7 +39,7 @@ export function ScheduleStep({
           {generateScheduleName(
             selectedPrompt?.name ?? "Untitled",
             form.stockSelection,
-            stocks ?? undefined,
+            stocks ?? undefined
           )}
         </p>
       </div>
@@ -55,7 +55,7 @@ export function ScheduleStep({
               "flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left transition-all",
               form.triggerType === "cron"
                 ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                : "border-border hover:border-foreground/20 hover:bg-accent/50",
+                : "border-border hover:border-foreground/20 hover:bg-accent/50"
             )}
           >
             <span className="text-sm font-medium">Time-based</span>
@@ -72,7 +72,7 @@ export function ScheduleStep({
               form.triggerType === "earnings"
                 ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                 : "border-border hover:border-foreground/20 hover:bg-accent/50",
-              isDiscovery && "cursor-not-allowed opacity-40",
+              isDiscovery && "cursor-not-allowed opacity-40"
             )}
           >
             <span className="text-sm font-medium">Earnings-based</span>
@@ -99,7 +99,7 @@ export function ScheduleStep({
                   "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
                   frequencyMode === preset.value
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-foreground hover:bg-accent",
+                    : "border-border bg-background text-foreground hover:bg-accent"
                 )}
               >
                 {preset.label}
@@ -137,7 +137,8 @@ export function ScheduleStep({
       {/* Earnings Config */}
       {form.triggerType === "earnings" && (
         <div className="flex flex-col gap-3">
-          {(selectedPromptType === "multi-stock" || selectedPromptType === "single-stock") && (
+          {(selectedPromptType === "multi-stock" ||
+            selectedPromptType === "single-stock") && (
             <div className="flex flex-col gap-2">
               <Label>Trigger Mode *</Label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -158,7 +159,7 @@ export function ScheduleStep({
                       "flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left transition-all",
                       form.earningsConfig.earningsMode === option.value
                         ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                        : "border-border hover:border-foreground/20 hover:bg-accent/50",
+                        : "border-border hover:border-foreground/20 hover:bg-accent/50"
                     )}
                   >
                     <span className="text-sm font-medium">{option.label}</span>
@@ -186,7 +187,7 @@ export function ScheduleStep({
               }
               className={cn(
                 "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-xs transition-colors",
-                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               )}
             >
               {OFFSET_OPTIONS.map((opt) => (
@@ -223,9 +224,7 @@ export function ScheduleStep({
               }
               className={cn(
                 "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                form.earningsConfig.adjustForHour
-                  ? "bg-primary"
-                  : "bg-muted",
+                form.earningsConfig.adjustForHour ? "bg-primary" : "bg-muted"
               )}
               aria-label={
                 form.earningsConfig.adjustForHour
@@ -238,7 +237,7 @@ export function ScheduleStep({
                   "pointer-events-none inline-block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform",
                   form.earningsConfig.adjustForHour
                     ? "translate-x-4"
-                    : "translate-x-0",
+                    : "translate-x-0"
                 )}
               />
             </button>
@@ -249,9 +248,7 @@ export function ScheduleStep({
           </p>
 
           {errors.earningsConfig && (
-            <p className="text-xs text-destructive">
-              {errors.earningsConfig}
-            </p>
+            <p className="text-xs text-destructive">{errors.earningsConfig}</p>
           )}
         </div>
       )}
@@ -267,7 +264,7 @@ export function ScheduleStep({
             className={cn(
               "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-xs transition-colors",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              errors.timezone && "border-destructive",
+              errors.timezone && "border-destructive"
             )}
           >
             {COMMON_TIMEZONES.map((tz) => (
@@ -300,9 +297,7 @@ export function ScheduleStep({
         earningsSummary={earningsSummary}
       />
 
-      {submitError && (
-        <p className="text-sm text-destructive">{submitError}</p>
-      )}
+      {submitError && <p className="text-sm text-destructive">{submitError}</p>}
     </div>
   );
 }

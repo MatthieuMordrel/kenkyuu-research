@@ -27,7 +27,9 @@ describe("validateTicker", () => {
   });
 
   it("rejects tickers exceeding max length", () => {
-    expect(() => validateTicker("ABCDEFGHIJK")).toThrow("at most 10 characters");
+    expect(() => validateTicker("ABCDEFGHIJK")).toThrow(
+      "at most 10 characters"
+    );
   });
 
   it("rejects lowercase letters", () => {
@@ -46,12 +48,14 @@ describe("validateStringLength", () => {
   it("accepts strings within limit", () => {
     expect(() => validateStringLength("hello", "Test", 10)).not.toThrow();
     expect(() => validateStringLength("", "Test", 10)).not.toThrow();
-    expect(() => validateStringLength("a".repeat(10), "Test", 10)).not.toThrow();
+    expect(() =>
+      validateStringLength("a".repeat(10), "Test", 10)
+    ).not.toThrow();
   });
 
   it("rejects strings exceeding limit", () => {
     expect(() => validateStringLength("a".repeat(11), "Field", 10)).toThrow(
-      "Field must be at most 10 characters",
+      "Field must be at most 10 characters"
     );
   });
 });
@@ -66,7 +70,7 @@ describe("validateStockInput", () => {
         sector: "Technology",
         notes: "Blue chip stock",
         tags: ["tech", "megacap"],
-      }),
+      })
     ).not.toThrow();
   });
 
@@ -81,33 +85,33 @@ describe("validateStockInput", () => {
   });
 
   it("rejects tags that are too long", () => {
-    expect(() =>
-      validateStockInput({ tags: ["a".repeat(51)] }),
-    ).toThrow("Tag must be at most 50 characters");
+    expect(() => validateStockInput({ tags: ["a".repeat(51)] })).toThrow(
+      "Tag must be at most 50 characters"
+    );
   });
 
   it("rejects company name that is too long", () => {
-    expect(() =>
-      validateStockInput({ companyName: "a".repeat(201) }),
-    ).toThrow("Company name must be at most 200 characters");
+    expect(() => validateStockInput({ companyName: "a".repeat(201) })).toThrow(
+      "Company name must be at most 200 characters"
+    );
   });
 
   it("rejects exchange that is too long", () => {
-    expect(() =>
-      validateStockInput({ exchange: "a".repeat(21) }),
-    ).toThrow("Exchange must be at most 20 characters");
+    expect(() => validateStockInput({ exchange: "a".repeat(21) })).toThrow(
+      "Exchange must be at most 20 characters"
+    );
   });
 
   it("rejects sector that is too long", () => {
-    expect(() =>
-      validateStockInput({ sector: "a".repeat(101) }),
-    ).toThrow("Sector must be at most 100 characters");
+    expect(() => validateStockInput({ sector: "a".repeat(101) })).toThrow(
+      "Sector must be at most 100 characters"
+    );
   });
 
   it("rejects notes that are too long", () => {
-    expect(() =>
-      validateStockInput({ notes: "a".repeat(5001) }),
-    ).toThrow("Notes must be at most 5000 characters");
+    expect(() => validateStockInput({ notes: "a".repeat(5001) })).toThrow(
+      "Notes must be at most 5000 characters"
+    );
   });
 });
 
@@ -118,7 +122,7 @@ describe("validatePromptInput", () => {
         name: "Deep Analysis",
         description: "Comprehensive stock analysis",
         template: "Analyze {{TICKER}} in depth.",
-      }),
+      })
     ).not.toThrow();
   });
 
@@ -127,21 +131,21 @@ describe("validatePromptInput", () => {
   });
 
   it("rejects name that is too long", () => {
-    expect(() =>
-      validatePromptInput({ name: "a".repeat(201) }),
-    ).toThrow("Prompt name must be at most 200 characters");
+    expect(() => validatePromptInput({ name: "a".repeat(201) })).toThrow(
+      "Prompt name must be at most 200 characters"
+    );
   });
 
   it("rejects description that is too long", () => {
     expect(() =>
-      validatePromptInput({ description: "a".repeat(1001) }),
+      validatePromptInput({ description: "a".repeat(1001) })
     ).toThrow("Prompt description must be at most 1000 characters");
   });
 
   it("rejects template that is too long", () => {
-    expect(() =>
-      validatePromptInput({ template: "a".repeat(50_001) }),
-    ).toThrow("Prompt template must be at most 50000 characters");
+    expect(() => validatePromptInput({ template: "a".repeat(50_001) })).toThrow(
+      "Prompt template must be at most 50000 characters"
+    );
   });
 });
 
@@ -152,7 +156,7 @@ describe("validateScheduleInput", () => {
         name: "Daily Research",
         cron: "0 9 * * *",
         timezone: "America/New_York",
-      }),
+      })
     ).not.toThrow();
   });
 
@@ -161,21 +165,21 @@ describe("validateScheduleInput", () => {
   });
 
   it("rejects name that is too long", () => {
-    expect(() =>
-      validateScheduleInput({ name: "a".repeat(201) }),
-    ).toThrow("Schedule name must be at most 200 characters");
+    expect(() => validateScheduleInput({ name: "a".repeat(201) })).toThrow(
+      "Schedule name must be at most 200 characters"
+    );
   });
 
   it("rejects cron that is too long", () => {
-    expect(() =>
-      validateScheduleInput({ cron: "a".repeat(101) }),
-    ).toThrow("Cron expression must be at most 100 characters");
+    expect(() => validateScheduleInput({ cron: "a".repeat(101) })).toThrow(
+      "Cron expression must be at most 100 characters"
+    );
   });
 
   it("rejects timezone that is too long", () => {
-    expect(() =>
-      validateScheduleInput({ timezone: "a".repeat(101) }),
-    ).toThrow("Timezone must be at most 100 characters");
+    expect(() => validateScheduleInput({ timezone: "a".repeat(101) })).toThrow(
+      "Timezone must be at most 100 characters"
+    );
   });
 });
 
@@ -188,26 +192,28 @@ describe("validateSearchTerm", () => {
 
   it("rejects search terms that are too long", () => {
     expect(() => validateSearchTerm("a".repeat(501))).toThrow(
-      "Search term must be at most 500 characters",
+      "Search term must be at most 500 characters"
     );
   });
 });
 
 describe("validateSettingInput", () => {
   it("accepts valid setting input", () => {
-    expect(() => validateSettingInput("openai_api_key", "sk-1234")).not.toThrow();
+    expect(() =>
+      validateSettingInput("openai_api_key", "sk-1234")
+    ).not.toThrow();
   });
 
   it("rejects key that is too long", () => {
-    expect(() =>
-      validateSettingInput("a".repeat(101), "value"),
-    ).toThrow("Setting key must be at most 100 characters");
+    expect(() => validateSettingInput("a".repeat(101), "value")).toThrow(
+      "Setting key must be at most 100 characters"
+    );
   });
 
   it("rejects value that is too long", () => {
-    expect(() =>
-      validateSettingInput("key", "a".repeat(10_001)),
-    ).toThrow("Setting value must be at most 10000 characters");
+    expect(() => validateSettingInput("key", "a".repeat(10_001))).toThrow(
+      "Setting value must be at most 10000 characters"
+    );
   });
 });
 

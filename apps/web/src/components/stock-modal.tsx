@@ -157,9 +157,7 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
       }
       onOpenChange(false);
     } catch (err) {
-      setSubmitError(
-        err instanceof Error ? err.message : "An error occurred",
-      );
+      setSubmitError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -171,8 +169,9 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
         className="max-h-[90vh] overflow-y-auto sm:max-w-md"
         onPointerDownOutside={(e) => {
           // Prevent dialog from closing when clicking on portaled Base UI select content
-          const target = (e as unknown as { detail: { originalEvent: PointerEvent } })
-            .detail.originalEvent.target as HTMLElement | null;
+          const target = (
+            e as unknown as { detail: { originalEvent: PointerEvent } }
+          ).detail.originalEvent.target as HTMLElement | null;
           if (target?.closest?.("[data-slot='select-content']")) {
             e.preventDefault();
           }
@@ -223,10 +222,7 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
               value={form.exchange || null}
               onValueChange={(value) => updateField("exchange", value ?? "")}
             >
-              <SelectTrigger
-                id="exchange"
-                aria-invalid={!!errors.exchange}
-              >
+              <SelectTrigger id="exchange" aria-invalid={!!errors.exchange}>
                 <SelectValue
                   render={(_, { value }) =>
                     value ?? (
@@ -308,27 +304,33 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
                 ))}
               </div>
             )}
-            {existingTags && existingTags.filter((t) => !form.tags.includes(t)).length > 0 && (
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">Existing tags:</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {existingTags
-                    .filter((t) => !form.tags.includes(t))
-                    .map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="outline"
-                        className="cursor-pointer hover:bg-accent"
-                        onClick={() =>
-                          setForm((prev) => ({ ...prev, tags: [...prev.tags, tag] }))
-                        }
-                      >
-                        + {tag}
-                      </Badge>
-                    ))}
+            {existingTags &&
+              existingTags.filter((t) => !form.tags.includes(t)).length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">
+                    Existing tags:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {existingTags
+                      .filter((t) => !form.tags.includes(t))
+                      .map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="outline"
+                          className="cursor-pointer hover:bg-accent"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              tags: [...prev.tags, tag],
+                            }))
+                          }
+                        >
+                          + {tag}
+                        </Badge>
+                      ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
 
           {submitError && (

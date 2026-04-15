@@ -1,5 +1,10 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -13,7 +18,7 @@ const SESSION_ROTATION_THRESHOLD_MS = 1 * 60 * 60 * 1000; // Rotate after 1 hour
  */
 export async function requireAuth(
   ctx: QueryCtx | MutationCtx,
-  token: string | undefined,
+  token: string | undefined
 ): Promise<void> {
   if (!token) {
     throw new Error("Unauthorized");
@@ -189,17 +194,22 @@ export const checkLoginRateLimit = internalQuery({
     const recentAttempts = await ctx.db
       .query("loginAttempts")
       .withIndex("by_identifier_timestamp", (q) =>
-        q.eq("identifier", args.identifier).gte("timestamp", windowStart),
+        q.eq("identifier", args.identifier).gte("timestamp", windowStart)
       )
       .collect();
 
     const failedAttempts = recentAttempts.filter((a) => !a.success);
     return {
       allowed: failedAttempts.length < MAX_LOGIN_ATTEMPTS,
-      remainingAttempts: Math.max(0, MAX_LOGIN_ATTEMPTS - failedAttempts.length),
-      retryAfterMs: failedAttempts.length >= MAX_LOGIN_ATTEMPTS
-        ? RATE_LIMIT_WINDOW_MS - (Date.now() - Math.min(...failedAttempts.map((a) => a.timestamp)))
-        : 0,
+      remainingAttempts: Math.max(
+        0,
+        MAX_LOGIN_ATTEMPTS - failedAttempts.length
+      ),
+      retryAfterMs:
+        failedAttempts.length >= MAX_LOGIN_ATTEMPTS
+          ? RATE_LIMIT_WINDOW_MS -
+            (Date.now() - Math.min(...failedAttempts.map((a) => a.timestamp)))
+          : 0,
     };
   },
 });
@@ -221,7 +231,7 @@ export const recordLoginAttempt = internalMutation({
     const oldAttempts = await ctx.db
       .query("loginAttempts")
       .withIndex("by_identifier_timestamp", (q) =>
-        q.eq("identifier", args.identifier).lt("timestamp", windowStart),
+        q.eq("identifier", args.identifier).lt("timestamp", windowStart)
       )
       .collect();
 

@@ -19,17 +19,17 @@ export function usePrompts(options: UsePromptsOptions = {}) {
   const { data } = useQuery(
     convexQuery(
       api.prompts.listPrompts,
-      token
-        ? { type: type || undefined, token }
-        : "skip",
-    ),
+      token ? { type: type || undefined, token } : "skip"
+    )
   );
   return data;
 }
 
 export function usePrompt(id: GenericId<"prompts">) {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.prompts.getPrompt, token ? { id, token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.prompts.getPrompt, token ? { id, token } : "skip")
+  );
   return data;
 }
 
@@ -41,7 +41,7 @@ export function useCreatePrompt() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -51,7 +51,7 @@ export function useUpdatePrompt() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -61,7 +61,7 @@ export function useDeletePrompt() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -71,6 +71,6 @@ export function useClonePrompt() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }

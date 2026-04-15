@@ -118,7 +118,11 @@ function SettingField({
               onClick={() => setShowValue(!showValue)}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              {showValue ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              {showValue ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
             </button>
           )}
         </div>
@@ -153,7 +157,10 @@ function ToggleField({
   async function handleToggle() {
     setSaving(true);
     try {
-      await updateSetting({ key: settingKey, value: isEnabled ? "false" : "true" });
+      await updateSetting({
+        key: settingKey,
+        value: isEnabled ? "false" : "true",
+      });
     } finally {
       setSaving(false);
     }
@@ -205,9 +212,7 @@ function ApiKeysSection() {
           <Key className="size-4 text-muted-foreground" />
           <CardTitle className="text-base">API Keys</CardTitle>
         </div>
-        <CardDescription>
-          Configure your AI provider API keys
-        </CardDescription>
+        <CardDescription>Configure your AI provider API keys</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
@@ -244,14 +249,21 @@ function TelegramSection() {
       const result = await detectChatId({ token });
       if (result.found && result.chatId) {
         await updateSetting({ key: "telegram_chat_id", value: result.chatId });
-        setTestResult({ type: "success", message: `Chat ID detected and saved: ${result.chatId}` });
+        setTestResult({
+          type: "success",
+          message: `Chat ID detected and saved: ${result.chatId}`,
+        });
       } else {
-        setTestResult({ type: "error", message: result.reason ?? "Could not detect chat ID." });
+        setTestResult({
+          type: "error",
+          message: result.reason ?? "Could not detect chat ID.",
+        });
       }
     } catch (err) {
       setTestResult({
         type: "error",
-        message: err instanceof Error ? err.message : "Failed to detect chat ID",
+        message:
+          err instanceof Error ? err.message : "Failed to detect chat ID",
       });
     } finally {
       setDetecting(false);
@@ -266,19 +278,24 @@ function TelegramSection() {
     try {
       const result = await sendTestTelegram({ token });
       if (result.sent) {
-        setTestResult({ type: "success", message: "Test message sent! Check your Telegram." });
+        setTestResult({
+          type: "success",
+          message: "Test message sent! Check your Telegram.",
+        });
       } else {
         setTestResult({
           type: "error",
-          message: result.reason === "not_configured"
-            ? "Telegram not configured. Please set your bot token and chat ID above."
-            : `Failed to send: ${result.reason}`,
+          message:
+            result.reason === "not_configured"
+              ? "Telegram not configured. Please set your bot token and chat ID above."
+              : `Failed to send: ${result.reason}`,
         });
       }
     } catch (err) {
       setTestResult({
         type: "error",
-        message: err instanceof Error ? err.message : "Failed to send test message",
+        message:
+          err instanceof Error ? err.message : "Failed to send test message",
       });
     } finally {
       setTesting(false);
@@ -373,19 +390,24 @@ function EmailSection() {
     try {
       const result = await sendTestEmail({ token });
       if (result.sent) {
-        setTestResult({ type: "success", message: "Test email sent! Check your inbox." });
+        setTestResult({
+          type: "success",
+          message: "Test email sent! Check your inbox.",
+        });
       } else {
         setTestResult({
           type: "error",
-          message: result.reason === "not_configured"
-            ? "Email not configured. Please set your Resend API key and notification email above."
-            : `Failed to send: ${result.reason}`,
+          message:
+            result.reason === "not_configured"
+              ? "Email not configured. Please set your Resend API key and notification email above."
+              : `Failed to send: ${result.reason}`,
         });
       }
     } catch (err) {
       setTestResult({
         type: "error",
-        message: err instanceof Error ? err.message : "Failed to send test email",
+        message:
+          err instanceof Error ? err.message : "Failed to send test email",
       });
     } finally {
       setTesting(false);
@@ -527,7 +549,9 @@ function PasswordSection() {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to change password");
+      setError(
+        err instanceof Error ? err.message : "Failed to change password"
+      );
     } finally {
       setSaving(false);
     }
@@ -603,18 +627,17 @@ function ThemeSection() {
           <CardTitle className="text-base">Theme</CardTitle>
         </div>
         <CardDescription>
-          Choose your preferred appearance. &quot;System&quot; follows your device settings.
+          Choose your preferred appearance. &quot;System&quot; follows your
+          device settings.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { value: "light" as const, label: "Light", icon: Sun },
-              { value: "dark" as const, label: "Dark", icon: Moon },
-              { value: "system" as const, label: "System", icon: Sun },
-            ]
-          ).map(({ value, label, icon: Icon }) => (
+          {[
+            { value: "light" as const, label: "Light", icon: Sun },
+            { value: "dark" as const, label: "Dark", icon: Moon },
+            { value: "system" as const, label: "System", icon: Sun },
+          ].map(({ value, label, icon: Icon }) => (
             <button
               key={value}
               type="button"

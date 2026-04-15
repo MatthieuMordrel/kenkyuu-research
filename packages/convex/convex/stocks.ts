@@ -41,7 +41,12 @@ export const addStock = mutation({
       createdAt: now,
       updatedAt: now,
     });
-    await logAuditEvent(ctx, { action: "stock.create", resourceType: "stocks", resourceId: id, details: args.ticker });
+    await logAuditEvent(ctx, {
+      action: "stock.create",
+      resourceType: "stocks",
+      resourceId: id,
+      details: args.ticker,
+    });
     return id;
   },
 });
@@ -76,9 +81,7 @@ export const updateStock = mutation({
         .unique();
 
       if (duplicate) {
-        throw new Error(
-          `Stock with ticker "${updates.ticker}" already exists`,
-        );
+        throw new Error(`Stock with ticker "${updates.ticker}" already exists`);
       }
     }
 
@@ -93,7 +96,11 @@ export const updateStock = mutation({
     if (updates.tags !== undefined) patch.tags = updates.tags;
 
     await ctx.db.patch(id, patch);
-    await logAuditEvent(ctx, { action: "stock.update", resourceType: "stocks", resourceId: id });
+    await logAuditEvent(ctx, {
+      action: "stock.update",
+      resourceType: "stocks",
+      resourceId: id,
+    });
     return id;
   },
 });
@@ -109,7 +116,12 @@ export const deleteStock = mutation({
     }
 
     await ctx.db.delete(args.id);
-    await logAuditEvent(ctx, { action: "stock.delete", resourceType: "stocks", resourceId: args.id, details: existing.ticker });
+    await logAuditEvent(ctx, {
+      action: "stock.delete",
+      resourceType: "stocks",
+      resourceId: args.id,
+      details: existing.ticker,
+    });
   },
 });
 
@@ -124,8 +136,8 @@ export const listStocks = query({
         v.literal("ticker"),
         v.literal("companyName"),
         v.literal("createdAt"),
-        v.literal("updatedAt"),
-      ),
+        v.literal("updatedAt")
+      )
     ),
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
     limit: v.optional(v.number()),
@@ -149,7 +161,7 @@ export const listStocks = query({
       stocks = stocks.filter(
         (s) =>
           s.ticker.toLowerCase().includes(term) ||
-          s.companyName.toLowerCase().includes(term),
+          s.companyName.toLowerCase().includes(term)
       );
     }
 

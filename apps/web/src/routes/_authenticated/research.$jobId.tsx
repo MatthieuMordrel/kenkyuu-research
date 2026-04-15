@@ -39,7 +39,10 @@ export const Route = createFileRoute("/_authenticated/research/$jobId")({
 
 const statusConfig: Record<
   string,
-  { variant: "default" | "secondary" | "destructive" | "outline"; label: string }
+  {
+    variant: "default" | "secondary" | "destructive" | "outline";
+    label: string;
+  }
 > = {
   completed: { variant: "secondary", label: "Completed" },
   failed: { variant: "destructive", label: "Failed" },
@@ -127,7 +130,8 @@ function ResultDetailPage() {
       : `${Math.round(job.durationMs / 1000)}s`
     : undefined;
 
-  const costStr = job.costUsd != null ? `$${job.costUsd.toFixed(2)}` : undefined;
+  const costStr =
+    job.costUsd != null ? `$${job.costUsd.toFixed(2)}` : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -155,9 +159,7 @@ function ResultDetailPage() {
               <Star
                 className={cn(
                   "size-4",
-                  job.isFavorited
-                    ? "fill-yellow-400 text-yellow-400"
-                    : "",
+                  job.isFavorited ? "fill-yellow-400 text-yellow-400" : ""
                 )}
               />
               {job.isFavorited ? "Favorited" : "Favorite"}
@@ -193,11 +195,7 @@ function ResultDetailPage() {
             label="Duration"
             value={durationStr ?? "—"}
           />
-          <MetadataCard
-            icon={DollarSign}
-            label="Cost"
-            value={costStr ?? "—"}
-          />
+          <MetadataCard icon={DollarSign} label="Cost" value={costStr ?? "—"} />
           <MetadataCard
             icon={Cpu}
             label="Provider"
@@ -217,12 +215,16 @@ function ResultDetailPage() {
             <dl className="flex flex-col gap-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Started</dt>
-                <dd>{createdDate} at {createdTime}</dd>
+                <dd>
+                  {createdDate} at {createdTime}
+                </dd>
               </div>
               {completedDate && (
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Completed</dt>
-                  <dd>{completedDate} at {completedTime}</dd>
+                  <dd>
+                    {completedDate} at {completedTime}
+                  </dd>
                 </div>
               )}
               <div className="flex justify-between">
@@ -255,7 +257,9 @@ function ResultDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">{job.error}</p>
+              <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">
+                {job.error}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -274,7 +278,6 @@ function ResultDetailPage() {
             </CardContent>
           </Card>
         )}
-
       </div>
 
       {/* Delete confirmation dialog */}
@@ -291,7 +294,10 @@ function ResultDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDelete}>
@@ -319,9 +325,7 @@ function MetadataCard({
         <Icon className="size-3.5" />
         {label}
       </div>
-      <div className="text-sm font-medium">
-        {value}
-      </div>
+      <div className="text-sm font-medium">{value}</div>
     </div>
   );
 }

@@ -38,10 +38,10 @@ When you `Ctrl+C` to stop the dev server, sometimes processes don't terminate pr
 | **convex**    | 3210 | Convex dev server (default)                  |
 | **sanity**    | 3333 | Sanity Studio (default)                      |
 
-| **email**     | 4321 | React Email preview server                   |
-| **frontend**  | 5173 | Main React SPA (Vite)                        |
-| **trigger**   | 8080 | Trigger.dev dev server                       |
-| **backend**   | 8787 | Hono API server (Bun)                        |
+| **email** | 4321 | React Email preview server |
+| **frontend** | 5173 | Main React SPA (Vite) |
+| **trigger** | 8080 | Trigger.dev dev server |
+| **backend** | 8787 | Hono API server (Bun) |
 
 ---
 

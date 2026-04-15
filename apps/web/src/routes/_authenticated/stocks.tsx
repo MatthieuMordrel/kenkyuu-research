@@ -46,7 +46,12 @@ export const Route = createFileRoute("/_authenticated/stocks")({
   component: StocksPage,
 });
 
-type SortField = "ticker" | "companyName" | "createdAt" | "updatedAt" | "nextEarnings";
+type SortField =
+  | "ticker"
+  | "companyName"
+  | "createdAt"
+  | "updatedAt"
+  | "nextEarnings";
 
 const SORT_OPTIONS: { field: SortField; label: string }[] = [
   { field: "ticker", label: "Ticker" },
@@ -67,7 +72,11 @@ function StocksPage() {
 
   const backendSortBy = sortBy === "nextEarnings" ? undefined : sortBy;
   const backendSortOrder = sortBy === "nextEarnings" ? undefined : sortOrder;
-  const allStocks = useStocks({ search, sortBy: backendSortBy, sortOrder: backendSortOrder });
+  const allStocks = useStocks({
+    search,
+    sortBy: backendSortBy,
+    sortOrder: backendSortOrder,
+  });
   const tags = useTags();
   const deleteStock = useDeleteStock();
   const earningsSummary = useEarningsSummary();
@@ -156,7 +165,7 @@ function StocksPage() {
                 "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-all",
                 !selectedTag
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
+                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
               All
@@ -166,7 +175,7 @@ function StocksPage() {
                     "ml-1.5 rounded-full px-1.5 text-[10px]",
                     !selectedTag
                       ? "bg-primary-foreground/20"
-                      : "bg-foreground/5",
+                      : "bg-foreground/5"
                   )}
                 >
                   {allStocks.length}
@@ -184,7 +193,7 @@ function StocksPage() {
                   "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-all",
                   selectedTag === tag
                     ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
+                    : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 {tag}
@@ -194,7 +203,7 @@ function StocksPage() {
                       "ml-1.5 rounded-full px-1.5 text-[10px]",
                       selectedTag === tag
                         ? "bg-primary-foreground/20"
-                        : "bg-foreground/5",
+                        : "bg-foreground/5"
                     )}
                   >
                     {allStocks.filter((s) => s.tags.includes(tag)).length}
@@ -217,13 +226,11 @@ function StocksPage() {
                 "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium transition-all",
                 sortBy === field
                   ? "bg-accent text-accent-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               {label}
-              {sortBy === field && (
-                <ArrowUpDown className="size-3" />
-              )}
+              {sortBy === field && <ArrowUpDown className="size-3" />}
             </button>
           ))}
         </div>
@@ -253,7 +260,12 @@ function StocksPage() {
               </p>
             </div>
             {!search && !selectedTag && (
-              <Button size="sm" variant="outline" onClick={openAdd} className="mt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={openAdd}
+                className="mt-1"
+              >
                 <Plus className="size-4" />
                 Add Stock
               </Button>

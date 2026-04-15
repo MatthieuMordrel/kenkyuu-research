@@ -21,7 +21,7 @@ export default defineSchema({
     type: v.union(
       v.literal("single-stock"),
       v.literal("multi-stock"),
-      v.literal("discovery"),
+      v.literal("discovery")
     ),
     template: v.string(),
     defaultProvider: v.literal("openai"),
@@ -42,7 +42,7 @@ export default defineSchema({
       v.literal("pending"),
       v.literal("running"),
       v.literal("completed"),
-      v.literal("failed"),
+      v.literal("failed")
     ),
     externalJobId: v.optional(v.string()),
     result: v.optional(v.string()),
@@ -70,7 +70,7 @@ export default defineSchema({
         v.literal("all"),
         v.literal("tagged"),
         v.literal("specific"),
-        v.literal("none"),
+        v.literal("none")
       ),
       tags: v.optional(v.array(v.string())),
       stockIds: v.optional(v.array(v.id("stocks"))),
@@ -82,9 +82,7 @@ export default defineSchema({
     createdAt: v.number(),
 
     // Trigger type: "cron" (default/legacy) or "earnings"
-    triggerType: v.optional(
-      v.union(v.literal("cron"), v.literal("earnings")),
-    ),
+    triggerType: v.optional(v.union(v.literal("cron"), v.literal("earnings"))),
 
     // Cron-specific fields (used when triggerType is "cron" or missing)
     cron: v.optional(v.string()),
@@ -98,12 +96,15 @@ export default defineSchema({
         adjustForHour: v.boolean(), // if true, amc earnings at offset=0 delay to next morning
         // For multi-stock: "each" = per stock (default), "after_last" = after last stock reports, "before_first" = before first stock reports
         earningsMode: v.optional(
-          v.union(v.literal("each"), v.literal("after_last"), v.literal("before_first")),
+          v.union(
+            v.literal("each"),
+            v.literal("after_last"),
+            v.literal("before_first")
+          )
         ),
-      }),
+      })
     ),
-  })
-    .index("by_enabled_nextRunAt", ["enabled", "nextRunAt"]),
+  }).index("by_enabled_nextRunAt", ["enabled", "nextRunAt"]),
 
   earningsTriggeredRuns: defineTable({
     scheduleId: v.id("schedules"),
@@ -162,8 +163,7 @@ export default defineSchema({
     identifier: v.string(), // "global" for single-user setup
     timestamp: v.number(),
     success: v.boolean(),
-  })
-    .index("by_identifier_timestamp", ["identifier", "timestamp"]),
+  }).index("by_identifier_timestamp", ["identifier", "timestamp"]),
 
   auditLogs: defineTable({
     action: v.string(), // e.g. "stock.create", "prompt.delete", "settings.update"

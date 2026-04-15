@@ -39,9 +39,7 @@ export function useTheme() {
   const updateSetting = useUpdateSetting();
 
   const theme: Theme =
-    storedTheme === "light" || storedTheme === "dark"
-      ? storedTheme
-      : "system";
+    storedTheme === "light" || storedTheme === "dark" ? storedTheme : "system";
 
   // Apply theme whenever the setting changes
   useEffect(() => {
@@ -67,7 +65,7 @@ export function useTheme() {
       await updateSetting({ key: "theme", value });
       applyTheme(value);
     },
-    [updateSetting],
+    [updateSetting]
   );
 
   const toggle = useCallback(async () => {

@@ -58,10 +58,7 @@ export function ResearchWizard() {
         </DialogHeader>
 
         {/* Step indicator */}
-        <StepIndicator
-          currentStep={flow.step}
-          promptType={flow.promptType}
-        />
+        <StepIndicator currentStep={flow.step} promptType={flow.promptType} />
 
         {/* Step content */}
         {flow.step === "prompt-selection" && <PromptSelectionStep />}
@@ -101,7 +98,7 @@ function StepIndicator({
                 ? "text-primary"
                 : i < currentIndex
                   ? "text-muted-foreground"
-                  : "text-muted-foreground/50",
+                  : "text-muted-foreground/50"
             )}
           >
             {STEP_LABELS[step]}
@@ -140,7 +137,7 @@ function PromptSelectionStep() {
           type="button"
           onClick={() => flow.selectPrompt(prompt._id, prompt.type)}
           className={cn(
-            "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent",
+            "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent"
           )}
         >
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
@@ -171,7 +168,7 @@ function StockSelectionStep() {
   const stocks = useStocks({ search, tag: selectedTag });
   const tags = useTags();
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(flow.stockIds),
+    () => new Set(flow.stockIds)
   );
 
   function toggleStock(id: GenericId<"stocks">) {
@@ -217,7 +214,7 @@ function StockSelectionStep() {
               "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
               !selectedTag
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-foreground hover:bg-accent",
+                : "border-border bg-background text-foreground hover:bg-accent"
             )}
           >
             All
@@ -233,7 +230,7 @@ function StockSelectionStep() {
                 "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
                 selectedTag === tag
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-foreground hover:bg-accent",
+                  : "border-border bg-background text-foreground hover:bg-accent"
               )}
             >
               {tag}
@@ -326,7 +323,7 @@ function StockSelectItem({
         "flex items-center gap-3 rounded-lg border p-2.5 text-left transition-colors",
         isSelected
           ? "border-primary bg-primary/5"
-          : "border-border hover:bg-accent",
+          : "border-border hover:bg-accent"
       )}
     >
       <div
@@ -334,7 +331,7 @@ function StockSelectItem({
           "flex size-5 shrink-0 items-center justify-center rounded border transition-colors",
           isSelected
             ? "border-primary bg-primary text-primary-foreground"
-            : "border-muted-foreground/30",
+            : "border-muted-foreground/30"
         )}
       >
         {isSelected && <Check className="size-3" />}
@@ -381,7 +378,7 @@ function PromptPreview({
     if (!prompt?.template) return null;
 
     const selectedStocks = allStocks?.filter((s) =>
-      stockIds.includes(s._id as GenericId<"stocks">),
+      stockIds.includes(s._id as GenericId<"stocks">)
     );
 
     const stocksStr =
@@ -462,10 +459,7 @@ function ProviderConfirmStep() {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Active Jobs</span>
             <span
-              className={cn(
-                "font-medium",
-                !hasCapacity && "text-destructive",
-              )}
+              className={cn("font-medium", !hasCapacity && "text-destructive")}
             >
               {slotsUsed}/{slotsLimit}
             </span>

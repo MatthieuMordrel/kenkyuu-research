@@ -39,7 +39,9 @@ function LoginPage() {
       await login(password, rememberMe);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Invalid password. Please try again.",
+        err instanceof Error
+          ? err.message
+          : "Invalid password. Please try again."
       );
     } finally {
       setIsSubmitting(false);

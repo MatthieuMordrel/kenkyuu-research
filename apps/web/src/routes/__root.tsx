@@ -7,19 +7,19 @@ import { lazy, Suspense } from "react";
 const DevtoolsLazy = lazy(() =>
   import("@tanstack/react-devtools").then((mod) => ({
     default: mod.TanStackDevtools,
-  })),
+  }))
 );
 
 const RouterDevtoolsPanelLazy = lazy(() =>
   import("@tanstack/react-router-devtools").then((mod) => ({
     default: mod.TanStackRouterDevtoolsPanel,
-  })),
+  }))
 );
 
 const ReactQueryDevtoolsLazy = lazy(() =>
   import("@tanstack/react-query-devtools").then((mod) => ({
     default: mod.ReactQueryDevtools,
-  })),
+  }))
 );
 
 function Devtools() {

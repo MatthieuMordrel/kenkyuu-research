@@ -33,8 +33,7 @@ export function useResearchFlow() {
   const startResearch = useStartResearch();
 
   const canExecute =
-    promptId !== null &&
-    (promptType === "discovery" || stockIds.length > 0);
+    promptId !== null && (promptType === "discovery" || stockIds.length > 0);
 
   const execute = useCallback(async () => {
     if (!promptId) {

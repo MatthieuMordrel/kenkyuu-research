@@ -37,18 +37,18 @@ export const getMonthlyCost = query({
     const startOfMonth = new Date(
       target.getFullYear(),
       target.getMonth(),
-      1,
+      1
     ).getTime();
     const startOfNextMonth = new Date(
       target.getFullYear(),
       target.getMonth() + 1,
-      1,
+      1
     ).getTime();
 
     const logs = await ctx.db
       .query("costLogs")
       .withIndex("by_timestamp", (q) =>
-        q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth),
+        q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth)
       )
       .collect();
 
@@ -74,18 +74,18 @@ export const getMonthlyCostInternal = internalQuery({
     const startOfMonth = new Date(
       target.getFullYear(),
       target.getMonth(),
-      1,
+      1
     ).getTime();
     const startOfNextMonth = new Date(
       target.getFullYear(),
       target.getMonth() + 1,
-      1,
+      1
     ).getTime();
 
     const logs = await ctx.db
       .query("costLogs")
       .withIndex("by_timestamp", (q) =>
-        q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth),
+        q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth)
       )
       .collect();
 
@@ -119,14 +119,12 @@ export const getCostByProvider = query({
       logsQuery = ctx.db
         .query("costLogs")
         .withIndex("by_timestamp", (q) =>
-          q.gte("timestamp", args.from!).lt("timestamp", args.to!),
+          q.gte("timestamp", args.from!).lt("timestamp", args.to!)
         );
     } else if (args.from !== undefined) {
       logsQuery = ctx.db
         .query("costLogs")
-        .withIndex("by_timestamp", (q) =>
-          q.gte("timestamp", args.from!),
-        );
+        .withIndex("by_timestamp", (q) => q.gte("timestamp", args.from!));
     }
 
     const logs = await logsQuery.collect();
@@ -175,20 +173,20 @@ export const getCostHistory = query({
     const startDate = new Date(
       now.getFullYear(),
       now.getMonth() - monthCount + 1,
-      1,
+      1
     );
     const startTimestamp = startDate.getTime();
 
     const endTimestamp = new Date(
       now.getFullYear(),
       now.getMonth() + 1,
-      1,
+      1
     ).getTime();
 
     const logs = await ctx.db
       .query("costLogs")
       .withIndex("by_timestamp", (q) =>
-        q.gte("timestamp", startTimestamp).lt("timestamp", endTimestamp),
+        q.gte("timestamp", startTimestamp).lt("timestamp", endTimestamp)
       )
       .collect();
 
@@ -202,7 +200,7 @@ export const getCostHistory = query({
       const d = new Date(
         now.getFullYear(),
         now.getMonth() - monthCount + 1 + i,
-        1,
+        1
       );
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       monthlyData[key] = {

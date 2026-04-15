@@ -230,7 +230,12 @@ function parseSections(markdown: string): ParsedMarkdown {
   let preamble = "";
 
   // First pass: collect flat sections
-  interface FlatSection { level: number; displayLevel: number; title: string; contentLines: string[] }
+  interface FlatSection {
+    level: number;
+    displayLevel: number;
+    title: string;
+    contentLines: string[];
+  }
   const flat: FlatSection[] = [];
   let current: FlatSection | null = null;
 
@@ -239,7 +244,12 @@ function parseSections(markdown: string): ParsedMarkdown {
     if (match) {
       if (current) flat.push(current);
       const lvl = match[1].length;
-      current = { level: lvl, displayLevel: lvl, title: match[2], contentLines: [] };
+      current = {
+        level: lvl,
+        displayLevel: lvl,
+        title: match[2],
+        contentLines: [],
+      };
     } else if (current) {
       current.contentLines.push(line);
     } else {
@@ -268,7 +278,9 @@ function parseSections(markdown: string): ParsedMarkdown {
     parentStack.length = Math.max(0, level - 1);
 
     const parentContext = parentStack.join("/");
-    const key = parentContext ? `${parentContext}/${normalizedTitle}` : normalizedTitle;
+    const key = parentContext
+      ? `${parentContext}/${normalizedTitle}`
+      : normalizedTitle;
     seen.set(key, idx); // last occurrence wins
 
     // Update parent stack so children of this heading are scoped to it
@@ -353,7 +365,7 @@ function CollapsibleSection({
         <ChevronRight
           className={cn(
             "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
-            isOpen && "rotate-90",
+            isOpen && "rotate-90"
           )}
         />
         <span className={cn(headingStyles[section.displayLevel])}>
@@ -368,7 +380,10 @@ function CollapsibleSection({
       {isOpen && (
         <div className="pb-3 pl-6 min-w-0 overflow-hidden">
           {section.content && (
-            <ReactMarkdown remarkPlugins={remarkPlugins} components={baseComponents}>
+            <ReactMarkdown
+              remarkPlugins={remarkPlugins}
+              components={baseComponents}
+            >
               {section.content}
             </ReactMarkdown>
           )}
@@ -405,7 +420,10 @@ export function MarkdownRenderer({
   collapsible = true,
 }: MarkdownRendererProps) {
   const fixedContent = useMemo(() => fixMarkdownTables(content), [content]);
-  const { preamble, sections } = useMemo(() => parseSections(fixedContent), [fixedContent]);
+  const { preamble, sections } = useMemo(
+    () => parseSections(fixedContent),
+    [fixedContent]
+  );
   const hasCollapsibleSections = collapsible && sections.length > 0;
 
   // Collect all keys from the tree for expand-all
@@ -448,8 +466,16 @@ export function MarkdownRenderer({
 
   if (!hasCollapsibleSections) {
     return (
-      <div className={cn("text-foreground text-sm leading-relaxed break-words overflow-hidden min-w-0", className)}>
-        <ReactMarkdown remarkPlugins={remarkPlugins} components={baseComponents}>
+      <div
+        className={cn(
+          "text-foreground text-sm leading-relaxed break-words overflow-hidden min-w-0",
+          className
+        )}
+      >
+        <ReactMarkdown
+          remarkPlugins={remarkPlugins}
+          components={baseComponents}
+        >
           {fixedContent}
         </ReactMarkdown>
       </div>
@@ -457,7 +483,12 @@ export function MarkdownRenderer({
   }
 
   return (
-    <div className={cn("text-foreground text-sm leading-relaxed break-words overflow-hidden", className)}>
+    <div
+      className={cn(
+        "text-foreground text-sm leading-relaxed break-words overflow-hidden",
+        className
+      )}
+    >
       {/* Collapse / Expand controls */}
       <div className="flex items-center justify-end gap-1 mb-2">
         <Button
@@ -483,7 +514,10 @@ export function MarkdownRenderer({
       {/* Preamble (content before any heading, or h1's content) */}
       {preamble && (
         <div className="mb-3">
-          <ReactMarkdown remarkPlugins={remarkPlugins} components={baseComponents}>
+          <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            components={baseComponents}
+          >
             {preamble}
           </ReactMarkdown>
         </div>

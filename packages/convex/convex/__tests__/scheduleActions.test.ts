@@ -26,7 +26,10 @@ describe("parseField", () => {
 
   it("parses range (e.g. 1-5)", () => {
     const result = parseField("1-5", 0, 59);
-    expect(result).toEqual({ type: "values", values: new Set([1, 2, 3, 4, 5]) });
+    expect(result).toEqual({
+      type: "values",
+      values: new Set([1, 2, 3, 4, 5]),
+    });
   });
 
   it("parses step with wildcard (*/15)", () => {
@@ -75,7 +78,10 @@ describe("matchesField", () => {
   });
 
   it("matches values field for included values", () => {
-    const spec: FieldSpec = { type: "values", values: new Set([0, 15, 30, 45]) };
+    const spec: FieldSpec = {
+      type: "values",
+      values: new Set([0, 15, 30, 45]),
+    };
     expect(matchesField(spec, 0)).toBe(true);
     expect(matchesField(spec, 15)).toBe(true);
     expect(matchesField(spec, 10)).toBe(false);

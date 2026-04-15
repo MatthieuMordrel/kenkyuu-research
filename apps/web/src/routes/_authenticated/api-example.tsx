@@ -27,7 +27,9 @@ function ApiExample() {
           {postsError && (
             <Card className="border-destructive">
               <CardContent className="py-4 text-destructive">
-                {postsError instanceof Error ? postsError.message : "Failed to fetch"}
+                {postsError instanceof Error
+                  ? postsError.message
+                  : "Failed to fetch"}
               </CardContent>
             </Card>
           )}
@@ -53,7 +55,9 @@ function ApiExample() {
             <Card>
               <CardHeader>
                 <CardTitle>All Posts</CardTitle>
-                <CardDescription>Showing 10 of {posts.length} posts</CardDescription>
+                <CardDescription>
+                  Showing 10 of {posts.length} posts
+                </CardDescription>
               </CardHeader>
               <CardContent className="max-h-96 space-y-2 overflow-y-auto">
                 {posts.slice(0, 10).map((post) => (

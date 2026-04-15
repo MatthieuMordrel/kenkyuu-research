@@ -20,12 +20,13 @@ export function useAuth() {
 
   // Validate session reactively via Convex query
   const { data: sessionValidation } = useQuery(
-    convexQuery(api.authHelpers.validateSession, token ? { token } : "skip"),
+    convexQuery(api.authHelpers.validateSession, token ? { token } : "skip")
   );
 
   // If we think we're authenticated but the server says invalid, log out
   const isSessionValid = sessionValidation?.valid ?? false;
-  const isLoading = !hasHydrated || (isAuthenticated && sessionValidation === undefined);
+  const isLoading =
+    !hasHydrated || (isAuthenticated && sessionValidation === undefined);
   const effectivelyAuthenticated = isAuthenticated && isSessionValid;
 
   const login = useCallback(
@@ -33,7 +34,7 @@ export function useAuth() {
       const result = await loginAction({ password, rememberMe });
       loggedIn(result.token, result.expiresAt);
     },
-    [loginAction, loggedIn],
+    [loginAction, loggedIn]
   );
 
   const logout = useCallback(async () => {

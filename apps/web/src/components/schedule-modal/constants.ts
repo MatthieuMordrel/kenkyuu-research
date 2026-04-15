@@ -22,9 +22,21 @@ export const STOCK_MODE_OPTIONS: {
   label: string;
   description: string;
 }[] = [
-  { value: "all", label: "All Stocks", description: "Run on every stock in your database" },
-  { value: "tagged", label: "By Tag", description: "Run on stocks matching selected tags" },
-  { value: "specific", label: "Specific", description: "Choose individual stocks" },
+  {
+    value: "all",
+    label: "All Stocks",
+    description: "Run on every stock in your database",
+  },
+  {
+    value: "tagged",
+    label: "By Tag",
+    description: "Run on stocks matching selected tags",
+  },
+  {
+    value: "specific",
+    label: "Specific",
+    description: "Choose individual stocks",
+  },
 ];
 
 export const INITIAL_EARNINGS_CONFIG: EarningsConfigFormData = {
@@ -38,9 +50,21 @@ export const EARNINGS_MODE_OPTIONS: {
   label: string;
   description: string;
 }[] = [
-  { value: "each", label: "Each Earning", description: "Trigger once per stock as it reports" },
-  { value: "after_last", label: "After Last", description: "Wait until all stocks have reported" },
-  { value: "before_first", label: "Before First", description: "Trigger on the earliest report date" },
+  {
+    value: "each",
+    label: "Each Earning",
+    description: "Trigger once per stock as it reports",
+  },
+  {
+    value: "after_last",
+    label: "After Last",
+    description: "Wait until all stocks have reported",
+  },
+  {
+    value: "before_first",
+    label: "Before First",
+    description: "Trigger on the earliest report date",
+  },
 ];
 
 export const INITIAL_FORM: ScheduleFormData = {
@@ -72,15 +96,18 @@ export const PROMPT_TYPE_CONFIG: Record<
 > = {
   "single-stock": {
     label: "Single Stock",
-    className: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    className:
+      "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
   },
   "multi-stock": {
     label: "Multi Stock",
-    className: "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-400",
+    className:
+      "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-400",
   },
   discovery: {
     label: "Discovery",
-    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    className:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   },
 };
 
@@ -94,7 +121,11 @@ export type WizardStep = (typeof WIZARD_STEPS)[number]["key"];
 
 export type EarningsSummaryMap = Record<
   string,
-  { previous?: { date: string }; next?: { date: string }; nextNext?: { date: string } }
+  {
+    previous?: { date: string };
+    next?: { date: string };
+    nextNext?: { date: string };
+  }
 >;
 
 /** Props shared across wizard step components */
@@ -102,19 +133,33 @@ export interface StepProps {
   form: ScheduleFormData;
   setForm: React.Dispatch<React.SetStateAction<ScheduleFormData>>;
   errors: ScheduleFormErrors;
-  updateField: <K extends keyof ScheduleFormData>(field: K, value: ScheduleFormData[K]) => void;
-  updateStockSelection: (updates: Partial<ScheduleFormData["stockSelection"]>) => void;
+  updateField: <K extends keyof ScheduleFormData>(
+    field: K,
+    value: ScheduleFormData[K]
+  ) => void;
+  updateStockSelection: (
+    updates: Partial<ScheduleFormData["stockSelection"]>
+  ) => void;
 }
 
 export interface PromptStepProps extends StepProps {
-  prompts: Array<{ _id: string; name: string; description?: string; type: string }> | undefined;
+  prompts:
+    | Array<{ _id: string; name: string; description?: string; type: string }>
+    | undefined;
   promptSearch: string;
   setPromptSearch: (v: string) => void;
   setErrors: React.Dispatch<React.SetStateAction<ScheduleFormErrors>>;
 }
 
 export interface StockStepProps extends StepProps {
-  stocks: Array<{ _id: Id<"stocks">; ticker: string; companyName: string; tags?: string[] }> | undefined;
+  stocks:
+    | Array<{
+        _id: Id<"stocks">;
+        ticker: string;
+        companyName: string;
+        tags?: string[];
+      }>
+    | undefined;
   tags: string[] | undefined;
   isSingleStock: boolean;
   toggleTag: (tag: string) => void;
@@ -127,7 +172,9 @@ export interface ScheduleStepProps extends StepProps {
   isDiscovery: boolean;
   frequencyMode: string;
   handleFrequencyChange: (preset: string) => void;
-  stocks: Array<{ _id: Id<"stocks">; ticker: string; companyName: string }> | undefined;
+  stocks:
+    | Array<{ _id: Id<"stocks">; ticker: string; companyName: string }>
+    | undefined;
   resolvedStockIds: string[];
   earningsSummary: EarningsSummaryMap | undefined;
   submitError: string | null;

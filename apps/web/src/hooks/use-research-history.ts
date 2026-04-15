@@ -22,7 +22,14 @@ interface UseResearchHistoryOptions {
 
 export function useResearchHistory(options: UseResearchHistoryOptions = {}) {
   const token = useAuthToken();
-  const { status, stockId, promptId, dateFrom, dateTo, pageSize = 20 } = options;
+  const {
+    status,
+    stockId,
+    promptId,
+    dateFrom,
+    dateTo,
+    pageSize = 20,
+  } = options;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
   const { data } = useQuery(
@@ -39,8 +46,8 @@ export function useResearchHistory(options: UseResearchHistoryOptions = {}) {
             limit: pageSize,
             token,
           }
-        : "skip",
-    ),
+        : "skip"
+    )
   );
 
   const loadMore = useCallback(() => {
@@ -67,15 +74,17 @@ export function useSearchResults(searchTerm: string, limit?: number) {
   const { data } = useQuery(
     convexQuery(
       api.researchJobs.searchResults,
-      token && searchTerm.length > 0 ? { searchTerm, limit, token } : "skip",
-    ),
+      token && searchTerm.length > 0 ? { searchTerm, limit, token } : "skip"
+    )
   );
   return data;
 }
 
 export function useFavoriteResults() {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.researchJobs.listFavorites, token ? { token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.researchJobs.listFavorites, token ? { token } : "skip")
+  );
   return data;
 }
 
@@ -87,6 +96,6 @@ export function useToggleFavorite() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }

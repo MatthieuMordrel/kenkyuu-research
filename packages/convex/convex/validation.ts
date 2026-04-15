@@ -41,7 +41,7 @@ export function validateTicker(ticker: string): void {
   }
   if (!TICKER_REGEX.test(ticker)) {
     throw new Error(
-      "Ticker must contain only uppercase letters, digits, and . ^ = - characters",
+      "Ticker must contain only uppercase letters, digits, and . ^ = - characters"
     );
   }
 }
@@ -51,7 +51,7 @@ export function validateTicker(ticker: string): void {
 export function validateStringLength(
   value: string,
   fieldName: string,
-  maxLength: number,
+  maxLength: number
 ): void {
   if (value.length > maxLength) {
     throw new Error(`${fieldName} must be at most ${maxLength} characters`);
@@ -75,7 +75,7 @@ export function validateStockInput(args: {
     validateStringLength(
       args.companyName,
       "Company name",
-      MAX_COMPANY_NAME_LENGTH,
+      MAX_COMPANY_NAME_LENGTH
     );
   if (args.sector !== undefined)
     validateStringLength(args.sector, "Sector", MAX_SECTOR_LENGTH);
@@ -104,13 +104,13 @@ export function validatePromptInput(args: {
     validateStringLength(
       args.description,
       "Prompt description",
-      MAX_PROMPT_DESCRIPTION_LENGTH,
+      MAX_PROMPT_DESCRIPTION_LENGTH
     );
   if (args.template !== undefined)
     validateStringLength(
       args.template,
       "Prompt template",
-      MAX_PROMPT_TEMPLATE_LENGTH,
+      MAX_PROMPT_TEMPLATE_LENGTH
     );
 }
 
@@ -161,7 +161,10 @@ export function validateSettingInput(key: string, value: string): void {
 
 export function truncateResult(result: string): string {
   if (result.length > MAX_RESULT_SIZE) {
-    return result.slice(0, MAX_RESULT_SIZE) + "\n\n[Result truncated due to size limits]";
+    return (
+      result.slice(0, MAX_RESULT_SIZE) +
+      "\n\n[Result truncated due to size limits]"
+    );
   }
   return result;
 }

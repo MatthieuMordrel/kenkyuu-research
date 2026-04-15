@@ -11,28 +11,36 @@ import { useAuthToken } from "@/lib/auth";
 /** Last 5 completed/failed research jobs with enriched prompt + stock info. */
 export function useRecentResearch() {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.dashboard.recentResearch, token ? { token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.dashboard.recentResearch, token ? { token } : "skip")
+  );
   return data;
 }
 
 /** Top 5 upcoming scheduled runs sorted by next run time. */
 export function useUpcomingSchedules() {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.dashboard.upcomingSchedules, token ? { token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.dashboard.upcomingSchedules, token ? { token } : "skip")
+  );
   return data;
 }
 
 /** Monthly cost summary with budget threshold. */
 export function useMonthlySpend() {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.dashboard.monthlySpend, token ? { token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.dashboard.monthlySpend, token ? { token } : "skip")
+  );
   return data;
 }
 
 /** Count of active (pending + running) jobs and the concurrency limit. */
 export function useActiveJobsCount() {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.dashboard.activeJobsCount, token ? { token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.dashboard.activeJobsCount, token ? { token } : "skip")
+  );
   return data;
 }
 

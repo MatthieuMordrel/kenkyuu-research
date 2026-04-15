@@ -8,7 +8,7 @@ describe("escapeHtml", () => {
 
   it("escapes angle brackets", () => {
     expect(escapeHtml("<script>alert('xss')</script>")).toBe(
-      "&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;",
+      "&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;"
     );
   });
 
@@ -30,7 +30,7 @@ describe("escapeHtml", () => {
 
   it("escapes all special characters together", () => {
     expect(escapeHtml(`<div class="test">'A & B'</div>`)).toBe(
-      "&lt;div class=&quot;test&quot;&gt;&#039;A &amp; B&#039;&lt;/div&gt;",
+      "&lt;div class=&quot;test&quot;&gt;&#039;A &amp; B&#039;&lt;/div&gt;"
     );
   });
 

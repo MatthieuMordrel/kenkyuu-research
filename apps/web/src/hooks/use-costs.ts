@@ -12,9 +12,7 @@ export function useMonthlyCost(options: UseMonthlyCostOptions = {}) {
   const token = useAuthToken();
   return useQuery(
     api.costTracking.getMonthlyCost,
-    token
-      ? { monthTimestamp: options.monthTimestamp, token }
-      : "skip",
+    token ? { monthTimestamp: options.monthTimestamp, token } : "skip"
   );
 }
 
@@ -26,9 +24,7 @@ export function useCostHistory(options: UseCostHistoryOptions = {}) {
   const token = useAuthToken();
   return useQuery(
     api.costTracking.getCostHistory,
-    token
-      ? { months: options.months, token }
-      : "skip",
+    token ? { months: options.months, token } : "skip"
   );
 }
 
@@ -41,8 +37,6 @@ export function useCostByProvider(options: UseCostByProviderOptions = {}) {
   const token = useAuthToken();
   return useQuery(
     api.costTracking.getCostByProvider,
-    token
-      ? { from: options.from, to: options.to, token }
-      : "skip",
+    token ? { from: options.from, to: options.to, token } : "skip"
   );
 }

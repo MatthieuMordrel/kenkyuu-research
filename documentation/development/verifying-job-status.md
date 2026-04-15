@@ -21,14 +21,14 @@ Each active job card in the **Active Jobs** panel has a **heart-pulse icon butto
 
 ### Interpreting Health Check Results
 
-| OpenAI Status   | What It Means                                                                 |
-|-----------------|-------------------------------------------------------------------------------|
-| `queued`        | Job is waiting to start on OpenAI's side. Normal.                            |
-| `in_progress`   | Job is actively running. Normal — can take 10-60+ minutes.                   |
-| `completed`     | OpenAI finished but webhook hasn't been processed yet. Recovery cron will handle it within 15 minutes. |
-| `failed`        | OpenAI reported a failure. Check the error message for details.              |
-| `cancelled`     | Job was cancelled on OpenAI's side.                                          |
-| `null`/unknown  | Could not reach OpenAI (API key missing or network issue).                   |
+| OpenAI Status  | What It Means                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| `queued`       | Job is waiting to start on OpenAI's side. Normal.                                                      |
+| `in_progress`  | Job is actively running. Normal — can take 10-60+ minutes.                                             |
+| `completed`    | OpenAI finished but webhook hasn't been processed yet. Recovery cron will handle it within 15 minutes. |
+| `failed`       | OpenAI reported a failure. Check the error message for details.                                        |
+| `cancelled`    | Job was cancelled on OpenAI's side.                                                                    |
+| `null`/unknown | Could not reach OpenAI (API key missing or network issue).                                             |
 
 ## Verifying Status via CLI (Advanced)
 
@@ -47,6 +47,7 @@ npx convex run researchJobs:getJob '{"id": "<job-id>", "token": "<your-session-t
 ```
 
 Key fields to check:
+
 - `status`: `pending` | `running` | `completed` | `failed`
 - `externalJobId`: The OpenAI response ID (starts with `resp_`)
 - `attempts`: Number of execution attempts (max 3)
@@ -69,10 +70,10 @@ The stale job recovery cron logs its activity. Check the Convex dashboard **Logs
 
 ## Troubleshooting
 
-| Symptom                            | Likely Cause                          | Resolution                                                    |
-|------------------------------------|---------------------------------------|---------------------------------------------------------------|
-| Job stuck in `pending`             | Action scheduler delay or failure     | Check Convex function logs for errors in `startResearch`      |
-| Job `running` for >1 hour         | Normal for complex prompts            | Use health check to confirm `in_progress` on OpenAI           |
-| Job `running` but OpenAI `completed` | Missed webhook                      | Recovery cron will pick it up within 15 min, or retry manually |
-| Job `failed` with quota error      | OpenAI API quota exceeded             | Check your OpenAI billing/usage limits                        |
-| Health check shows `null` status   | OpenAI API key missing or invalid     | Verify API key in Settings page                               |
+| Symptom                              | Likely Cause                      | Resolution                                                     |
+| ------------------------------------ | --------------------------------- | -------------------------------------------------------------- |
+| Job stuck in `pending`               | Action scheduler delay or failure | Check Convex function logs for errors in `startResearch`       |
+| Job `running` for >1 hour            | Normal for complex prompts        | Use health check to confirm `in_progress` on OpenAI            |
+| Job `running` but OpenAI `completed` | Missed webhook                    | Recovery cron will pick it up within 15 min, or retry manually |
+| Job `failed` with quota error        | OpenAI API quota exceeded         | Check your OpenAI billing/usage limits                         |
+| Health check shows `null` status     | OpenAI API key missing or invalid | Verify API key in Settings page                                |

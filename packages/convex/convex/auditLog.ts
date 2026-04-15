@@ -11,7 +11,7 @@ export async function logAuditEvent(
     resourceType?: string;
     resourceId?: string;
     details?: string;
-  },
+  }
 ): Promise<void> {
   await ctx.db.insert("auditLogs", {
     action: event.action,

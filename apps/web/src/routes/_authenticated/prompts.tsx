@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { usePrompts, useDeletePrompt, useClonePrompt } from "@/hooks/use-prompts";
+import {
+  usePrompts,
+  useDeletePrompt,
+  useClonePrompt,
+} from "@/hooks/use-prompts";
 import { PageHeader } from "@/components/page-header";
 import { ListSkeleton } from "@/components/loading-skeleton";
 import { PromptModal } from "@/components/prompt-modal";
@@ -47,25 +51,33 @@ const TYPE_LABELS: Record<PromptType, string> = {
   discovery: "Discovery",
 };
 
-const TYPE_CONFIG: Record<PromptType, { icon: typeof TrendingUp; color: string }> = {
+const TYPE_CONFIG: Record<
+  PromptType,
+  { icon: typeof TrendingUp; color: string }
+> = {
   "single-stock": {
     icon: TrendingUp,
-    color: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400",
+    color:
+      "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400",
   },
   "multi-stock": {
     icon: BarChart3,
-    color: "bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400",
+    color:
+      "bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400",
   },
   discovery: {
     icon: Search,
-    color: "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
+    color:
+      "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
   },
 };
 
 function PromptsPage() {
   const [selectedType, setSelectedType] = useState<PromptType | "all">("all");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingPrompt, setEditingPrompt] = useState<Doc<"prompts"> | null>(null);
+  const [editingPrompt, setEditingPrompt] = useState<Doc<"prompts"> | null>(
+    null
+  );
   const [deleteTarget, setDeleteTarget] = useState<Doc<"prompts"> | null>(null);
 
   const allPrompts = usePrompts();
@@ -127,7 +139,7 @@ function PromptsPage() {
                 "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-all",
                 selectedType === tab.value
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
+                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
               {tab.label}
@@ -137,7 +149,7 @@ function PromptsPage() {
                     "ml-1.5 rounded-full px-1.5 text-[10px]",
                     selectedType === tab.value
                       ? "bg-primary-foreground/20"
-                      : "bg-foreground/5",
+                      : "bg-foreground/5"
                   )}
                 >
                   {tab.value === "all"
@@ -174,7 +186,12 @@ function PromptsPage() {
               </p>
             </div>
             {selectedType === "all" && (
-              <Button size="sm" variant="outline" onClick={openAdd} className="mt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={openAdd}
+                className="mt-1"
+              >
                 <Plus className="size-4" />
                 New Prompt
               </Button>
@@ -249,7 +266,7 @@ function PromptCard({
       <div
         className={cn(
           "flex size-9 shrink-0 items-center justify-center rounded-lg",
-          config.color,
+          config.color
         )}
       >
         <TypeIcon className="size-4" />

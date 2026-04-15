@@ -15,7 +15,7 @@ const stockSelectionValidator = v.object({
     v.literal("all"),
     v.literal("tagged"),
     v.literal("specific"),
-    v.literal("none"),
+    v.literal("none")
   ),
   tags: v.optional(v.array(v.string())),
   stockIds: v.optional(v.array(v.id("stocks"))),
@@ -27,7 +27,11 @@ const earningsConfigValidator = v.object({
   offsetDays: v.number(),
   adjustForHour: v.boolean(),
   earningsMode: v.optional(
-    v.union(v.literal("each"), v.literal("after_last"), v.literal("before_first")),
+    v.union(
+      v.literal("each"),
+      v.literal("after_last"),
+      v.literal("before_first")
+    )
   ),
 });
 
@@ -60,11 +64,15 @@ export const createSchedule = mutation({
       }
     } else if (effectiveTriggerType === "earnings") {
       if (!args.earningsConfig) {
-        throw new Error("Earnings config is required for earnings-based schedules");
+        throw new Error(
+          "Earnings config is required for earnings-based schedules"
+        );
       }
       validateEarningsConfig(args.earningsConfig);
       if (args.stockSelection.type === "none") {
-        throw new Error("Stock selection is required for earnings-based schedules");
+        throw new Error(
+          "Stock selection is required for earnings-based schedules"
+        );
       }
     }
 
@@ -81,15 +89,28 @@ export const createSchedule = mutation({
       throw new Error("This prompt type requires stock selection");
     }
     if (prompt.type === "discovery" && effectiveTriggerType === "earnings") {
-      throw new Error("Earnings triggers are not compatible with discovery prompts");
+      throw new Error(
+        "Earnings triggers are not compatible with discovery prompts"
+      );
     }
 
     // Validate stock selection
-    if (args.stockSelection.type === "tagged" && (!args.stockSelection.tags || args.stockSelection.tags.length === 0)) {
-      throw new Error("Tags are required when stock selection type is 'tagged'");
+    if (
+      args.stockSelection.type === "tagged" &&
+      (!args.stockSelection.tags || args.stockSelection.tags.length === 0)
+    ) {
+      throw new Error(
+        "Tags are required when stock selection type is 'tagged'"
+      );
     }
-    if (args.stockSelection.type === "specific" && (!args.stockSelection.stockIds || args.stockSelection.stockIds.length === 0)) {
-      throw new Error("Stock IDs are required when stock selection type is 'specific'");
+    if (
+      args.stockSelection.type === "specific" &&
+      (!args.stockSelection.stockIds ||
+        args.stockSelection.stockIds.length === 0)
+    ) {
+      throw new Error(
+        "Stock IDs are required when stock selection type is 'specific'"
+      );
     }
 
     const now = Date.now();
@@ -120,12 +141,21 @@ export const createSchedule = mutation({
 
     // Only cron schedules use self-rescheduling; earnings schedules are driven by the hourly cron
     if (args.enabled && effectiveTriggerType === "cron") {
-      await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
-        scheduleId,
-      });
+      await ctx.scheduler.runAfter(
+        0,
+        internal.scheduleActions.scheduleNextRun,
+        {
+          scheduleId,
+        }
+      );
     }
 
-    await logAuditEvent(ctx, { action: "schedule.create", resourceType: "schedules", resourceId: scheduleId, details: args.name });
+    await logAuditEvent(ctx, {
+      action: "schedule.create",
+      resourceType: "schedules",
+      resourceId: scheduleId,
+      details: args.name,
+    });
     return scheduleId;
   },
 });
@@ -167,30 +197,46 @@ export const updateSchedule = mutation({
       if (!prompt) throw new Error("Prompt not found");
       patch.promptId = updates.promptId;
     }
-    if (updates.stockSelection !== undefined) patch.stockSelection = updates.stockSelection;
+    if (updates.stockSelection !== undefined)
+      patch.stockSelection = updates.stockSelection;
 
     // Cross-validate prompt type vs stock selection and trigger type
     const effectivePromptId = updates.promptId ?? schedule.promptId;
-    const effectiveStockSelection = updates.stockSelection ?? schedule.stockSelection;
-    const effectiveTriggerType = updates.triggerType ?? (schedule.triggerType ?? "cron");
+    const effectiveStockSelection =
+      updates.stockSelection ?? schedule.stockSelection;
+    const effectiveTriggerType =
+      updates.triggerType ?? schedule.triggerType ?? "cron";
     const effectivePrompt = await ctx.db.get(effectivePromptId);
     if (effectivePrompt) {
-      if (effectivePrompt.type === "discovery" && effectiveStockSelection.type !== "none") {
+      if (
+        effectivePrompt.type === "discovery" &&
+        effectiveStockSelection.type !== "none"
+      ) {
         throw new Error("Discovery prompts should use 'none' stock selection");
       }
-      if (effectivePrompt.type !== "discovery" && effectiveStockSelection.type === "none") {
+      if (
+        effectivePrompt.type !== "discovery" &&
+        effectiveStockSelection.type === "none"
+      ) {
         throw new Error("This prompt type requires stock selection");
       }
-      if (effectivePrompt.type === "discovery" && effectiveTriggerType === "earnings") {
-        throw new Error("Earnings triggers are not compatible with discovery prompts");
+      if (
+        effectivePrompt.type === "discovery" &&
+        effectiveTriggerType === "earnings"
+      ) {
+        throw new Error(
+          "Earnings triggers are not compatible with discovery prompts"
+        );
       }
     }
     if (updates.provider !== undefined) patch.provider = updates.provider;
     if (updates.cron !== undefined) patch.cron = updates.cron;
     if (updates.timezone !== undefined) patch.timezone = updates.timezone;
     if (updates.enabled !== undefined) patch.enabled = updates.enabled;
-    if (updates.triggerType !== undefined) patch.triggerType = updates.triggerType;
-    if (updates.earningsConfig !== undefined) patch.earningsConfig = updates.earningsConfig;
+    if (updates.triggerType !== undefined)
+      patch.triggerType = updates.triggerType;
+    if (updates.earningsConfig !== undefined)
+      patch.earningsConfig = updates.earningsConfig;
 
     // Clear timezone when switching to earnings (timezone is per-stock via exchange)
     if (updates.triggerType === "earnings" && schedule.timezone) {
@@ -203,10 +249,14 @@ export const updateSchedule = mutation({
     const newTriggerType = updates.triggerType ?? oldTriggerType;
     const wasEnabled = schedule.enabled;
     const isNowEnabled = updates.enabled ?? schedule.enabled;
-    const cronChanged = updates.cron !== undefined && updates.cron !== schedule.cron;
-    const timezoneChanged = updates.timezone !== undefined && updates.timezone !== schedule.timezone;
-    const switchedToCron = oldTriggerType === "earnings" && newTriggerType === "cron";
-    const switchedToEarnings = oldTriggerType === "cron" && newTriggerType === "earnings";
+    const cronChanged =
+      updates.cron !== undefined && updates.cron !== schedule.cron;
+    const timezoneChanged =
+      updates.timezone !== undefined && updates.timezone !== schedule.timezone;
+    const switchedToCron =
+      oldTriggerType === "earnings" && newTriggerType === "cron";
+    const switchedToEarnings =
+      oldTriggerType === "cron" && newTriggerType === "earnings";
 
     // If switching to earnings, cancel any pending cron scheduled function
     if (switchedToEarnings && schedule.nextScheduledFunctionId) {
@@ -215,31 +265,48 @@ export const updateSchedule = mutation({
       } catch {
         // May already have executed or been cancelled
       }
-      await ctx.db.patch(id, { nextRunAt: undefined, nextScheduledFunctionId: undefined });
+      await ctx.db.patch(id, {
+        nextRunAt: undefined,
+        nextScheduledFunctionId: undefined,
+      });
     }
 
     // Only manage self-rescheduling for cron-type schedules
     if (newTriggerType === "cron") {
-      if (isNowEnabled && (!wasEnabled || cronChanged || timezoneChanged || switchedToCron)) {
+      if (
+        isNowEnabled &&
+        (!wasEnabled || cronChanged || timezoneChanged || switchedToCron)
+      ) {
         if (schedule.nextScheduledFunctionId) {
           try {
-            await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
+            await ctx.scheduler.cancel(
+              schedule.nextScheduledFunctionId as never
+            );
           } catch {
             // May already have executed or been cancelled
           }
         }
-        await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
-          scheduleId: id,
-        });
+        await ctx.scheduler.runAfter(
+          0,
+          internal.scheduleActions.scheduleNextRun,
+          {
+            scheduleId: id,
+          }
+        );
       } else if (!isNowEnabled && wasEnabled) {
         if (schedule.nextScheduledFunctionId) {
           try {
-            await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
+            await ctx.scheduler.cancel(
+              schedule.nextScheduledFunctionId as never
+            );
           } catch {
             // May already have executed or been cancelled
           }
         }
-        await ctx.db.patch(id, { nextRunAt: undefined, nextScheduledFunctionId: undefined });
+        await ctx.db.patch(id, {
+          nextRunAt: undefined,
+          nextScheduledFunctionId: undefined,
+        });
       }
     }
 
@@ -258,11 +325,9 @@ export const runScheduleNow = mutation({
     const schedule = await ctx.db.get(args.id);
     if (!schedule) throw new Error("Schedule not found");
 
-    await ctx.scheduler.runAfter(
-      0,
-      internal.scheduleActions.executeRunNow,
-      { scheduleId: args.id },
-    );
+    await ctx.scheduler.runAfter(0, internal.scheduleActions.executeRunNow, {
+      scheduleId: args.id,
+    });
 
     await logAuditEvent(ctx, {
       action: "schedule.runNow",
@@ -298,7 +363,12 @@ export const deleteSchedule = mutation({
     }
 
     await ctx.db.delete(args.id);
-    await logAuditEvent(ctx, { action: "schedule.delete", resourceType: "schedules", resourceId: args.id, details: schedule.name });
+    await logAuditEvent(ctx, {
+      action: "schedule.delete",
+      resourceType: "schedules",
+      resourceId: args.id,
+      details: schedule.name,
+    });
     return args.id;
   },
 });
@@ -330,18 +400,27 @@ export const toggleSchedule = mutation({
 
     if (isCronType) {
       if (newEnabled && !isGloballyPaused) {
-        await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
-          scheduleId: args.id,
-        });
+        await ctx.scheduler.runAfter(
+          0,
+          internal.scheduleActions.scheduleNextRun,
+          {
+            scheduleId: args.id,
+          }
+        );
       } else if (!newEnabled) {
         if (schedule.nextScheduledFunctionId) {
           try {
-            await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
+            await ctx.scheduler.cancel(
+              schedule.nextScheduledFunctionId as never
+            );
           } catch {
             // May already have executed or been cancelled
           }
         }
-        await ctx.db.patch(args.id, { nextRunAt: undefined, nextScheduledFunctionId: undefined });
+        await ctx.db.patch(args.id, {
+          nextRunAt: undefined,
+          nextScheduledFunctionId: undefined,
+        });
       }
     }
     // Earnings-type schedules: just toggling enabled is enough; the hourly cron checks enabled status
@@ -381,7 +460,9 @@ export const toggleGlobalPause = mutation({
       for (const schedule of enabledSchedules) {
         if (schedule.nextScheduledFunctionId) {
           try {
-            await ctx.scheduler.cancel(schedule.nextScheduledFunctionId as never);
+            await ctx.scheduler.cancel(
+              schedule.nextScheduledFunctionId as never
+            );
           } catch {
             // Already executed or cancelled
           }
@@ -401,9 +482,13 @@ export const toggleGlobalPause = mutation({
       for (const schedule of enabledSchedules) {
         const isCronType = (schedule.triggerType ?? "cron") === "cron";
         if (isCronType) {
-          await ctx.scheduler.runAfter(0, internal.scheduleActions.scheduleNextRun, {
-            scheduleId: schedule._id,
-          });
+          await ctx.scheduler.runAfter(
+            0,
+            internal.scheduleActions.scheduleNextRun,
+            {
+              scheduleId: schedule._id,
+            }
+          );
         }
       }
     }
@@ -427,7 +512,8 @@ export const updateScheduleNextRun = internalMutation({
 
     const patch: Record<string, unknown> = {};
     if (args.nextRunAt !== undefined) patch.nextRunAt = args.nextRunAt;
-    if (args.nextScheduledFunctionId !== undefined) patch.nextScheduledFunctionId = args.nextScheduledFunctionId;
+    if (args.nextScheduledFunctionId !== undefined)
+      patch.nextScheduledFunctionId = args.nextScheduledFunctionId;
     if (args.lastRunAt !== undefined) patch.lastRunAt = args.lastRunAt;
 
     await ctx.db.patch(args.id, patch);
@@ -445,7 +531,10 @@ export const listSchedules = query({
     await requireAuth(ctx, args.token);
 
     const maxResults = Math.min(args.limit ?? 200, 200);
-    const schedules = await ctx.db.query("schedules").order("desc").take(maxResults);
+    const schedules = await ctx.db
+      .query("schedules")
+      .order("desc")
+      .take(maxResults);
 
     const globalPause = await ctx.db
       .query("settings")
@@ -577,7 +666,9 @@ export const createScheduledJob = internalMutation({
       .take(MAX_CONCURRENT_JOBS);
 
     if (pendingJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
-      throw new Error(`Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed. Scheduled job deferred.`);
+      throw new Error(
+        `Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed. Scheduled job deferred.`
+      );
     }
 
     const now = Date.now();
@@ -594,9 +685,13 @@ export const createScheduledJob = internalMutation({
 
     // Stagger start to avoid hitting OpenAI rate limits
     const staggerDelayMs = runningJobs.length * 10_000; // 10s per running job
-    await ctx.scheduler.runAfter(staggerDelayMs, internal.researchActions.startResearch, {
-      jobId,
-    });
+    await ctx.scheduler.runAfter(
+      staggerDelayMs,
+      internal.researchActions.startResearch,
+      {
+        jobId,
+      }
+    );
 
     return jobId;
   },

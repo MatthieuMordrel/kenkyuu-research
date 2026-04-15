@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { convexQuery, useConvexMutation, useConvexAction } from "@convex-dev/react-query";
+import {
+  convexQuery,
+  useConvexMutation,
+  useConvexAction,
+} from "@convex-dev/react-query";
 import { api } from "@repo/convex";
 import type { GenericId } from "convex/values";
 import { useAuthToken } from "@/lib/auth";
@@ -28,21 +32,25 @@ export function useResearchJobs(options: UseResearchJobsOptions = {}) {
             promptId: promptId || undefined,
             token,
           }
-        : "skip",
-    ),
+        : "skip"
+    )
   );
   return data;
 }
 
 export function useResearchJob(id: GenericId<"researchJobs">) {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.researchJobs.getJob, token ? { id, token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.researchJobs.getJob, token ? { id, token } : "skip")
+  );
   return data;
 }
 
 export function useActiveJobs() {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.researchJobs.getActiveJobs, token ? { token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.researchJobs.getActiveJobs, token ? { token } : "skip")
+  );
   return data;
 }
 
@@ -54,7 +62,7 @@ export function useStartResearch() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -64,7 +72,7 @@ export function useCancelJob() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -74,7 +82,7 @@ export function useRetryJob() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -84,7 +92,7 @@ export function useCheckJobHealth() {
   return useCallback(
     (args: { jobId: GenericId<"researchJobs"> }) =>
       checkHealth({ jobId: args.jobId, token: token ?? undefined }),
-    [checkHealth, token],
+    [checkHealth, token]
   );
 }
 
@@ -94,6 +102,6 @@ export function useDeleteJob() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }

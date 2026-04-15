@@ -7,9 +7,12 @@ import { internal } from "./_generated/api";
 
 const MAX_RETRIES = 3;
 
-async function getOpenAIClient(
-  ctx: { runQuery: (ref: typeof internal.authHelpers.getSettingValue, args: { key: string }) => Promise<string | null> },
-): Promise<OpenAI | null> {
+async function getOpenAIClient(ctx: {
+  runQuery: (
+    ref: typeof internal.authHelpers.getSettingValue,
+    args: { key: string }
+  ) => Promise<string | null>;
+}): Promise<OpenAI | null> {
   const apiKey = await ctx.runQuery(internal.authHelpers.getSettingValue, {
     key: "openai_api_key",
   });
@@ -19,7 +22,9 @@ async function getOpenAIClient(
 
 // o3-deep-research pricing: Input $10/1M tokens, Output $40/1M tokens
 /** @internal Exported for testing */
-export function estimateCost(usage: OpenAI.Responses.ResponseUsage | undefined): number | undefined {
+export function estimateCost(
+  usage: OpenAI.Responses.ResponseUsage | undefined
+): number | undefined {
   if (!usage) return undefined;
   const inputTokens = usage.input_tokens ?? 0;
   const outputTokens = usage.output_tokens ?? 0;
@@ -41,7 +46,10 @@ export const processWebhookEvent = internalAction({
 
     // Idempotency guard: skip if the job has already reached a terminal state.
     // Duplicate webhook deliveries would otherwise insert extra rows into costLogs.
-    if (job.status === "completed" || (job.status === "failed" && args.eventType === "response.completed")) {
+    if (
+      job.status === "completed" ||
+      (job.status === "failed" && args.eventType === "response.completed")
+    ) {
       return;
     }
 
@@ -87,16 +95,14 @@ export const processWebhookEvent = internalAction({
       await ctx.scheduler.runAfter(
         0,
         internal.notifications.dispatchJobNotification,
-        { jobId: args.jobId },
+        { jobId: args.jobId }
       );
 
       // Check budget alert
       if (costUsd !== undefined) {
-        await ctx.scheduler.runAfter(
-          0,
-          internal.budgetAlert.checkBudgetAlert,
-          { currentCostUsd: costUsd },
-        );
+        await ctx.scheduler.runAfter(0, internal.budgetAlert.checkBudgetAlert, {
+          currentCostUsd: costUsd,
+        });
       }
     } else if (
       args.eventType === "response.failed" ||
@@ -105,7 +111,8 @@ export const processWebhookEvent = internalAction({
       response.status === "cancelled"
     ) {
       const error =
-        response.error?.message ?? `Research ${response.status ?? args.eventType}`;
+        response.error?.message ??
+        `Research ${response.status ?? args.eventType}`;
 
       await ctx.runMutation(internal.researchJobs.updateJobStatus, {
         id: args.jobId,
@@ -118,13 +125,13 @@ export const processWebhookEvent = internalAction({
         await ctx.scheduler.runAfter(
           Math.pow(2, job.attempts) * 5000,
           internal.researchActions.startResearch,
-          { jobId: args.jobId },
+          { jobId: args.jobId }
         );
       } else {
         await ctx.scheduler.runAfter(
           0,
           internal.notifications.dispatchJobNotification,
-          { jobId: args.jobId },
+          { jobId: args.jobId }
         );
       }
     }
@@ -143,7 +150,7 @@ export const recoverStaleJobs = internalAction({
   handler: async (ctx) => {
     const staleJobs = await ctx.runQuery(
       internal.researchJobs.getStaleRunningJobs,
-      { staleThresholdMs: STALE_JOB_THRESHOLD_MS },
+      { staleThresholdMs: STALE_JOB_THRESHOLD_MS }
     );
 
     if (staleJobs.length === 0) return;
@@ -173,9 +180,12 @@ export const recoverStaleJobs = internalAction({
             eventType: `response.${response.status}`,
           });
           console.log(
-            `recoverStaleJobs: recovered ${response.status} job ${job._id}`,
+            `recoverStaleJobs: recovered ${response.status} job ${job._id}`
           );
-        } else if (response.status === "in_progress" || response.status === "queued") {
+        } else if (
+          response.status === "in_progress" ||
+          response.status === "queued"
+        ) {
           // Still running on OpenAI's side — leave it alone.
           // If it's been too long (>90 minutes), mark as failed to unblock the queue.
           const ninetyMinutes = 90 * 60 * 1000;
@@ -183,12 +193,13 @@ export const recoverStaleJobs = internalAction({
             await ctx.runMutation(internal.researchJobs.updateJobStatus, {
               id: job._id,
               status: "failed",
-              error: "Job timed out after 90 minutes with no result from OpenAI",
+              error:
+                "Job timed out after 90 minutes with no result from OpenAI",
             });
             await ctx.scheduler.runAfter(
               0,
               internal.notifications.dispatchJobNotification,
-              { jobId: job._id },
+              { jobId: job._id }
             );
             console.log(`recoverStaleJobs: timed out job ${job._id}`);
           }
@@ -196,7 +207,7 @@ export const recoverStaleJobs = internalAction({
       } catch (error) {
         console.error(
           `recoverStaleJobs: failed to check job ${job._id}:`,
-          error instanceof Error ? error.message : error,
+          error instanceof Error ? error.message : error
         );
       }
     }
@@ -226,7 +237,7 @@ export const checkJobHealth = action({
     if (!args.token) throw new Error("Unauthorized");
     const session = await ctx.runQuery(
       internal.authHelpers.validateSessionInternal,
-      { token: args.token },
+      { token: args.token }
     );
     if (!session.valid) throw new Error("Unauthorized");
 
@@ -268,7 +279,8 @@ export const checkJobHealth = action({
         jobId,
         convexStatus: job.status as string,
         openaiStatus: null,
-        message: "OpenAI API key not configured. Cannot verify external status.",
+        message:
+          "OpenAI API key not configured. Cannot verify external status.",
         checkedAt: Date.now(),
       };
     }
@@ -296,8 +308,7 @@ export const checkJobHealth = action({
         checkedAt: Date.now(),
       };
     } catch (error: unknown) {
-      const errMsg =
-        error instanceof Error ? error.message : "Unknown error";
+      const errMsg = error instanceof Error ? error.message : "Unknown error";
       return {
         jobId,
         convexStatus: job.status as string,
@@ -330,17 +341,17 @@ export const startResearch = internalAction({
     const MAX_RUNNING = 3;
     const runningJobs = await ctx.runQuery(
       internal.researchJobs.getRunningJobCount,
-      {},
+      {}
     );
     if (runningJobs >= MAX_RUNNING) {
       // Re-queue this job to try again in 30 seconds
       console.log(
-        `startResearch: ${MAX_RUNNING} jobs already running, re-queuing ${args.jobId} in 30s`,
+        `startResearch: ${MAX_RUNNING} jobs already running, re-queuing ${args.jobId} in 30s`
       );
       await ctx.scheduler.runAfter(
         30_000,
         internal.researchActions.startResearch,
-        { jobId: args.jobId },
+        { jobId: args.jobId }
       );
       return;
     }
@@ -348,7 +359,7 @@ export const startResearch = internalAction({
     // Increment attempts
     const attempts = await ctx.runMutation(
       internal.researchJobs.incrementAttempts,
-      { id: args.jobId },
+      { id: args.jobId }
     );
 
     if (attempts > MAX_RETRIES) {
@@ -369,11 +380,11 @@ export const startResearch = internalAction({
     // Resolve stock tickers for prompt variable injection
     const stocks = await Promise.all(
       job.stockIds.map((stockId) =>
-        ctx.runQuery(internal.researchJobs.getStockInternal, { id: stockId }),
-      ),
+        ctx.runQuery(internal.researchJobs.getStockInternal, { id: stockId })
+      )
     );
     const validStocks = stocks.filter(
-      (s): s is NonNullable<typeof s> => s !== null,
+      (s): s is NonNullable<typeof s> => s !== null
     );
 
     // Build the final prompt with variable injection
@@ -382,18 +393,18 @@ export const startResearch = internalAction({
       "{{STOCKS}}",
       validStocks
         .map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`)
-        .join(", "),
+        .join(", ")
     );
     const firstStock = validStocks[0];
     resolvedPrompt = resolvedPrompt.replaceAll(
       "{{TICKER}}",
       firstStock
         ? `${firstStock.ticker} (${firstStock.companyName}, ${firstStock.exchange})`
-        : "",
+        : ""
     );
     resolvedPrompt = resolvedPrompt.replaceAll(
       "{{DATE}}",
-      new Date().toISOString().split("T")[0]!,
+      new Date().toISOString().split("T")[0]!
     );
 
     const client = await getOpenAIClient(ctx);
@@ -452,7 +463,7 @@ export const startResearch = internalAction({
         await ctx.scheduler.runAfter(
           delayMs,
           internal.researchActions.startResearch,
-          { jobId: args.jobId },
+          { jobId: args.jobId }
         );
       } else {
         await ctx.runMutation(internal.researchJobs.updateJobStatus, {

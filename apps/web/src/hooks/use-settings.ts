@@ -9,7 +9,7 @@ import { useCallback } from "react";
 export function useSettings(key: string) {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.settings.getSetting, token ? { key, token } : "skip"),
+    convexQuery(api.settings.getSetting, token ? { key, token } : "skip")
   );
   return data;
 }
@@ -25,6 +25,6 @@ export function useUpdateSetting() {
       if (!token) throw new Error("Not authenticated");
       return mutation({ ...args, token });
     },
-    [mutation, token],
+    [mutation, token]
   );
 }

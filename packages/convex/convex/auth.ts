@@ -11,20 +11,17 @@ export const login = action({
     password: v.string(),
     rememberMe: v.boolean(),
   },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ token: string; expiresAt: number }> => {
+  handler: async (ctx, args): Promise<{ token: string; expiresAt: number }> => {
     // Check rate limit before attempting login
     const rateLimit = await ctx.runQuery(
       internal.authHelpers.checkLoginRateLimit,
-      { identifier: LOGIN_IDENTIFIER },
+      { identifier: LOGIN_IDENTIFIER }
     );
 
     if (!rateLimit.allowed) {
       const retryMinutes = Math.ceil(rateLimit.retryAfterMs / 60_000);
       throw new Error(
-        `Too many login attempts. Try again in ${retryMinutes} minute${retryMinutes === 1 ? "" : "s"}.`,
+        `Too many login attempts. Try again in ${retryMinutes} minute${retryMinutes === 1 ? "" : "s"}.`
       );
     }
 
@@ -32,7 +29,7 @@ export const login = action({
       internal.authHelpers.getSettingValue,
       {
         key: "auth_password_hash",
-      },
+      }
     )) as string | null;
 
     if (!storedHash) {
@@ -57,10 +54,12 @@ export const login = action({
       success: true,
     });
 
-    const result: { token: string; expiresAt: number } =
-      await ctx.runMutation(internal.authHelpers.createSession, {
+    const result: { token: string; expiresAt: number } = await ctx.runMutation(
+      internal.authHelpers.createSession,
+      {
         rememberMe: args.rememberMe,
-      });
+      }
+    );
 
     return result;
   },
@@ -76,7 +75,7 @@ export const changePassword = action({
       internal.authHelpers.getSettingValue,
       {
         key: "auth_password_hash",
-      },
+      }
     )) as string | null;
 
     if (!storedHash) {

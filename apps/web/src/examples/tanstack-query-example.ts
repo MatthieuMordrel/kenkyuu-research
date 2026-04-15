@@ -23,7 +23,8 @@ const postKeys = {
   list: (userId?: number) => [...postKeys.lists(), { userId }] as const,
   details: () => [...postKeys.all, "detail"] as const,
   detail: (id: number) => [...postKeys.details(), id] as const,
-  comments: (postId: number) => [...postKeys.detail(postId), "comments"] as const,
+  comments: (postId: number) =>
+    [...postKeys.detail(postId), "comments"] as const,
 };
 
 // Query Functions (private - not exported)

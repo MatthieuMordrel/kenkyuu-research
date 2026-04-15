@@ -100,7 +100,11 @@ function AppSidebar() {
                     : location.pathname.startsWith(item.to);
                 return (
                   <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.label}
+                    >
                       <Link to={item.to}>
                         <item.icon />
                         <span>{item.label}</span>
@@ -117,9 +121,14 @@ function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={toggle} tooltip={resolvedTheme === "dark" ? "Light mode" : "Dark mode"}>
+            <SidebarMenuButton
+              onClick={toggle}
+              tooltip={resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+            >
               {resolvedTheme === "dark" ? <Sun /> : <Moon />}
-              <span>{resolvedTheme === "dark" ? "Light mode" : "Dark mode"}</span>
+              <span>
+                {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -170,14 +179,15 @@ function SidebarActiveJobs() {
             const isRunning = job.status === "running";
             return (
               <SidebarMenuItem key={job._id}>
-                <SidebarMenuButton asChild tooltip={promptMap.get(job.promptId) ?? "Research Job"}>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={promptMap.get(job.promptId) ?? "Research Job"}
+                >
                   <Link to="/research">
                     <div
                       className={cn(
                         "flex size-4 shrink-0 items-center justify-center rounded-full",
-                        isRunning
-                          ? "text-primary"
-                          : "text-muted-foreground",
+                        isRunning ? "text-primary" : "text-muted-foreground"
                       )}
                     >
                       {isRunning ? (
@@ -191,14 +201,15 @@ function SidebarActiveJobs() {
                         {promptMap.get(job.promptId) ?? "Research Job"}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
-                        {job.stockIds.length} stock{job.stockIds.length !== 1 ? "s" : ""}{" "}
-                        · {formatRelativeTime(job.createdAt, now)}
+                        {job.stockIds.length} stock
+                        {job.stockIds.length !== 1 ? "s" : ""} ·{" "}
+                        {formatRelativeTime(job.createdAt, now)}
                       </p>
                     </div>
                     <span
                       className={cn(
                         "size-1.5 shrink-0 rounded-full",
-                        isRunning ? "bg-primary" : "bg-muted-foreground/50",
+                        isRunning ? "bg-primary" : "bg-muted-foreground/50"
                       )}
                     />
                   </Link>

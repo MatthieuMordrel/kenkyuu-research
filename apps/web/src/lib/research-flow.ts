@@ -25,7 +25,7 @@ interface ResearchFlowActions {
   /** Select a prompt and advance to the next step */
   selectPrompt: (
     promptId: GenericId<"prompts">,
-    promptType: "single-stock" | "multi-stock" | "discovery",
+    promptType: "single-stock" | "multi-stock" | "discovery"
   ) => void;
   /** Select stocks and advance to provider confirmation */
   selectStocks: (stockIds: GenericId<"stocks">[]) => void;
@@ -103,8 +103,7 @@ export const useResearchFlowStore = create<ResearchFlowStore>()((set, get) => ({
 }));
 
 // Atomic selectors
-export const useResearchFlowStep = () =>
-  useResearchFlowStore((s) => s.step);
+export const useResearchFlowStep = () => useResearchFlowStore((s) => s.step);
 export const useResearchFlowIsOpen = () =>
   useResearchFlowStore((s) => s.isOpen);
 export const useResearchFlowPromptId = () =>
@@ -128,5 +127,5 @@ export const useResearchFlowActions = () =>
       markExecuting: s.markExecuting,
       back: s.back,
       reset: s.reset,
-    })),
+    }))
   );

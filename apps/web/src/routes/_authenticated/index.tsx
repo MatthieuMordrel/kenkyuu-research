@@ -199,7 +199,11 @@ function QuickActions() {
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" size="sm" onClick={quickActions.startNewResearch}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={quickActions.startNewResearch}
+      >
         <FlaskConical className="mr-1.5 size-4" />
         New Research
       </Button>
@@ -403,7 +407,7 @@ function UpcomingSchedulesCard() {
                           day: "numeric",
                           hour: "numeric",
                           minute: "2-digit",
-                        },
+                        }
                       )}
                     </span>
                     {schedule.timezone && <span>{schedule.timezone}</span>}

@@ -52,7 +52,11 @@ const INITIAL_FORM: PromptFormData = {
   template: "",
 };
 
-const TYPE_OPTIONS: { value: PromptType; label: string; description: string }[] = [
+const TYPE_OPTIONS: {
+  value: PromptType;
+  label: string;
+  description: string;
+}[] = [
   {
     value: "single-stock",
     label: "Single Stock",
@@ -113,7 +117,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
 
   function updateField<K extends keyof PromptFormData>(
     field: K,
-    value: PromptFormData[K],
+    value: PromptFormData[K]
   ) {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field as keyof PromptFormErrors]) {
@@ -123,12 +127,12 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
 
   const previewText = useMemo(
     () => injectVariables(form.template),
-    [form.template],
+    [form.template]
   );
 
   const usedVariables = useMemo(
     () => extractVariables(form.template),
-    [form.template],
+    [form.template]
   );
 
   const availableVariables = getPromptVariables();
@@ -161,9 +165,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
       }
       onOpenChange(false);
     } catch (err) {
-      setSubmitError(
-        err instanceof Error ? err.message : "An error occurred",
-      );
+      setSubmitError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -224,7 +226,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
                     "flex flex-col items-start gap-0.5 rounded-md border p-3 text-left transition-colors",
                     form.type === option.value
                       ? "border-primary bg-primary/5"
-                      : "border-border hover:bg-accent",
+                      : "border-border hover:bg-accent"
                   )}
                 >
                   <span className="text-sm font-medium">{option.label}</span>
@@ -247,7 +249,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
                     "rounded px-2.5 py-1 text-xs font-medium transition-colors",
                     !showPreview
                       ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   Edit
@@ -259,7 +261,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
                     "flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors",
                     showPreview
                       ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <Eye className="size-3" />
@@ -274,7 +276,9 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
                 {availableVariables.map((v) => (
                   <Badge
                     key={v.name}
-                    variant={usedVariables.includes(v.name) ? "default" : "outline"}
+                    variant={
+                      usedVariables.includes(v.name) ? "default" : "outline"
+                    }
                     className="text-[10px] px-1.5 py-0 cursor-help"
                     title={v.description}
                   >

@@ -22,7 +22,7 @@ export function PromptStep({
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.description?.toLowerCase().includes(q) ||
-        p.type.toLowerCase().includes(q),
+        p.type.toLowerCase().includes(q)
     );
   }, [prompts, promptSearch]);
 
@@ -73,26 +73,33 @@ export function PromptStep({
                     "flex items-start gap-3 rounded-lg border p-3 text-left transition-all",
                     isSelected
                       ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                      : "border-border hover:border-foreground/20 hover:bg-accent/50",
+                      : "border-border hover:border-foreground/20 hover:bg-accent/50"
                   )}
                 >
-                  <span className={cn(
-                    "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                    isSelected
-                      ? "border-primary"
-                      : "border-muted-foreground/30",
-                  )}>
+                  <span
+                    className={cn(
+                      "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                      isSelected
+                        ? "border-primary"
+                        : "border-muted-foreground/30"
+                    )}
+                  >
                     {isSelected && (
                       <span className="size-2 rounded-full bg-primary" />
                     )}
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate">{prompt.name}</span>
+                      <span className="text-sm font-medium truncate">
+                        {prompt.name}
+                      </span>
                       {typeConfig && (
                         <Badge
                           variant="outline"
-                          className={cn("shrink-0 text-[10px] px-1.5 py-0", typeConfig.className)}
+                          className={cn(
+                            "shrink-0 text-[10px] px-1.5 py-0",
+                            typeConfig.className
+                          )}
                         >
                           {typeConfig.label}
                         </Badge>

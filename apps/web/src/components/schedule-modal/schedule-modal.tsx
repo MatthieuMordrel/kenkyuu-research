@@ -107,7 +107,10 @@ export function ScheduleModal({
         }
       }
 
-      if (selectedPromptType === "discovery" && next.triggerType === "earnings") {
+      if (
+        selectedPromptType === "discovery" &&
+        next.triggerType === "earnings"
+      ) {
         next = { ...next, triggerType: "cron" };
       }
 
@@ -124,7 +127,9 @@ export function ScheduleModal({
   useEffect(() => {
     if (open) {
       if (schedule) {
-        const triggerType = (schedule.triggerType ?? "cron") as "cron" | "earnings";
+        const triggerType = (schedule.triggerType ?? "cron") as
+          | "cron"
+          | "earnings";
         setForm({
           name: schedule.name,
           promptId: schedule.promptId,
@@ -132,13 +137,16 @@ export function ScheduleModal({
           triggerType,
           cron: schedule.cron ?? "@daily",
           earningsConfig: schedule.earningsConfig
-            ? { ...schedule.earningsConfig, earningsMode: schedule.earningsConfig.earningsMode ?? "each" }
+            ? {
+                ...schedule.earningsConfig,
+                earningsMode: schedule.earningsConfig.earningsMode ?? "each",
+              }
             : { ...INITIAL_FORM.earningsConfig },
           timezone: schedule.timezone ?? "America/New_York",
         });
         if (triggerType === "cron") {
           const isPreset = FREQUENCY_PRESETS.some(
-            (p) => p.value === schedule.cron,
+            (p) => p.value === schedule.cron
           );
           setFrequencyMode(isPreset ? (schedule.cron ?? "@daily") : "custom");
         }
@@ -156,7 +164,7 @@ export function ScheduleModal({
 
   function updateField<K extends keyof ScheduleFormData>(
     field: K,
-    value: ScheduleFormData[K],
+    value: ScheduleFormData[K]
   ) {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field as keyof ScheduleFormErrors]) {
@@ -165,7 +173,7 @@ export function ScheduleModal({
   }
 
   function updateStockSelection(
-    updates: Partial<ScheduleFormData["stockSelection"]>,
+    updates: Partial<ScheduleFormData["stockSelection"]>
   ) {
     setForm((prev) => ({
       ...prev,
@@ -221,12 +229,18 @@ export function ScheduleModal({
       }
     } else if (step === "stocks") {
       if (form.stockSelection.type === "tagged") {
-        if (!form.stockSelection.tags || form.stockSelection.tags.length === 0) {
+        if (
+          !form.stockSelection.tags ||
+          form.stockSelection.tags.length === 0
+        ) {
           stepErrors.stockSelection = "Select at least one tag";
         }
       }
       if (form.stockSelection.type === "specific") {
-        if (!form.stockSelection.stockIds || form.stockSelection.stockIds.length === 0) {
+        if (
+          !form.stockSelection.stockIds ||
+          form.stockSelection.stockIds.length === 0
+        ) {
           stepErrors.stockSelection = "Select at least one stock";
         }
       }
@@ -262,12 +276,13 @@ export function ScheduleModal({
       const autoName = generateScheduleName(
         selectedPrompt?.name ?? "Untitled",
         form.stockSelection,
-        stocks ?? undefined,
+        stocks ?? undefined
       );
       const commonFields = {
         name: autoName,
         promptId: form.promptId as Id<"prompts">,
-        stockSelection: form.stockSelection as Doc<"schedules">["stockSelection"],
+        stockSelection:
+          form.stockSelection as Doc<"schedules">["stockSelection"],
         enabled: true,
         triggerType: form.triggerType as "cron" | "earnings",
         ...(form.triggerType === "cron" ? { timezone: form.timezone } : {}),
@@ -293,9 +308,7 @@ export function ScheduleModal({
       }
       onOpenChange(false);
     } catch (err) {
-      setSubmitError(
-        err instanceof Error ? err.message : "An error occurred",
-      );
+      setSubmitError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -340,26 +353,30 @@ export function ScheduleModal({
                         ? "bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer"
                         : isSkipped
                           ? "bg-muted/50 text-muted-foreground/50 line-through"
-                          : "bg-muted text-muted-foreground",
+                          : "bg-muted text-muted-foreground"
                   )}
                 >
-                  <span className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
-                    isActive
-                      ? "bg-primary-foreground/20 text-primary-foreground"
-                      : isCompleted
-                        ? "bg-primary/20 text-primary"
-                        : "bg-foreground/10 text-muted-foreground",
-                  )}>
+                  <span
+                    className={cn(
+                      "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                      isActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : isCompleted
+                          ? "bg-primary/20 text-primary"
+                          : "bg-foreground/10 text-muted-foreground"
+                    )}
+                  >
                     {isCompleted ? "✓" : i + 1}
                   </span>
                   {s.label}
                 </button>
                 {i < WIZARD_STEPS.length - 1 && (
-                  <div className={cn(
-                    "h-px flex-1",
-                    i < stepIndex ? "bg-primary/30" : "bg-border",
-                  )} />
+                  <div
+                    className={cn(
+                      "h-px flex-1",
+                      i < stepIndex ? "bg-primary/30" : "bg-border"
+                    )}
+                  />
                 )}
               </div>
             );

@@ -10,17 +10,14 @@ export const sendTelegramMessage = internalAction({
   args: {
     text: v.string(),
   },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ sent: boolean; reason?: string }> => {
+  handler: async (ctx, args): Promise<{ sent: boolean; reason?: string }> => {
     const botToken: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "telegram_bot_token" },
+      { key: "telegram_bot_token" }
     );
     const chatId: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "telegram_chat_id" },
+      { key: "telegram_chat_id" }
     );
 
     if (!botToken || !chatId) {
@@ -64,17 +61,14 @@ export const sendEmail = internalAction({
     subject: v.string(),
     html: v.string(),
   },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ sent: boolean; reason?: string }> => {
+  handler: async (ctx, args): Promise<{ sent: boolean; reason?: string }> => {
     const apiKey: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "resend_api_key" },
+      { key: "resend_api_key" }
     );
     const toEmail: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "notification_email" },
+      { key: "notification_email" }
     );
 
     if (!apiKey || !toEmail) {
@@ -89,7 +83,8 @@ export const sendEmail = internalAction({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM ?? "KenkyuStock <notifications@mordrel.pro>",
+        from:
+          process.env.EMAIL_FROM ?? "KenkyuStock <notifications@mordrel.pro>",
         to: [toEmail],
         subject: args.subject,
         html: args.html,
@@ -143,21 +138,35 @@ function buildResearchEmailHtml(opts: {
 
   const metaRows: string[] = [];
   if (opts.costUsd !== undefined) {
-    metaRows.push(`<td style="padding:4px 12px 4px 0;color:#6b7280;">Cost</td><td style="padding:4px 0;font-weight:500;">$${opts.costUsd.toFixed(2)}</td>`);
+    metaRows.push(
+      `<td style="padding:4px 12px 4px 0;color:#6b7280;">Cost</td><td style="padding:4px 0;font-weight:500;">$${opts.costUsd.toFixed(2)}</td>`
+    );
   }
   if (opts.durationMs !== undefined) {
-    metaRows.push(`<td style="padding:4px 12px 4px 0;color:#6b7280;">Duration</td><td style="padding:4px 0;font-weight:500;">${formatDuration(opts.durationMs)}</td>`);
+    metaRows.push(
+      `<td style="padding:4px 12px 4px 0;color:#6b7280;">Duration</td><td style="padding:4px 0;font-weight:500;">${formatDuration(opts.durationMs)}</td>`
+    );
   }
   if (opts.createdAt) {
     const d = new Date(opts.createdAt);
-    const dateStr = d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-    const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-    metaRows.push(`<td style="padding:4px 12px 4px 0;color:#6b7280;">Date</td><td style="padding:4px 0;font-weight:500;">${escapeHtml(dateStr)} at ${escapeHtml(timeStr)}</td>`);
+    const dateStr = d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+    const timeStr = d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    metaRows.push(
+      `<td style="padding:4px 12px 4px 0;color:#6b7280;">Date</td><td style="padding:4px 0;font-weight:500;">${escapeHtml(dateStr)} at ${escapeHtml(timeStr)}</td>`
+    );
   }
 
-  const metaTable = metaRows.length > 0
-    ? `<table style="border-collapse:collapse;font-size:14px;margin:16px 0;">${metaRows.map((r) => `<tr>${r}</tr>`).join("")}</table>`
-    : "";
+  const metaTable =
+    metaRows.length > 0
+      ? `<table style="border-collapse:collapse;font-size:14px;margin:16px 0;">${metaRows.map((r) => `<tr>${r}</tr>`).join("")}</table>`
+      : "";
 
   const errorBlock = opts.error
     ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin:16px 0;font-size:14px;color:#991b1b;">${escapeHtml(opts.error)}</div>`
@@ -231,27 +240,25 @@ export const dispatchJobNotification = internalAction({
     // Check enabled channels
     const telegramEnabled: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "notification_telegram_enabled" },
+      { key: "notification_telegram_enabled" }
     );
     const emailEnabled: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "notification_email_enabled" },
+      { key: "notification_email_enabled" }
     );
 
     // Resolve stock names for the message
     const stocks = await Promise.all(
       job.stockIds.map((id) =>
-        ctx.runQuery(internal.researchJobs.getStockInternal, { id }),
-      ),
+        ctx.runQuery(internal.researchJobs.getStockInternal, { id })
+      )
     );
     const stockTickers = stocks
       .filter((s): s is NonNullable<typeof s> => s !== null)
       .map((s) => s.ticker);
 
     const stockLabel =
-      stockTickers.length > 0
-        ? stockTickers.join(", ")
-        : "Discovery research";
+      stockTickers.length > 0 ? stockTickers.join(", ") : "Discovery research";
 
     // Build notification content
     const isCompleted = job.status === "completed";
@@ -268,9 +275,7 @@ export const dispatchJobNotification = internalAction({
     }
 
     const costLine =
-      job.costUsd !== undefined
-        ? `\nCost: $${job.costUsd.toFixed(2)}`
-        : "";
+      job.costUsd !== undefined ? `\nCost: $${job.costUsd.toFixed(2)}` : "";
 
     // --- Telegram ---
     if (telegramEnabled === "true") {
@@ -293,7 +298,7 @@ export const dispatchJobNotification = internalAction({
       // Build link to the research detail page (app_url is auto-synced by the frontend)
       const appUrl: string | null = await ctx.runQuery(
         internal.authHelpers.getSettingValue,
-        { key: "app_url" },
+        { key: "app_url" }
       );
       const viewUrl = appUrl
         ? `${appUrl.replace(/\/+$/, "")}/research/${args.jobId}`
@@ -341,11 +346,11 @@ export const dispatchBatchNotification = internalAction({
     // Fetch all jobs
     const jobs = await Promise.all(
       args.jobIds.map((id) =>
-        ctx.runQuery(internal.researchJobs.getJobInternal, { id }),
-      ),
+        ctx.runQuery(internal.researchJobs.getJobInternal, { id })
+      )
     );
     const validJobs = jobs.filter(
-      (j): j is NonNullable<typeof j> => j !== null,
+      (j): j is NonNullable<typeof j> => j !== null
     );
 
     const completed = validJobs.filter((j) => j.status === "completed");
@@ -354,11 +359,11 @@ export const dispatchBatchNotification = internalAction({
     // Check enabled channels
     const telegramEnabled: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "notification_telegram_enabled" },
+      { key: "notification_telegram_enabled" }
     );
     const emailEnabled: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "notification_email_enabled" },
+      { key: "notification_email_enabled" }
     );
 
     const lines: string[] = [
@@ -366,13 +371,9 @@ export const dispatchBatchNotification = internalAction({
     ];
     if (completed.length > 0)
       lines.push(`\u2705 ${completed.length} completed`);
-    if (failed.length > 0)
-      lines.push(`\u274c ${failed.length} failed`);
+    if (failed.length > 0) lines.push(`\u274c ${failed.length} failed`);
 
-    const totalCost = validJobs.reduce(
-      (sum, j) => sum + (j.costUsd ?? 0),
-      0,
-    );
+    const totalCost = validJobs.reduce((sum, j) => sum + (j.costUsd ?? 0), 0);
     if (totalCost > 0) lines.push(`Total cost: $${totalCost.toFixed(2)}`);
 
     const text = lines.join("\n");
@@ -386,36 +387,45 @@ export const dispatchBatchNotification = internalAction({
     if (emailEnabled === "true") {
       const appUrl: string | null = await ctx.runQuery(
         internal.authHelpers.getSettingValue,
-        { key: "app_url" },
+        { key: "app_url" }
       );
       const baseUrl = appUrl ? appUrl.replace(/\/+$/, "") : undefined;
 
       const totalDuration = validJobs.reduce(
         (sum, j) => sum + (j.durationMs ?? 0),
-        0,
+        0
       );
 
       const metaRows: string[] = [];
       if (totalCost > 0) {
-        metaRows.push(`<td style="padding:4px 12px 4px 0;color:#6b7280;">Total Cost</td><td style="padding:4px 0;font-weight:500;">$${totalCost.toFixed(2)}</td>`);
+        metaRows.push(
+          `<td style="padding:4px 12px 4px 0;color:#6b7280;">Total Cost</td><td style="padding:4px 0;font-weight:500;">$${totalCost.toFixed(2)}</td>`
+        );
       }
       if (totalDuration > 0) {
-        metaRows.push(`<td style="padding:4px 12px 4px 0;color:#6b7280;">Total Duration</td><td style="padding:4px 0;font-weight:500;">${formatDuration(totalDuration)}</td>`);
+        metaRows.push(
+          `<td style="padding:4px 12px 4px 0;color:#6b7280;">Total Duration</td><td style="padding:4px 0;font-weight:500;">${formatDuration(totalDuration)}</td>`
+        );
       }
-      const metaTable = metaRows.length > 0
-        ? `<table style="border-collapse:collapse;font-size:14px;margin:16px 0;">${metaRows.map((r) => `<tr>${r}</tr>`).join("")}</table>`
-        : "";
+      const metaTable =
+        metaRows.length > 0
+          ? `<table style="border-collapse:collapse;font-size:14px;margin:16px 0;">${metaRows.map((r) => `<tr>${r}</tr>`).join("")}</table>`
+          : "";
 
-      const jobRows = validJobs.map((j) => {
-        const emoji = j.status === "completed" ? "\u2705" : "\u274c";
-        const link = baseUrl ? `<a href="${baseUrl}/research/${j._id}" style="color:#2563eb;text-decoration:none;">View</a>` : "";
-        return `<tr>
+      const jobRows = validJobs
+        .map((j) => {
+          const emoji = j.status === "completed" ? "\u2705" : "\u274c";
+          const link = baseUrl
+            ? `<a href="${baseUrl}/research/${j._id}" style="color:#2563eb;text-decoration:none;">View</a>`
+            : "";
+          return `<tr>
           <td style="padding:8px 12px 8px 0;border-bottom:1px solid #f3f4f6;">${emoji}</td>
           <td style="padding:8px 12px 8px 0;border-bottom:1px solid #f3f4f6;font-weight:500;">${escapeHtml(j.status)}</td>
           <td style="padding:8px 12px 8px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;">${j.costUsd !== undefined ? "$" + j.costUsd.toFixed(2) : "—"}</td>
           <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;">${link}</td>
         </tr>`;
-      }).join("");
+        })
+        .join("");
 
       const html = `
 <!DOCTYPE html>
@@ -448,9 +458,13 @@ export const dispatchBatchNotification = internalAction({
           </tr></thead>
           <tbody>${jobRows}</tbody>
         </table>
-        ${baseUrl ? `<div style="margin:24px 0 0;text-align:center;">
+        ${
+          baseUrl
+            ? `<div style="margin:24px 0 0;text-align:center;">
           <a href="${baseUrl}/research" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:8px;font-weight:600;font-size:14px;">View All Research</a>
-        </div>` : ""}
+        </div>`
+            : ""
+        }
       </div>
     </div>
     <div style="text-align:center;padding-top:20px;font-size:12px;color:#9ca3af;">
@@ -474,11 +488,11 @@ export const detectTelegramChatId = action({
   args: { token: v.string() },
   handler: async (
     ctx,
-    args,
+    args
   ): Promise<{ found: boolean; chatId?: string; reason?: string }> => {
     const session = await ctx.runQuery(
       internal.authHelpers.validateSessionInternal,
-      { token: args.token },
+      { token: args.token }
     );
     if (!session.valid) {
       throw new Error("Unauthorized");
@@ -486,7 +500,7 @@ export const detectTelegramChatId = action({
 
     const botToken: string | null = await ctx.runQuery(
       internal.authHelpers.getSettingValue,
-      { key: "telegram_bot_token" },
+      { key: "telegram_bot_token" }
     );
 
     if (!botToken) {
@@ -538,13 +552,10 @@ export const detectTelegramChatId = action({
 
 export const sendTestTelegram = action({
   args: { token: v.string() },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ sent: boolean; reason?: string }> => {
+  handler: async (ctx, args): Promise<{ sent: boolean; reason?: string }> => {
     const session = await ctx.runQuery(
       internal.authHelpers.validateSessionInternal,
-      { token: args.token },
+      { token: args.token }
     );
     if (!session.valid) {
       throw new Error("Unauthorized");
@@ -560,14 +571,11 @@ export const sendTestTelegram = action({
 
 export const sendTestEmail = action({
   args: { token: v.string() },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ sent: boolean; reason?: string }> => {
+  handler: async (ctx, args): Promise<{ sent: boolean; reason?: string }> => {
     // Validate session
     const session = await ctx.runQuery(
       internal.authHelpers.validateSessionInternal,
-      { token: args.token },
+      { token: args.token }
     );
     if (!session.valid) {
       throw new Error("Unauthorized");

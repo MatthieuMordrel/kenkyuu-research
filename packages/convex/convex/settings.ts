@@ -4,9 +4,7 @@ import { requireAuth } from "./authHelpers";
 import { validateSettingInput } from "./validation";
 import { logAuditEvent } from "./auditLog";
 
-const PROTECTED_SETTING_KEYS = new Set([
-  "auth_password_hash",
-]);
+const PROTECTED_SETTING_KEYS = new Set(["auth_password_hash"]);
 
 export const getSetting = query({
   args: { key: v.string(), token: v.optional(v.string()) },
@@ -42,7 +40,11 @@ export const upsertSetting = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, { value: args.value });
-      await logAuditEvent(ctx, { action: "settings.update", resourceType: "settings", details: args.key });
+      await logAuditEvent(ctx, {
+        action: "settings.update",
+        resourceType: "settings",
+        details: args.key,
+      });
       return existing._id;
     }
 
@@ -50,7 +52,11 @@ export const upsertSetting = mutation({
       key: args.key,
       value: args.value,
     });
-    await logAuditEvent(ctx, { action: "settings.create", resourceType: "settings", details: args.key });
+    await logAuditEvent(ctx, {
+      action: "settings.create",
+      resourceType: "settings",
+      details: args.key,
+    });
     return id;
   },
 });

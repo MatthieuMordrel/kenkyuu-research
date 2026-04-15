@@ -15,7 +15,8 @@ export function StockStep({
     <div className="flex flex-col gap-3">
       {isSingleStock && (
         <p className="text-xs text-muted-foreground">
-          This prompt analyzes one stock at a time. When multiple stocks are selected, it will run once per stock.
+          This prompt analyzes one stock at a time. When multiple stocks are
+          selected, it will run once per stock.
         </p>
       )}
 
@@ -27,15 +28,21 @@ export function StockStep({
             onClick={() =>
               updateStockSelection({
                 type: option.value,
-                tags: option.value === "tagged" ? (form.stockSelection.tags ?? []) : undefined,
-                stockIds: option.value === "specific" ? (form.stockSelection.stockIds ?? []) : undefined,
+                tags:
+                  option.value === "tagged"
+                    ? (form.stockSelection.tags ?? [])
+                    : undefined,
+                stockIds:
+                  option.value === "specific"
+                    ? (form.stockSelection.stockIds ?? [])
+                    : undefined,
               })
             }
             className={cn(
               "flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left transition-all",
               form.stockSelection.type === option.value
                 ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                : "border-border hover:border-foreground/20 hover:bg-accent/50",
+                : "border-border hover:border-foreground/20 hover:bg-accent/50"
             )}
           >
             <span className="text-sm font-medium">{option.label}</span>
@@ -54,7 +61,8 @@ export function StockStep({
             <span className="font-medium text-foreground">
               {stocks?.length ?? "..."}
             </span>{" "}
-            stocks in your database.{isSingleStock && " One job will be created per stock."}
+            stocks in your database.
+            {isSingleStock && " One job will be created per stock."}
           </p>
         </div>
       )}
@@ -66,7 +74,8 @@ export function StockStep({
           {tags && tags.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => {
-                const selected = form.stockSelection.tags?.includes(tag) ?? false;
+                const selected =
+                  form.stockSelection.tags?.includes(tag) ?? false;
                 return (
                   <button
                     key={tag}
@@ -76,7 +85,7 @@ export function StockStep({
                       "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
                       selected
                         ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background text-foreground hover:bg-accent",
+                        : "border-border bg-background text-foreground hover:bg-accent"
                     )}
                   >
                     {tag}
@@ -99,7 +108,8 @@ export function StockStep({
           {stocks && stocks.length > 0 ? (
             <div className="flex flex-col gap-1">
               {stocks.map((stock) => {
-                const selected = form.stockSelection.stockIds?.includes(stock._id) ?? false;
+                const selected =
+                  form.stockSelection.stockIds?.includes(stock._id) ?? false;
                 return (
                   <button
                     key={stock._id}
@@ -109,7 +119,7 @@ export function StockStep({
                       "flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-all",
                       selected
                         ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                        : "border-border hover:border-foreground/20 hover:bg-accent/50",
+                        : "border-border hover:border-foreground/20 hover:bg-accent/50"
                     )}
                   >
                     <span
@@ -117,7 +127,7 @@ export function StockStep({
                         "flex size-4 shrink-0 items-center justify-center rounded border text-[10px] transition-colors",
                         selected
                           ? "border-primary bg-primary text-primary-foreground"
-                          : "border-muted-foreground/30",
+                          : "border-muted-foreground/30"
                       )}
                     >
                       {selected && "✓"}

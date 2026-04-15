@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { useActiveJobs, useCancelJob, useRetryJob, useCheckJobHealth } from "@/hooks/use-research";
+import {
+  useActiveJobs,
+  useCancelJob,
+  useRetryJob,
+  useCheckJobHealth,
+} from "@/hooks/use-research";
 import { usePrompts } from "@/hooks/use-prompts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +46,11 @@ interface HealthCheckResult {
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+    icon: typeof Clock;
+  }
 > = {
   pending: { label: "Pending", variant: "outline", icon: Clock },
   running: { label: "Running", variant: "default", icon: Loader2 },
@@ -178,7 +187,7 @@ function JobCard({
   const [retrying, setRetrying] = useState(false);
   const [checking, setChecking] = useState(false);
   const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(
-    null,
+    null
   );
   const now = useNow(1_000);
 
@@ -231,7 +240,7 @@ function JobCard({
           <div
             className={cn(
               "flex size-8 shrink-0 items-center justify-center rounded-md",
-              job.status === "running" ? "bg-primary/10" : "bg-muted",
+              job.status === "running" ? "bg-primary/10" : "bg-muted"
             )}
           >
             <StatusIcon
@@ -239,7 +248,7 @@ function JobCard({
                 "size-4",
                 job.status === "running"
                   ? "animate-spin text-primary"
-                  : "text-muted-foreground",
+                  : "text-muted-foreground"
               )}
             />
           </div>

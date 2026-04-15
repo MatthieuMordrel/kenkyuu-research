@@ -28,27 +28,33 @@ export function useStocks(options: UseStocksOptions = {}) {
             sortOrder,
             token,
           }
-        : "skip",
-    ),
+        : "skip"
+    )
   );
   return data;
 }
 
 export function useStock(id: GenericId<"stocks">) {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.stocks.getStock, token ? { id, token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.stocks.getStock, token ? { id, token } : "skip")
+  );
   return data;
 }
 
 export function useStockByTicker(ticker: string) {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.stocks.getStockByTicker, token ? { ticker, token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.stocks.getStockByTicker, token ? { ticker, token } : "skip")
+  );
   return data;
 }
 
 export function useTags() {
   const token = useAuthToken();
-  const { data } = useQuery(convexQuery(api.stocks.listTags, token ? { token } : "skip"));
+  const { data } = useQuery(
+    convexQuery(api.stocks.listTags, token ? { token } : "skip")
+  );
   return data;
 }
 
@@ -60,7 +66,7 @@ export function useAddStock() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -70,7 +76,7 @@ export function useUpdateStock() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }
 
@@ -80,6 +86,6 @@ export function useDeleteStock() {
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
-    [mutation, token],
+    [mutation, token]
   );
 }

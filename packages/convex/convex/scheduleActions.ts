@@ -12,7 +12,11 @@ import type { Id } from "./_generated/dataModel";
  * Also supports preset aliases: @daily, @weekly, @monthly, @hourly
  */
 /** @internal Exported for testing */
-export function computeNextRunAt(cronExpr: string, timezone: string, afterMs: number): number {
+export function computeNextRunAt(
+  cronExpr: string,
+  timezone: string,
+  afterMs: number
+): number {
   const parsed = parseCron(cronExpr);
   const after = new Date(afterMs);
 
@@ -51,7 +55,9 @@ export interface CronFields {
   dayOfWeek: FieldSpec;
 }
 
-export type FieldSpec = { type: "any" } | { type: "values"; values: Set<number> };
+export type FieldSpec =
+  | { type: "any" }
+  | { type: "values"; values: Set<number> };
 
 /** @internal Exported for testing */
 export function parseCron(expr: string): CronFields {
@@ -72,7 +78,9 @@ export function parseCron(expr: string): CronFields {
 
   const parts = trimmed.split(/\s+/);
   if (parts.length !== 5) {
-    throw new Error(`Invalid cron expression: expected 5 fields, got ${parts.length}`);
+    throw new Error(
+      `Invalid cron expression: expected 5 fields, got ${parts.length}`
+    );
   }
 
   return {
@@ -106,7 +114,9 @@ export function parseField(field: string, min: number, max: number): FieldSpec {
 
       if (rangeStr !== "*") {
         if (rangeStr!.includes("-")) {
-          const [rStart, rEnd] = rangeStr!.split("-").map((s) => Number.parseInt(s, 10));
+          const [rStart, rEnd] = rangeStr!
+            .split("-")
+            .map((s) => Number.parseInt(s, 10));
           start = rStart!;
           end = rEnd!;
         } else {
@@ -118,7 +128,9 @@ export function parseField(field: string, min: number, max: number): FieldSpec {
         values.add(i);
       }
     } else if (segment.includes("-")) {
-      const [start, end] = segment.split("-").map((s) => Number.parseInt(s, 10));
+      const [start, end] = segment
+        .split("-")
+        .map((s) => Number.parseInt(s, 10));
       for (let i = start!; i <= end!; i++) {
         values.add(i);
       }
@@ -165,7 +177,13 @@ function getDatePartsInTimezone(date: Date, timezone: string): TzDateParts {
 
   const weekdayStr = parts.find((p) => p.type === "weekday")?.value ?? "Sun";
   const weekdayMap: Record<string, number> = {
-    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
   };
 
   return {
@@ -178,13 +196,16 @@ function getDatePartsInTimezone(date: Date, timezone: string): TzDateParts {
   };
 }
 
-function getUtcTimestampFromTzParts(parts: TzDateParts, timezone: string): number {
+function getUtcTimestampFromTzParts(
+  parts: TzDateParts,
+  timezone: string
+): number {
   const isoStr = `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.dayOfMonth).padStart(2, "0")}T${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}:00`;
 
   const roughUtc = new Date(isoStr + "Z").getTime();
   const roughParts = getDatePartsInTimezone(new Date(roughUtc), timezone);
   const roughOffsetMinutes =
-    (roughParts.hour * 60 + roughParts.minute) - (parts.hour * 60 + parts.minute);
+    roughParts.hour * 60 + roughParts.minute - (parts.hour * 60 + parts.minute);
 
   return roughUtc - roughOffsetMinutes * 60 * 1000;
 }
@@ -198,9 +219,12 @@ export const executeRunNow = internalAction({
     scheduleId: v.id("schedules"),
   },
   handler: async (ctx, args): Promise<void> => {
-    const schedule = await ctx.runQuery(internal.schedules.getScheduleInternal, {
-      id: args.scheduleId,
-    });
+    const schedule = await ctx.runQuery(
+      internal.schedules.getScheduleInternal,
+      {
+        id: args.scheduleId,
+      }
+    );
     if (!schedule) return;
 
     // Resolve stock IDs based on stock selection mode
@@ -211,10 +235,16 @@ export const executeRunNow = internalAction({
     } else if (schedule.stockSelection.type === "specific") {
       stockIds = (schedule.stockSelection.stockIds ?? []) as Id<"stocks">[];
     } else {
-      const allStocks = await ctx.runQuery(internal.schedules.listStocksInternal, {});
+      const allStocks = await ctx.runQuery(
+        internal.schedules.listStocksInternal,
+        {}
+      );
       if (schedule.stockSelection.type === "all") {
         stockIds = allStocks.map((s) => s._id);
-      } else if (schedule.stockSelection.type === "tagged" && schedule.stockSelection.tags) {
+      } else if (
+        schedule.stockSelection.type === "tagged" &&
+        schedule.stockSelection.tags
+      ) {
         const tagSet = new Set(schedule.stockSelection.tags);
         stockIds = allStocks
           .filter((s) => s.tags.some((t: string) => tagSet.has(t)))
@@ -240,8 +270,11 @@ export const executeRunNow = internalAction({
               scheduleId: args.scheduleId,
             });
           } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "Unknown error";
-            console.error(`Run Now failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`);
+            const message =
+              error instanceof Error ? error.message : "Unknown error";
+            console.error(
+              `Run Now failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`
+            );
             if (message.includes("concurrent jobs")) break;
           }
         }
@@ -255,7 +288,9 @@ export const executeRunNow = internalAction({
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(`Run Now failed for schedule ${args.scheduleId}: ${message}`);
+      console.error(
+        `Run Now failed for schedule ${args.scheduleId}: ${message}`
+      );
     }
 
     await ctx.runMutation(internal.schedules.updateScheduleNextRun, {
@@ -276,9 +311,12 @@ export const scheduleNextRun = internalAction({
     scheduleId: v.id("schedules"),
   },
   handler: async (ctx, args) => {
-    const schedule = await ctx.runQuery(internal.schedules.getScheduleInternal, {
-      id: args.scheduleId,
-    });
+    const schedule = await ctx.runQuery(
+      internal.schedules.getScheduleInternal,
+      {
+        id: args.scheduleId,
+      }
+    );
 
     if (!schedule || !schedule.enabled) {
       return;
@@ -290,7 +328,10 @@ export const scheduleNextRun = internalAction({
     }
 
     // Check global pause
-    const globalPaused = await ctx.runQuery(internal.schedules.getGlobalPauseStatusInternal, {});
+    const globalPaused = await ctx.runQuery(
+      internal.schedules.getGlobalPauseStatusInternal,
+      {}
+    );
     if (globalPaused) {
       return;
     }
@@ -300,14 +341,18 @@ export const scheduleNextRun = internalAction({
     if (!schedule.cron) {
       return;
     }
-    const nextRunAt = computeNextRunAt(schedule.cron, schedule.timezone ?? "UTC", now);
+    const nextRunAt = computeNextRunAt(
+      schedule.cron,
+      schedule.timezone ?? "UTC",
+      now
+    );
 
     // Schedule the execution action at that time
     const delayMs = Math.max(0, nextRunAt - now);
     const scheduledId = await ctx.scheduler.runAfter(
       delayMs,
       internal.scheduleActions.executeScheduledRun,
-      { scheduleId: args.scheduleId },
+      { scheduleId: args.scheduleId }
     );
 
     // Update the schedule with nextRunAt and the scheduled function ID
@@ -328,9 +373,12 @@ export const executeScheduledRun = internalAction({
     scheduleId: v.id("schedules"),
   },
   handler: async (ctx, args) => {
-    const schedule = await ctx.runQuery(internal.schedules.getScheduleInternal, {
-      id: args.scheduleId,
-    });
+    const schedule = await ctx.runQuery(
+      internal.schedules.getScheduleInternal,
+      {
+        id: args.scheduleId,
+      }
+    );
 
     if (!schedule || !schedule.enabled) {
       return;
@@ -342,7 +390,10 @@ export const executeScheduledRun = internalAction({
     }
 
     // Check global pause
-    const globalPaused = await ctx.runQuery(internal.schedules.getGlobalPauseStatusInternal, {});
+    const globalPaused = await ctx.runQuery(
+      internal.schedules.getGlobalPauseStatusInternal,
+      {}
+    );
     if (globalPaused) {
       return;
     }
@@ -356,11 +407,17 @@ export const executeScheduledRun = internalAction({
       stockIds = (schedule.stockSelection.stockIds ?? []) as Id<"stocks">[];
     } else {
       // For "all" and "tagged", fetch stocks
-      const allStocks = await ctx.runQuery(internal.schedules.listStocksInternal, {});
+      const allStocks = await ctx.runQuery(
+        internal.schedules.listStocksInternal,
+        {}
+      );
 
       if (schedule.stockSelection.type === "all") {
         stockIds = allStocks.map((s) => s._id);
-      } else if (schedule.stockSelection.type === "tagged" && schedule.stockSelection.tags) {
+      } else if (
+        schedule.stockSelection.type === "tagged" &&
+        schedule.stockSelection.tags
+      ) {
         const tagSet = new Set(schedule.stockSelection.tags);
         stockIds = allStocks
           .filter((s) => s.tags.some((t: string) => tagSet.has(t)))
@@ -387,8 +444,11 @@ export const executeScheduledRun = internalAction({
               scheduleId: args.scheduleId,
             });
           } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "Unknown error";
-            console.error(`Scheduled run failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`);
+            const message =
+              error instanceof Error ? error.message : "Unknown error";
+            console.error(
+              `Scheduled run failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`
+            );
             if (message.includes("concurrent jobs")) break;
           }
         }
@@ -402,7 +462,9 @@ export const executeScheduledRun = internalAction({
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(`Scheduled run failed for schedule ${args.scheduleId}: ${message}`);
+      console.error(
+        `Scheduled run failed for schedule ${args.scheduleId}: ${message}`
+      );
     }
 
     // Update lastRunAt
