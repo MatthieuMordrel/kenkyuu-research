@@ -70,13 +70,7 @@ function StocksPage() {
   const [editingStock, setEditingStock] = useState<Doc<"stocks"> | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Doc<"stocks"> | null>(null);
 
-  const backendSortBy = sortBy === "nextEarnings" ? undefined : sortBy;
-  const backendSortOrder = sortBy === "nextEarnings" ? undefined : sortOrder;
-  const allStocks = useStocks({
-    search,
-    sortBy: backendSortBy,
-    sortOrder: backendSortOrder,
-  });
+  const allStocks = useStocks({ search });
   const tags = useTags();
   const deleteStock = useDeleteStock();
   const earningsSummary = useEarningsSummary();
@@ -88,14 +82,25 @@ function StocksPage() {
     : undefined;
 
   const sortedStocks = useMemo(() => {
-    if (!stocks || sortBy !== "nextEarnings" || !earningsSummary) return stocks;
+    if (!stocks) return stocks;
     return [...stocks].sort((a, b) => {
-      const aDate = earningsSummary[a._id]?.next?.date ?? "";
-      const bDate = earningsSummary[b._id]?.next?.date ?? "";
-      if (!aDate && !bDate) return 0;
-      if (!aDate) return 1;
-      if (!bDate) return -1;
-      const cmp = aDate.localeCompare(bDate);
+      let cmp = 0;
+      if (sortBy === "nextEarnings") {
+        const aDate = earningsSummary?.[a._id]?.next?.date ?? "";
+        const bDate = earningsSummary?.[b._id]?.next?.date ?? "";
+        if (!aDate && !bDate) cmp = 0;
+        else if (!aDate) cmp = 1;
+        else if (!bDate) cmp = -1;
+        else cmp = aDate.localeCompare(bDate);
+      } else {
+        const aVal = a[sortBy];
+        const bVal = b[sortBy];
+        if (typeof aVal === "string" && typeof bVal === "string") {
+          cmp = aVal.localeCompare(bVal);
+        } else if (typeof aVal === "number" && typeof bVal === "number") {
+          cmp = aVal - bVal;
+        }
+      }
       return sortOrder === "asc" ? cmp : -cmp;
     });
   }, [stocks, sortBy, sortOrder, earningsSummary]);
