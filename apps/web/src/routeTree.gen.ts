@@ -272,7 +272,9 @@ const AuthenticatedResearchRouteChildren: AuthenticatedResearchRouteChildren = {
 }
 
 const AuthenticatedResearchRouteWithChildren =
-  AuthenticatedResearchRoute._addFileChildren(AuthenticatedResearchRouteChildren)
+  AuthenticatedResearchRoute._addFileChildren(
+    AuthenticatedResearchRouteChildren,
+  )
 
 interface AuthenticatedStocksRouteChildren {
   AuthenticatedStocksStockIdRoute: typeof AuthenticatedStocksStockIdRoute
