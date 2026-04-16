@@ -9,6 +9,7 @@ import { internal } from "./_generated/api";
 export const sendTelegramMessage = internalAction({
   args: {
     text: v.string(),
+    disablePreview: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<{ sent: boolean; reason?: string }> => {
     const botToken: string | null = await ctx.runQuery(
@@ -34,6 +35,7 @@ export const sendTelegramMessage = internalAction({
         chat_id: chatId,
         text: args.text,
         parse_mode: "Markdown",
+        disable_web_page_preview: args.disablePreview ?? false,
       }),
     });
 
@@ -112,6 +114,16 @@ export function escapeHtml(str: string): string {
 }
 
 // --- Email template helpers ---
+
+/**
+ * Sanitize untrusted text for Telegram's legacy Markdown parser.
+ * Classic "Markdown" parse_mode (unlike MarkdownV2) has no escape sequence,
+ * so any stray `*`, `_`, `` ` ``, or `[` in user-provided content (error
+ * messages, stock labels) can corrupt the rest of the message. We strip them.
+ */
+function sanitizeForTelegramMarkdown(str: string): string {
+  return str.replace(/[_*`[\]]/g, "");
+}
 
 function formatDuration(ms: number): string {
   if (ms >= 60000) {
@@ -265,45 +277,44 @@ export const dispatchJobNotification = internalAction({
     const statusEmoji = isCompleted ? "\u2705" : "\u274c";
     const statusText = isCompleted ? "completed" : "failed";
 
-    // Extract a brief summary for Telegram
-    let summary = "";
-    if (isCompleted && job.result) {
-      summary = job.result.substring(0, 300);
-      if (job.result.length > 300) summary += "...";
-    } else if (job.error) {
-      summary = `Error: ${job.error}`;
-    }
-
-    const costLine =
-      job.costUsd !== undefined ? `\nCost: $${job.costUsd.toFixed(2)}` : "";
+    // Link to the research detail page (shared by email + telegram;
+    // app_url is auto-synced by the frontend).
+    const appUrl: string | null = await ctx.runQuery(
+      internal.authHelpers.getSettingValue,
+      { key: "app_url" }
+    );
+    const viewUrl = appUrl
+      ? `${appUrl.replace(/\/+$/, "")}/research/${args.jobId}`
+      : undefined;
 
     // --- Telegram ---
     if (telegramEnabled === "true") {
-      const telegramText = [
-        `${statusEmoji} Research ${statusText}: ${stockLabel}`,
-        costLine,
+      const lines: string[] = [
+        `${statusEmoji} *Research ${statusText}*`,
         "",
-        summary,
-      ]
-        .filter(Boolean)
-        .join("\n");
+        `*Stocks:* ${sanitizeForTelegramMarkdown(stockLabel)}`,
+      ];
+      if (job.costUsd !== undefined) {
+        lines.push(`*Cost:* $${job.costUsd.toFixed(2)}`);
+      }
+      if (job.durationMs !== undefined) {
+        lines.push(`*Duration:* ${formatDuration(job.durationMs)}`);
+      }
+      if (!isCompleted && job.error) {
+        lines.push("", `Error: ${sanitizeForTelegramMarkdown(job.error)}`);
+      }
+      if (viewUrl) {
+        lines.push("", `[View Full Research](${viewUrl})`);
+      }
 
       await ctx.runAction(internal.notifications.sendTelegramMessage, {
-        text: telegramText,
+        text: lines.join("\n"),
+        disablePreview: true,
       });
     }
 
     // --- Email ---
     if (emailEnabled === "true") {
-      // Build link to the research detail page (app_url is auto-synced by the frontend)
-      const appUrl: string | null = await ctx.runQuery(
-        internal.authHelpers.getSettingValue,
-        { key: "app_url" }
-      );
-      const viewUrl = appUrl
-        ? `${appUrl.replace(/\/+$/, "")}/research/${args.jobId}`
-        : undefined;
-
       const subject = `${statusEmoji} Research ${statusText}: ${stockLabel}`;
       const html = buildResearchEmailHtml({
         statusText,
