@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { internalAction } from "./_generated/server";
+import { internalAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id, Doc } from "./_generated/dataModel";
 import { getMarketTimezone } from "./lib/exchangeTimezones";
@@ -48,9 +48,6 @@ function getCurrentReportingQuarter(today: string): {
   if (month <= 9) return { quarter: 2, year };
   return { quarter: 3, year };
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ActionCtx = any;
 
 /** Resolve all stock IDs from a schedule's stock selection */
 async function resolveSelectedStocks(

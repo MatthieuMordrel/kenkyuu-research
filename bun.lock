@@ -89,12 +89,12 @@
     },
   },
   "catalog": {
-    "@types/node": "^25.0.10",
-    "@types/react": "^19.2.9",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "convex": "^1.31.6",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
+    "convex": "^1.35.1",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "typescript": "^5.9.3",
   },
   "packages": {
