@@ -39,8 +39,15 @@ export interface ResearchProvider {
   readonly name: ProviderName;
   readonly completionMode: CompletionMode;
 
-  /** Submit a research prompt. Returns the provider-side job/response ID. */
-  start(prompt: string, apiKey: string): Promise<{ externalId: string }>;
+  /**
+   * Submit a research prompt.
+   * Returns the provider-side job/response ID and, when available, the exact
+   * prompt that was ultimately submitted after any provider-specific rewriting.
+   */
+  start(
+    prompt: string,
+    apiKey: string
+  ): Promise<{ externalId: string; submittedPrompt?: string }>;
 
   /** Check current status of a previously-started job. */
   poll(externalId: string, apiKey: string): Promise<PollResult>;

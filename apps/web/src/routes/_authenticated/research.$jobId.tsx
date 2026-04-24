@@ -274,7 +274,7 @@ function ResultDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <MarkdownRenderer content={job.result} />
+              <MarkdownRenderer content={job.result} collapsible={false} />
             </CardContent>
           </Card>
         )}

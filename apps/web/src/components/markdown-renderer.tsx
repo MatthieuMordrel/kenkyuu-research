@@ -119,13 +119,25 @@ function fixMarkdownTables(markdown: string): string {
   const lines = markdown.split("\n");
   const result: string[] = [];
   let i = 0;
+  let inFence = false;
 
   while (i < lines.length) {
+    if (isFenceDelimiter(lines[i])) {
+      inFence = !inFence;
+      result.push(lines[i]);
+      i++;
+      continue;
+    }
+
     // Detect start of a potential table: a line with at least two pipe characters
-    if (isPipeRow(lines[i])) {
+    if (!inFence && isPipeRow(lines[i])) {
       // Collect the full table block (consecutive pipe rows)
       const tableLines: string[] = [];
-      while (i < lines.length && isPipeRow(lines[i])) {
+      while (
+        i < lines.length &&
+        !isFenceDelimiter(lines[i]) &&
+        isPipeRow(lines[i])
+      ) {
         tableLines.push(lines[i]);
         i++;
       }
@@ -145,6 +157,10 @@ function fixMarkdownTables(markdown: string): string {
   }
 
   return result.join("\n");
+}
+
+function isFenceDelimiter(line: string): boolean {
+  return /^(```|~~~)/.test(line.trim());
 }
 
 function isPipeRow(line: string): boolean {
@@ -228,6 +244,7 @@ interface ParsedMarkdown {
 function parseSections(markdown: string): ParsedMarkdown {
   const lines = markdown.split("\n");
   let preamble = "";
+  let inFence = false;
 
   // First pass: collect flat sections
   interface FlatSection {
@@ -240,6 +257,25 @@ function parseSections(markdown: string): ParsedMarkdown {
   let current: FlatSection | null = null;
 
   for (const line of lines) {
+    if (isFenceDelimiter(line)) {
+      inFence = !inFence;
+      if (current) {
+        current.contentLines.push(line);
+      } else {
+        preamble += line + "\n";
+      }
+      continue;
+    }
+
+    if (inFence) {
+      if (current) {
+        current.contentLines.push(line);
+      } else {
+        preamble += line + "\n";
+      }
+      continue;
+    }
+
     const match = line.match(/^(#{1,4})\s+(.+)$/);
     if (match) {
       if (current) flat.push(current);
@@ -258,42 +294,11 @@ function parseSections(markdown: string): ParsedMarkdown {
   }
   if (current) flat.push(current);
 
-  // Deduplicate sections with near-identical titles (e.g. AI models sometimes
-  // output a summary outline followed by the full sections). Normalize titles
-  // by collapsing dashes/whitespace, then keep the *last* occurrence (usually
-  // the more detailed version).
-  // Important: scope dedup keys by parent heading so repeated sub-headings
-  // under different parents (e.g. per-stock "Financial Summary") are preserved.
-  const seen = new Map<string, number>();
-  const parentStack: string[] = []; // track parent heading titles by level
-  for (let idx = 0; idx < flat.length; idx++) {
-    const { level, title } = flat[idx];
-    const normalizedTitle = title
-      .toLowerCase()
-      .replace(/[\u2013\u2014\u2015\u2012-]/g, "-")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    // Pop parent stack to current level — only parents at strictly lower levels count
-    parentStack.length = Math.max(0, level - 1);
-
-    const parentContext = parentStack.join("/");
-    const key = parentContext
-      ? `${parentContext}/${normalizedTitle}`
-      : normalizedTitle;
-    seen.set(key, idx); // last occurrence wins
-
-    // Update parent stack so children of this heading are scoped to it
-    parentStack[level - 1] = normalizedTitle;
-  }
-  const keepIndices = new Set(seen.values());
-  const deduped = flat.filter((_, idx) => keepIndices.has(idx));
-
   // Treat the first h1 like an h2 for tree-building (so it's collapsible)
   // but keep its original display level for styling
-  const firstIsH1 = deduped.length > 0 && deduped[0].level === 1;
+  const firstIsH1 = flat.length > 0 && flat[0].level === 1;
   if (firstIsH1) {
-    deduped[0].level = 2;
+    flat[0].level = 2;
   }
 
   // Build tree: nest sections by heading level
@@ -328,7 +333,7 @@ function parseSections(markdown: string): ParsedMarkdown {
     return result;
   }
 
-  return { preamble: preamble.trim(), sections: buildTree(deduped) };
+  return { preamble: preamble.trim(), sections: buildTree(flat) };
 }
 
 // --- Heading styles ---

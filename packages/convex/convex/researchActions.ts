@@ -175,13 +175,16 @@ export const startResearch = internalAction({
     const resolvedPrompt = await resolvePrompt(ctx, job);
 
     try {
-      const { externalId } = await provider.start(resolvedPrompt, apiKey);
+      const { externalId, submittedPrompt } = await provider.start(
+        resolvedPrompt,
+        apiKey
+      );
 
       await ctx.runMutation(internal.researchJobs.updateJobStatus, {
         id: args.jobId,
         status: "running",
         externalJobId: externalId,
-        resolvedPrompt,
+        resolvedPrompt: submittedPrompt ?? resolvedPrompt,
       });
 
       // Providers without webhooks need us to poll until they finish.
