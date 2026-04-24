@@ -222,6 +222,12 @@ function ApiKeysSection() {
             placeholder="sk-..."
             type="password"
           />
+          <SettingField
+            settingKey="anthropic_api_key"
+            label="Anthropic API Key"
+            placeholder="sk-ant-..."
+            type="password"
+          />
         </div>
       </CardContent>
     </Card>

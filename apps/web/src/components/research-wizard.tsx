@@ -11,7 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useResearchFlow } from "@/hooks/use-research-flow";
+import {
+  PROVIDER_LABELS,
+  useResearchFlow,
+  type ProviderName,
+} from "@/hooks/use-research-flow";
 import { usePrompts, usePrompt } from "@/hooks/use-prompts";
 import { useStocks, useTags } from "@/hooks/use-stocks";
 import { useActiveJobs } from "@/hooks/use-research";
@@ -30,6 +34,13 @@ import {
 } from "lucide-react";
 import type { Doc } from "@repo/convex/dataModel";
 import type { GenericId } from "convex/values";
+
+const PROVIDER_COST_ESTIMATE: Record<ProviderName, string> = {
+  openai: "~$3–4",
+  anthropic: "~$1–2",
+};
+
+const PROVIDER_ORDER: readonly ProviderName[] = ["openai", "anthropic"];
 
 const STEP_LABELS: Record<string, string> = {
   "prompt-selection": "Select Prompt",
@@ -135,7 +146,13 @@ function PromptSelectionStep() {
         <button
           key={prompt._id}
           type="button"
-          onClick={() => flow.selectPrompt(prompt._id, prompt.type)}
+          onClick={() =>
+            flow.selectPrompt(
+              prompt._id,
+              prompt.type,
+              prompt.defaultProvider as ProviderName | undefined
+            )
+          }
           className={cn(
             "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent"
           )}
@@ -405,6 +422,50 @@ function PromptPreview({
   return <PromptPreviewDialog content={resolvedPrompt} />;
 }
 
+function ProviderPicker({
+  value,
+  onChange,
+}: {
+  value: ProviderName;
+  onChange: (provider: ProviderName) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-medium text-muted-foreground">
+        Provider
+      </span>
+      <div className="grid grid-cols-2 gap-2">
+        {PROVIDER_ORDER.map((provider) => {
+          const selected = value === provider;
+          return (
+            <button
+              key={provider}
+              type="button"
+              onClick={() => onChange(provider)}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border p-3 text-left transition-colors",
+                selected
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:bg-accent"
+              )}
+            >
+              <Zap
+                className={cn(
+                  "size-4 shrink-0",
+                  selected ? "text-primary" : "text-muted-foreground"
+                )}
+              />
+              <span className="text-sm font-medium truncate">
+                {PROVIDER_LABELS[provider]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ProviderConfirmStep() {
   const flow = useResearchFlow();
   const activeJobs = useActiveJobs();
@@ -428,16 +489,15 @@ function ProviderConfirmStep() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Provider selector */}
+      <ProviderPicker
+        value={flow.provider}
+        onChange={flow.selectProvider}
+      />
+
       {/* Summary */}
       <Card className="py-3">
         <CardContent className="flex flex-col gap-3 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Provider</span>
-            <div className="flex items-center gap-1.5">
-              <Zap className="size-3.5 text-primary" />
-              <span className="font-medium">OpenAI Deep Research</span>
-            </div>
-          </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Prompt Type</span>
             <Badge variant="outline" className="text-xs">
@@ -454,7 +514,9 @@ function ProviderConfirmStep() {
           )}
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Est. Cost</span>
-            <span className="font-medium">~$3-4</span>
+            <span className="font-medium">
+              {PROVIDER_COST_ESTIMATE[flow.provider]}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Active Jobs</span>

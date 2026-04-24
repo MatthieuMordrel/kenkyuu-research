@@ -17,10 +17,11 @@ import { useStartResearch } from "./use-research";
  *
  * Usage:
  *   const flow = useResearchFlow();
- *   flow.open();               // open wizard
- *   flow.selectPrompt(id, t);  // step 1: pick prompt
- *   flow.selectStocks([...]);  // step 2: pick stocks
- *   await flow.execute();      // step 3: confirm & run
+ *   flow.open();                     // open wizard
+ *   flow.selectPrompt(id, t, dp);    // step 1: pick prompt
+ *   flow.selectStocks([...]);        // step 2: pick stocks
+ *   flow.selectProvider("anthropic");// step 3: optional override
+ *   await flow.execute();            // step 3: confirm & run
  */
 export function useResearchFlow() {
   const step = useResearchFlowStep();
@@ -70,6 +71,7 @@ export function useResearchFlow() {
     close: actions.close,
     selectPrompt: actions.selectPrompt,
     selectStocks: actions.selectStocks,
+    selectProvider: actions.selectProvider,
     back: actions.back,
     reset: actions.reset,
     execute,
@@ -77,7 +79,8 @@ export function useResearchFlow() {
 }
 
 // Re-export types for consumers
-export type { ResearchFlowStep } from "@/lib/research-flow";
+export type { ResearchFlowStep, ProviderName } from "@/lib/research-flow";
+export { PROVIDER_LABELS } from "@/lib/research-flow";
 
 // Re-export individual selectors for components that only need one piece
 export {

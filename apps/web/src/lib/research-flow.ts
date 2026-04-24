@@ -8,12 +8,21 @@ export type ResearchFlowStep =
   | "provider-confirm"
   | "executing";
 
+export type ProviderName = "openai" | "anthropic";
+
+export const PROVIDER_LABELS: Record<ProviderName, string> = {
+  openai: "OpenAI Deep Research",
+  anthropic: "Claude Opus 4.7 (Anthropic)",
+};
+
+export const DEFAULT_PROVIDER: ProviderName = "openai";
+
 interface ResearchFlowState {
   step: ResearchFlowStep;
   promptId: GenericId<"prompts"> | null;
   promptType: "single-stock" | "multi-stock" | "discovery" | null;
   stockIds: GenericId<"stocks">[];
-  provider: "openai";
+  provider: ProviderName;
   isOpen: boolean;
 }
 
@@ -22,13 +31,20 @@ interface ResearchFlowActions {
   open: () => void;
   /** Close the wizard and reset all state */
   close: () => void;
-  /** Select a prompt and advance to the next step */
+  /**
+   * Select a prompt and advance to the next step.
+   * The prompt's defaultProvider seeds the provider field for this run;
+   * the user can still override it in the confirm step.
+   */
   selectPrompt: (
     promptId: GenericId<"prompts">,
-    promptType: "single-stock" | "multi-stock" | "discovery"
+    promptType: "single-stock" | "multi-stock" | "discovery",
+    defaultProvider?: ProviderName
   ) => void;
   /** Select stocks and advance to provider confirmation */
   selectStocks: (stockIds: GenericId<"stocks">[]) => void;
+  /** Pick a provider for this run (overrides the prompt's default) */
+  selectProvider: (provider: ProviderName) => void;
   /** Confirm provider and move to executing step */
   confirmProvider: () => void;
   /** Mark execution as started (called after mutation succeeds) */
@@ -46,7 +62,7 @@ const initialState: ResearchFlowState = {
   promptId: null,
   promptType: null,
   stockIds: [],
-  provider: "openai",
+  provider: DEFAULT_PROVIDER,
   isOpen: false,
 };
 
@@ -57,20 +73,24 @@ export const useResearchFlowStore = create<ResearchFlowStore>()((set, get) => ({
 
   close: () => set(initialState),
 
-  selectPrompt: (promptId, promptType) => {
-    // Discovery prompts skip stock selection entirely
+  selectPrompt: (promptId, promptType, defaultProvider) => {
     const nextStep =
       promptType === "discovery" ? "provider-confirm" : "stock-selection";
     set({
       promptId,
       promptType,
       stockIds: [],
+      provider: defaultProvider ?? DEFAULT_PROVIDER,
       step: nextStep,
     });
   },
 
   selectStocks: (stockIds) => {
     set({ stockIds, step: "provider-confirm" });
+  },
+
+  selectProvider: (provider) => {
+    set({ provider });
   },
 
   confirmProvider: () => {
@@ -123,6 +143,7 @@ export const useResearchFlowActions = () =>
       close: s.close,
       selectPrompt: s.selectPrompt,
       selectStocks: s.selectStocks,
+      selectProvider: s.selectProvider,
       confirmProvider: s.confirmProvider,
       markExecuting: s.markExecuting,
       back: s.back,

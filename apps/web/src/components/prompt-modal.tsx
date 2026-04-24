@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import type { Doc } from "@repo/convex/dataModel";
 
 type PromptType = "single-stock" | "multi-stock" | "discovery";
+type ProviderName = "openai" | "anthropic";
 
 interface PromptModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ interface PromptFormData {
   description: string;
   type: PromptType;
   template: string;
+  defaultProvider: ProviderName;
 }
 
 interface PromptFormErrors {
@@ -50,7 +52,13 @@ const INITIAL_FORM: PromptFormData = {
   description: "",
   type: "single-stock",
   template: "",
+  defaultProvider: "openai",
 };
+
+const PROVIDER_OPTIONS: { value: ProviderName; label: string }[] = [
+  { value: "openai", label: "OpenAI Deep Research" },
+  { value: "anthropic", label: "Claude Opus 4.7" },
+];
 
 const TYPE_OPTIONS: {
   value: PromptType;
@@ -105,6 +113,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: prompt.description,
           type: prompt.type,
           template: prompt.template,
+          defaultProvider: (prompt.defaultProvider ?? "openai") as ProviderName,
         });
       } else {
         setForm(INITIAL_FORM);
@@ -154,6 +163,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: form.description.trim(),
           type: form.type,
           template: form.template,
+          defaultProvider: form.defaultProvider,
         });
       } else {
         await createPrompt({
@@ -161,6 +171,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: form.description.trim(),
           type: form.type,
           template: form.template,
+          defaultProvider: form.defaultProvider,
         });
       }
       onOpenChange(false);
@@ -236,6 +247,31 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Default Provider</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {PROVIDER_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => updateField("defaultProvider", option.value)}
+                  className={cn(
+                    "rounded-md border p-2 text-left text-sm transition-colors",
+                    form.defaultProvider === option.value
+                      ? "border-primary bg-primary/5 font-medium"
+                      : "border-border hover:bg-accent"
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Used as the default for new research runs and schedules of this
+              prompt.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

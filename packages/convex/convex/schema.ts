@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { providerValidator } from "./providers/constants";
 
 export default defineSchema({
   stocks: defineTable({
@@ -24,7 +25,7 @@ export default defineSchema({
       v.literal("discovery")
     ),
     template: v.string(),
-    defaultProvider: v.literal("openai"),
+    defaultProvider: providerValidator,
     isBuiltIn: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -37,7 +38,7 @@ export default defineSchema({
     promptSnapshot: v.string(),
     resolvedPrompt: v.optional(v.string()),
     stockIds: v.array(v.id("stocks")),
-    provider: v.literal("openai"),
+    provider: providerValidator,
     status: v.union(
       v.literal("pending"),
       v.literal("running"),
@@ -75,7 +76,7 @@ export default defineSchema({
       tags: v.optional(v.array(v.string())),
       stockIds: v.optional(v.array(v.id("stocks"))),
     }),
-    provider: v.literal("openai"),
+    provider: providerValidator,
     timezone: v.optional(v.string()),
     enabled: v.boolean(),
     lastRunAt: v.optional(v.number()),
@@ -126,7 +127,7 @@ export default defineSchema({
 
   costLogs: defineTable({
     jobId: v.id("researchJobs"),
-    provider: v.literal("openai"),
+    provider: providerValidator,
     costUsd: v.number(),
     timestamp: v.number(),
   })

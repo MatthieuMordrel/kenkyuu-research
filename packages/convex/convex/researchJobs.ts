@@ -10,6 +10,7 @@ import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
 import { validateSearchTerm, truncateResult } from "./validation";
 import { logAuditEvent } from "./auditLog";
+import { providerValidator } from "./providers/constants";
 
 const MAX_CONCURRENT_JOBS = 3;
 
@@ -44,7 +45,7 @@ export const createResearchJob = mutation({
   args: {
     promptId: v.id("prompts"),
     stockIds: v.array(v.id("stocks")),
-    provider: v.literal("openai"),
+    provider: providerValidator,
     scheduleId: v.optional(v.id("schedules")),
     token: v.optional(v.string()),
   },
@@ -76,7 +77,7 @@ export const createAndStartResearch = mutation({
   args: {
     promptId: v.id("prompts"),
     stockIds: v.array(v.id("stocks")),
-    provider: v.literal("openai"),
+    provider: providerValidator,
     scheduleId: v.optional(v.id("schedules")),
     token: v.optional(v.string()),
   },
@@ -184,7 +185,7 @@ export const incrementAttempts = internalMutation({
 export const logCost = internalMutation({
   args: {
     jobId: v.id("researchJobs"),
-    provider: v.literal("openai"),
+    provider: providerValidator,
     costUsd: v.number(),
   },
   handler: async (ctx, args) => {

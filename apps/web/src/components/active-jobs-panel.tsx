@@ -38,11 +38,17 @@ import type { Doc } from "@repo/convex/dataModel";
 
 interface HealthCheckResult {
   convexStatus: string;
-  openaiStatus: string | null;
+  providerStatus: string | null;
+  provider: "openai" | "anthropic";
   message: string;
   elapsedMs?: number;
   checkedAt: number;
 }
+
+const PROVIDER_LABEL: Record<HealthCheckResult["provider"], string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+};
 
 const STATUS_CONFIG: Record<
   string,
@@ -138,8 +144,10 @@ export function ActiveJobsPanel() {
 
 function HealthStatusIndicator({ result }: { result: HealthCheckResult }) {
   const isHealthy =
-    result.openaiStatus === "in_progress" || result.openaiStatus === "queued";
-  const isCompleted = result.openaiStatus === "completed";
+    result.providerStatus === "running" ||
+    result.providerStatus === "in_progress" ||
+    result.providerStatus === "queued";
+  const isCompleted = result.providerStatus === "completed";
 
   const Icon = isCompleted
     ? CheckCircle2
@@ -158,7 +166,8 @@ function HealthStatusIndicator({ result }: { result: HealthCheckResult }) {
         <div className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
           <Icon className={cn("size-3", colorClass)} />
           <span className="text-[10px] font-medium">
-            {result.openaiStatus ?? "unknown"}
+            {PROVIDER_LABEL[result.provider]}:{" "}
+            {result.providerStatus ?? "unknown"}
           </span>
         </div>
       </TooltipTrigger>
@@ -224,7 +233,8 @@ function JobCard({
     } catch {
       setHealthResult({
         convexStatus: job.status,
-        openaiStatus: null,
+        providerStatus: null,
+        provider: job.provider,
         message: "Failed to check health.",
         checkedAt: Date.now(),
       });
@@ -303,7 +313,7 @@ function JobCard({
                     <span className="sr-only">Check Health</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Check OpenAI status</TooltipContent>
+                <TooltipContent>Check provider status</TooltipContent>
               </Tooltip>
             )}
             {canRetry && (

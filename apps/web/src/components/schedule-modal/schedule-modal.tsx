@@ -300,10 +300,15 @@ export function ScheduleModal({
           ...triggerFields,
         });
       } else {
+        // Schedules inherit the selected prompt's default provider. To change
+        // provider for a schedule, update the prompt's default.
+        const provider = (selectedPrompt?.defaultProvider ?? "openai") as
+          | "openai"
+          | "anthropic";
         await createSchedule({
           ...commonFields,
           ...triggerFields,
-          provider: "openai",
+          provider,
         });
       }
       onOpenChange(false);

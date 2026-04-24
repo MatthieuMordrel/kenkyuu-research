@@ -3,6 +3,7 @@ import { internalQuery, mutation, query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
 import { validatePromptInput } from "./validation";
 import { logAuditEvent } from "./auditLog";
+import { providerValidator } from "./providers/constants";
 
 const promptType = v.union(
   v.literal("single-stock"),
@@ -18,7 +19,7 @@ export const createPrompt = mutation({
     description: v.string(),
     type: promptType,
     template: v.string(),
-    defaultProvider: v.optional(v.literal("openai")),
+    defaultProvider: v.optional(providerValidator),
     isBuiltIn: v.optional(v.boolean()),
     token: v.optional(v.string()),
   },
@@ -54,7 +55,7 @@ export const updatePrompt = mutation({
     description: v.optional(v.string()),
     type: v.optional(promptType),
     template: v.optional(v.string()),
-    defaultProvider: v.optional(v.literal("openai")),
+    defaultProvider: v.optional(providerValidator),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

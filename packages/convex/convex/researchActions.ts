@@ -1,150 +1,390 @@
 "use node";
 
 import { v } from "convex/values";
-import OpenAI from "openai";
 import { action, internalAction } from "./_generated/server";
+import type { ActionCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import {
+  getProvider,
+  SETTING_KEY_BY_PROVIDER,
+  type PollResult,
+  type ProviderName,
+  type ResearchProvider,
+} from "./providers";
 
 const MAX_RETRIES = 3;
+const MAX_RUNNING = 3;
 
-async function getOpenAIClient(ctx: {
-  runQuery: (
-    ref: typeof internal.authHelpers.getSettingValue,
-    args: { key: string }
-  ) => Promise<string | null>;
-}): Promise<OpenAI | null> {
-  const apiKey = await ctx.runQuery(internal.authHelpers.getSettingValue, {
-    key: "openai_api_key",
+// Scheduled-poll cadence for providers without webhooks. Start aggressive,
+// back off so long jobs don't burn scheduler invocations.
+const POLL_INITIAL_DELAY_MS = 30_000;
+const POLL_MAX_DELAY_MS = 5 * 60_000;
+const POLL_BACKOFF = 1.5;
+// Hard timeout after which a still-running job is marked failed.
+const JOB_HARD_TIMEOUT_MS = 90 * 60_000;
+// Stale threshold for the recovery cron (runs every 15 min).
+const STALE_JOB_THRESHOLD_MS = 30 * 60_000;
+
+// ---------------------------------------------------------------------------
+// Provider key resolution
+// ---------------------------------------------------------------------------
+
+async function getProviderApiKey(
+  ctx: ActionCtx,
+  provider: ProviderName
+): Promise<string | null> {
+  return await ctx.runQuery(internal.authHelpers.getSettingValue, {
+    key: SETTING_KEY_BY_PROVIDER[provider],
   });
-  if (!apiKey) return null;
-  return new OpenAI({ apiKey });
 }
 
-// o3-deep-research pricing: Input $10/1M tokens, Output $40/1M tokens
-/** @internal Exported for testing */
-export function estimateCost(
-  usage: OpenAI.Responses.ResponseUsage | undefined
-): number | undefined {
-  if (!usage) return undefined;
-  const inputTokens = usage.input_tokens ?? 0;
-  const outputTokens = usage.output_tokens ?? 0;
-  return (inputTokens * 10 + outputTokens * 40) / 1_000_000;
+function missingKeyMessage(provider: ProviderName): string {
+  const label = provider === "openai" ? "OpenAI" : "Anthropic";
+  return `${label} API key not configured. Set it in Settings.`;
 }
+
+// ---------------------------------------------------------------------------
+// Terminal bookkeeping — shared between webhook path and polling path
+// ---------------------------------------------------------------------------
+
+async function applyCompletedResult(
+  ctx: ActionCtx,
+  job: Doc<"researchJobs">,
+  provider: ResearchProvider,
+  result: Extract<PollResult, { status: "completed" }>
+) {
+  const costUsd = provider.estimateCost(result.usage);
+  const durationMs = Date.now() - job.createdAt;
+
+  await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+    id: job._id,
+    status: "completed",
+    result: result.text,
+    costUsd,
+    durationMs,
+  });
+
+  await ctx.runMutation(internal.researchJobs.logCost, {
+    jobId: job._id,
+    provider: provider.name,
+    costUsd,
+  });
+
+  await ctx.scheduler.runAfter(
+    0,
+    internal.notifications.dispatchJobNotification,
+    { jobId: job._id }
+  );
+
+  await ctx.scheduler.runAfter(0, internal.budgetAlert.checkBudgetAlert, {
+    currentCostUsd: costUsd,
+  });
+}
+
+async function applyFailedResult(
+  ctx: ActionCtx,
+  job: Doc<"researchJobs">,
+  error: string,
+  { retryable }: { retryable: boolean }
+) {
+  await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+    id: job._id,
+    status: "failed",
+    error,
+  });
+
+  if (retryable && job.attempts < MAX_RETRIES) {
+    await ctx.scheduler.runAfter(
+      Math.pow(2, job.attempts) * 5000,
+      internal.researchActions.startResearch,
+      { jobId: job._id }
+    );
+  } else {
+    await ctx.scheduler.runAfter(
+      0,
+      internal.notifications.dispatchJobNotification,
+      { jobId: job._id }
+    );
+  }
+}
+
+function isTerminal(status: Doc<"researchJobs">["status"]): boolean {
+  return status === "completed" || status === "failed";
+}
+
+// ---------------------------------------------------------------------------
+// startResearch — submit a pending job to its provider
+// ---------------------------------------------------------------------------
+
+export const startResearch = internalAction({
+  args: { jobId: v.id("researchJobs") },
+  handler: async (ctx, args) => {
+    const job = await ctx.runQuery(internal.researchJobs.getJobInternal, {
+      id: args.jobId,
+    });
+    if (!job) throw new Error("Research job not found");
+
+    if (job.status !== "pending" && job.status !== "failed") {
+      throw new Error(`Job is not in a startable state: ${job.status}`);
+    }
+
+    // Pre-flight: cap concurrent submitted jobs. If at limit, re-queue.
+    const runningJobs = await ctx.runQuery(
+      internal.researchJobs.getRunningJobCount,
+      {}
+    );
+    if (runningJobs >= MAX_RUNNING) {
+      await ctx.scheduler.runAfter(
+        30_000,
+        internal.researchActions.startResearch,
+        { jobId: args.jobId }
+      );
+      return;
+    }
+
+    const attempts = await ctx.runMutation(
+      internal.researchJobs.incrementAttempts,
+      { id: args.jobId }
+    );
+    if (attempts > MAX_RETRIES) {
+      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+        id: args.jobId,
+        status: "failed",
+        error: `Exceeded maximum retries (${MAX_RETRIES})`,
+      });
+      return;
+    }
+
+    await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+      id: args.jobId,
+      status: "running",
+    });
+
+    const provider = getProvider(job.provider);
+    const apiKey = await getProviderApiKey(ctx, job.provider);
+    if (!apiKey) {
+      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+        id: args.jobId,
+        status: "failed",
+        error: missingKeyMessage(job.provider),
+      });
+      return;
+    }
+
+    const resolvedPrompt = await resolvePrompt(ctx, job);
+
+    try {
+      const { externalId } = await provider.start(resolvedPrompt, apiKey);
+
+      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+        id: args.jobId,
+        status: "running",
+        externalJobId: externalId,
+        resolvedPrompt,
+      });
+
+      // Providers without webhooks need us to poll until they finish.
+      if (provider.completionMode === "polling") {
+        await ctx.scheduler.runAfter(
+          POLL_INITIAL_DELAY_MS,
+          internal.researchActions.pollJob,
+          { jobId: args.jobId, nextDelayMs: POLL_INITIAL_DELAY_MS }
+        );
+      }
+    } catch (error) {
+      await handleStartError(ctx, args.jobId, attempts, error);
+    }
+  },
+});
+
+/** Resolve {{STOCKS}} / {{TICKER}} / {{DATE}} variables in the job's template. */
+async function resolvePrompt(
+  ctx: ActionCtx,
+  job: Doc<"researchJobs">
+): Promise<string> {
+  const stocks = await Promise.all(
+    job.stockIds.map((id) =>
+      ctx.runQuery(internal.researchJobs.getStockInternal, { id })
+    )
+  );
+  const valid = stocks.filter((s): s is NonNullable<typeof s> => s !== null);
+  const first = valid[0];
+
+  return job.promptSnapshot
+    .replaceAll(
+      "{{STOCKS}}",
+      valid.map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`).join(", ")
+    )
+    .replaceAll(
+      "{{TICKER}}",
+      first ? `${first.ticker} (${first.companyName}, ${first.exchange})` : ""
+    )
+    .replaceAll("{{DATE}}", new Date().toISOString().split("T")[0]!);
+}
+
+async function handleStartError(
+  ctx: ActionCtx,
+  jobId: Doc<"researchJobs">["_id"],
+  attempts: number,
+  error: unknown
+) {
+  const message = error instanceof Error ? error.message : "Unknown error";
+
+  await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+    id: jobId,
+    status: "failed",
+    error: message,
+  });
+
+  if (attempts >= MAX_RETRIES) return;
+
+  const delayMs = parseRetryDelayMs(message, attempts);
+  await ctx.scheduler.runAfter(
+    delayMs,
+    internal.researchActions.startResearch,
+    { jobId }
+  );
+}
+
+/** Parse "try again in 404ms" / "try again in 6s" out of rate-limit errors. */
+function parseRetryDelayMs(message: string, attempts: number): number {
+  const isRateLimit = message.toLowerCase().includes("rate limit");
+  if (isRateLimit) {
+    const msMatch = message.match(/try again in (\d+)ms/i);
+    const sMatch = message.match(/try again in ([\d.]+)s/i);
+    const parsedMs = msMatch
+      ? parseInt(msMatch[1]!, 10)
+      : sMatch
+        ? parseFloat(sMatch[1]!) * 1000
+        : 0;
+    return Math.max(parsedMs + 2000, 5000);
+  }
+  return Math.pow(2, attempts) * 5000;
+}
+
+// ---------------------------------------------------------------------------
+// pollJob — provider-agnostic status check
+// ---------------------------------------------------------------------------
+// Called in three contexts:
+//   1. Anthropic self-scheduled polling (providers with completionMode=polling)
+//   2. OpenAI webhook handler (http.ts → processWebhookEvent → pollJob)
+//   3. Recovery cron for stale jobs (all providers)
+// ---------------------------------------------------------------------------
+
+export const pollJob = internalAction({
+  args: {
+    jobId: v.id("researchJobs"),
+    /** Only set when called from the polling loop; used to grow the backoff. */
+    nextDelayMs: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const job = await ctx.runQuery(internal.researchJobs.getJobInternal, {
+      id: args.jobId,
+    });
+    if (!job) return;
+
+    // Idempotency: once terminal, nothing more to do.
+    if (isTerminal(job.status)) return;
+    if (!job.externalJobId) return;
+
+    const provider = getProvider(job.provider);
+    const apiKey = await getProviderApiKey(ctx, job.provider);
+    if (!apiKey) {
+      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+        id: args.jobId,
+        status: "failed",
+        error: missingKeyMessage(job.provider),
+      });
+      return;
+    }
+
+    let result: PollResult;
+    try {
+      result = await provider.poll(job.externalJobId, apiKey);
+    } catch (error) {
+      console.error(
+        `pollJob: ${job.provider} poll failed for ${args.jobId}:`,
+        error instanceof Error ? error.message : error
+      );
+      // Transient: keep the job alive unless it's older than the hard timeout.
+      await maybeTimeoutOrReschedule(ctx, job, args.nextDelayMs);
+      return;
+    }
+
+    switch (result.status) {
+      case "completed":
+        await applyCompletedResult(ctx, job, provider, result);
+        return;
+      case "failed":
+        await applyFailedResult(ctx, job, result.error, { retryable: true });
+        return;
+      case "cancelled":
+        await applyFailedResult(ctx, job, `Research cancelled`, {
+          retryable: false,
+        });
+        return;
+      case "running":
+        await maybeTimeoutOrReschedule(ctx, job, args.nextDelayMs);
+        return;
+    }
+  },
+});
+
+/** If the job has run longer than the hard timeout, fail it; otherwise reschedule polling. */
+async function maybeTimeoutOrReschedule(
+  ctx: ActionCtx,
+  job: Doc<"researchJobs">,
+  currentDelayMs: number | undefined
+) {
+  if (Date.now() - job.createdAt > JOB_HARD_TIMEOUT_MS) {
+    await applyFailedResult(
+      ctx,
+      job,
+      `Job timed out after ${Math.round(JOB_HARD_TIMEOUT_MS / 60_000)} minutes`,
+      { retryable: false }
+    );
+    return;
+  }
+
+  // Only the self-scheduling polling loop passes currentDelayMs. The webhook
+  // handler and recovery cron invoke pollJob without it — they do their own
+  // rescheduling.
+  if (currentDelayMs === undefined) return;
+
+  const nextDelayMs = Math.min(
+    Math.round(currentDelayMs * POLL_BACKOFF),
+    POLL_MAX_DELAY_MS
+  );
+  await ctx.scheduler.runAfter(
+    nextDelayMs,
+    internal.researchActions.pollJob,
+    { jobId: job._id, nextDelayMs }
+  );
+}
+
+// ---------------------------------------------------------------------------
+// processWebhookEvent — OpenAI webhook entry point
+// ---------------------------------------------------------------------------
 
 export const processWebhookEvent = internalAction({
   args: {
     jobId: v.id("researchJobs"),
     eventType: v.string(),
   },
-  handler: async (ctx, args) => {
-    const job = await ctx.runQuery(internal.researchJobs.getJobInternal, {
-      id: args.jobId,
+  handler: async (ctx, args): Promise<void> => {
+    // Webhook delivery can fire after we've already processed the job (e.g.
+    // via the recovery cron). pollJob's own idempotency guard handles that.
+    await ctx.runAction(internal.researchActions.pollJob, {
+      jobId: args.jobId,
     });
-    if (!job || !job.externalJobId) {
-      throw new Error("Research job not found or missing external ID");
-    }
-
-    // Idempotency guard: skip if the job has already reached a terminal state.
-    // Duplicate webhook deliveries would otherwise insert extra rows into costLogs.
-    if (
-      job.status === "completed" ||
-      (job.status === "failed" && args.eventType === "response.completed")
-    ) {
-      return;
-    }
-
-    const client = await getOpenAIClient(ctx);
-    if (!client) {
-      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-        id: args.jobId,
-        status: "failed",
-        error: "OpenAI API key not configured. Set it in Settings.",
-      });
-      return;
-    }
-
-    // Fetch the full response from OpenAI using the SDK
-    const response = await client.responses.retrieve(job.externalJobId);
-
-    if (
-      args.eventType === "response.completed" &&
-      response.status === "completed"
-    ) {
-      const outputContent = response.output_text;
-      const durationMs = Date.now() - job.createdAt;
-      const costUsd = estimateCost(response.usage);
-
-      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-        id: args.jobId,
-        status: "completed",
-        result: outputContent,
-        costUsd,
-        durationMs,
-      });
-
-      // Log cost
-      if (costUsd !== undefined) {
-        await ctx.runMutation(internal.researchJobs.logCost, {
-          jobId: args.jobId,
-          provider: "openai",
-          costUsd,
-        });
-      }
-
-      // Dispatch notifications
-      await ctx.scheduler.runAfter(
-        0,
-        internal.notifications.dispatchJobNotification,
-        { jobId: args.jobId }
-      );
-
-      // Check budget alert
-      if (costUsd !== undefined) {
-        await ctx.scheduler.runAfter(0, internal.budgetAlert.checkBudgetAlert, {
-          currentCostUsd: costUsd,
-        });
-      }
-    } else if (
-      args.eventType === "response.failed" ||
-      args.eventType === "response.cancelled" ||
-      response.status === "failed" ||
-      response.status === "cancelled"
-    ) {
-      const error =
-        response.error?.message ??
-        `Research ${response.status ?? args.eventType}`;
-
-      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-        id: args.jobId,
-        status: "failed",
-        error,
-      });
-
-      // Trigger retry if under max attempts
-      if (response.status === "failed" && job.attempts < 3) {
-        await ctx.scheduler.runAfter(
-          Math.pow(2, job.attempts) * 5000,
-          internal.researchActions.startResearch,
-          { jobId: args.jobId }
-        );
-      } else {
-        await ctx.scheduler.runAfter(
-          0,
-          internal.notifications.dispatchJobNotification,
-          { jobId: args.jobId }
-        );
-      }
-    }
   },
 });
 
-const STALE_JOB_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+// ---------------------------------------------------------------------------
+// recoverStaleJobs — cron every 15 min; catches dropped webhooks and stalled polls
+// ---------------------------------------------------------------------------
 
-/**
- * Cron-driven recovery for stale "running" jobs.
- * Polls OpenAI for the actual status of any job that has been running longer
- * than the threshold and processes the result — exactly as the webhook would.
- */
 export const recoverStaleJobs = internalAction({
   args: {},
   handler: async (ctx) => {
@@ -153,60 +393,14 @@ export const recoverStaleJobs = internalAction({
       { staleThresholdMs: STALE_JOB_THRESHOLD_MS }
     );
 
-    if (staleJobs.length === 0) return;
-
-    const client = await getOpenAIClient(ctx);
-    if (!client) {
-      console.error("recoverStaleJobs: OpenAI API key not configured");
-      return;
-    }
-
     for (const job of staleJobs) {
       try {
-        const response = await client.responses.retrieve(job.externalJobId!);
-
-        if (response.status === "completed") {
-          await ctx.runAction(internal.researchActions.processWebhookEvent, {
-            jobId: job._id,
-            eventType: "response.completed",
-          });
-          console.log(`recoverStaleJobs: recovered completed job ${job._id}`);
-        } else if (
-          response.status === "failed" ||
-          response.status === "cancelled"
-        ) {
-          await ctx.runAction(internal.researchActions.processWebhookEvent, {
-            jobId: job._id,
-            eventType: `response.${response.status}`,
-          });
-          console.log(
-            `recoverStaleJobs: recovered ${response.status} job ${job._id}`
-          );
-        } else if (
-          response.status === "in_progress" ||
-          response.status === "queued"
-        ) {
-          // Still running on OpenAI's side — leave it alone.
-          // If it's been too long (>90 minutes), mark as failed to unblock the queue.
-          const ninetyMinutes = 90 * 60 * 1000;
-          if (Date.now() - job.createdAt > ninetyMinutes) {
-            await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-              id: job._id,
-              status: "failed",
-              error:
-                "Job timed out after 90 minutes with no result from OpenAI",
-            });
-            await ctx.scheduler.runAfter(
-              0,
-              internal.notifications.dispatchJobNotification,
-              { jobId: job._id }
-            );
-            console.log(`recoverStaleJobs: timed out job ${job._id}`);
-          }
-        }
+        await ctx.runAction(internal.researchActions.pollJob, {
+          jobId: job._id,
+        });
       } catch (error) {
         console.error(
-          `recoverStaleJobs: failed to check job ${job._id}:`,
+          `recoverStaleJobs: pollJob failed for ${job._id}:`,
           error instanceof Error ? error.message : error
         );
       }
@@ -214,14 +408,15 @@ export const recoverStaleJobs = internalAction({
   },
 });
 
-/**
- * Public action: checks the health of a running job by polling OpenAI directly.
- * Returns the OpenAI-side status so the user can confirm the job is progressing.
- */
+// ---------------------------------------------------------------------------
+// checkJobHealth — user-facing liveness probe
+// ---------------------------------------------------------------------------
+
 interface HealthCheckResult {
   jobId: string;
   convexStatus: string;
-  openaiStatus: string | null;
+  providerStatus: string | null;
+  provider: ProviderName;
   message: string;
   elapsedMs?: number;
   checkedAt: number;
@@ -233,7 +428,6 @@ export const checkJobHealth = action({
     token: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<HealthCheckResult> => {
-    // Validate auth
     if (!args.token) throw new Error("Unauthorized");
     const session = await ctx.runQuery(
       internal.authHelpers.validateSessionInternal,
@@ -247,231 +441,92 @@ export const checkJobHealth = action({
     if (!job) throw new Error("Research job not found");
 
     const jobId = args.jobId as string;
+    const now = Date.now();
 
-    // If no external ID yet, job hasn't been submitted to OpenAI
     if (!job.externalJobId) {
       return {
         jobId,
-        convexStatus: job.status as string,
-        openaiStatus: null,
+        provider: job.provider,
+        convexStatus: job.status,
+        providerStatus: null,
         message:
           job.status === "pending"
-            ? "Job is queued and has not been submitted to OpenAI yet."
+            ? "Job is queued and has not been submitted yet."
             : "No external job ID found.",
-        checkedAt: Date.now(),
+        checkedAt: now,
       };
     }
 
-    // If job is already terminal, no need to poll OpenAI
-    if (job.status === "completed" || job.status === "failed") {
+    if (isTerminal(job.status)) {
       return {
         jobId,
-        convexStatus: job.status as string,
-        openaiStatus: job.status === "completed" ? "completed" : "failed",
+        provider: job.provider,
+        convexStatus: job.status,
+        providerStatus: job.status === "completed" ? "completed" : "failed",
         message: `Job already ${job.status}.`,
-        checkedAt: Date.now(),
+        checkedAt: now,
       };
     }
 
-    const client = await getOpenAIClient(ctx);
-    if (!client) {
+    const provider = getProvider(job.provider);
+    const apiKey = await getProviderApiKey(ctx, job.provider);
+    if (!apiKey) {
       return {
         jobId,
-        convexStatus: job.status as string,
-        openaiStatus: null,
-        message:
-          "OpenAI API key not configured. Cannot verify external status.",
-        checkedAt: Date.now(),
+        provider: job.provider,
+        convexStatus: job.status,
+        providerStatus: null,
+        message: `${missingKeyMessage(job.provider)} Cannot verify external status.`,
+        checkedAt: now,
       };
     }
 
     try {
-      const response = await client.responses.retrieve(job.externalJobId);
-      const elapsedMs = Date.now() - job.createdAt;
+      const result = await provider.poll(job.externalJobId, apiKey);
+      const elapsedMs = now - job.createdAt;
       const elapsedMin = Math.floor(elapsedMs / 60_000);
-
-      let message: string;
-      if (response.status === "in_progress" || response.status === "queued") {
-        message = `Job is ${response.status} on OpenAI (running for ${elapsedMin}m). This is normal for o3-deep-research.`;
-      } else if (response.status === "completed") {
-        message = `OpenAI reports completed — webhook may be pending. Recovery cron will pick it up within 15 minutes.`;
-      } else {
-        message = `OpenAI status: ${response.status}`;
-      }
-
       return {
         jobId,
-        convexStatus: job.status as string,
-        openaiStatus: (response.status as string) ?? null,
+        provider: job.provider,
+        convexStatus: job.status,
+        providerStatus: result.status,
         elapsedMs,
-        message,
-        checkedAt: Date.now(),
+        message: statusMessage(job.provider, result, elapsedMin),
+        checkedAt: now,
       };
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : "Unknown error";
+    } catch (error) {
       return {
         jobId,
-        convexStatus: job.status as string,
-        openaiStatus: null,
-        message: `Failed to check OpenAI status: ${errMsg}`,
-        checkedAt: Date.now(),
+        provider: job.provider,
+        convexStatus: job.status,
+        providerStatus: null,
+        message: `Failed to check provider status: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        checkedAt: now,
       };
     }
   },
 });
 
-export const startResearch = internalAction({
-  args: {
-    jobId: v.id("researchJobs"),
-  },
-  handler: async (ctx, args) => {
-    const job = await ctx.runQuery(internal.researchJobs.getJobInternal, {
-      id: args.jobId,
-    });
-    if (!job) {
-      throw new Error("Research job not found");
-    }
+function statusMessage(
+  provider: ProviderName,
+  result: PollResult,
+  elapsedMin: number
+): string {
+  const label = provider === "openai" ? "OpenAI" : "Anthropic";
+  switch (result.status) {
+    case "running":
+      return `Job is running on ${label} (${elapsedMin}m elapsed). This is normal for deep research.`;
+    case "completed":
+      return `${label} reports completed — processing will follow shortly.`;
+    case "failed":
+      return `${label} reports failed: ${result.error}`;
+    case "cancelled":
+      return `${label} reports cancelled.`;
+  }
+}
 
-    if (job.status !== "pending" && job.status !== "failed") {
-      throw new Error(`Job is not in a startable state: ${job.status}`);
-    }
-
-    // Pre-flight: check how many jobs are already running on OpenAI.
-    // If we're at the limit, re-queue with a delay instead of submitting immediately.
-    const MAX_RUNNING = 3;
-    const runningJobs = await ctx.runQuery(
-      internal.researchJobs.getRunningJobCount,
-      {}
-    );
-    if (runningJobs >= MAX_RUNNING) {
-      // Re-queue this job to try again in 30 seconds
-      console.log(
-        `startResearch: ${MAX_RUNNING} jobs already running, re-queuing ${args.jobId} in 30s`
-      );
-      await ctx.scheduler.runAfter(
-        30_000,
-        internal.researchActions.startResearch,
-        { jobId: args.jobId }
-      );
-      return;
-    }
-
-    // Increment attempts
-    const attempts = await ctx.runMutation(
-      internal.researchJobs.incrementAttempts,
-      { id: args.jobId }
-    );
-
-    if (attempts > MAX_RETRIES) {
-      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-        id: args.jobId,
-        status: "failed",
-        error: `Exceeded maximum retries (${MAX_RETRIES})`,
-      });
-      return;
-    }
-
-    // Update status to running
-    await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-      id: args.jobId,
-      status: "running",
-    });
-
-    // Resolve stock tickers for prompt variable injection
-    const stocks = await Promise.all(
-      job.stockIds.map((stockId) =>
-        ctx.runQuery(internal.researchJobs.getStockInternal, { id: stockId })
-      )
-    );
-    const validStocks = stocks.filter(
-      (s): s is NonNullable<typeof s> => s !== null
-    );
-
-    // Build the final prompt with variable injection
-    let resolvedPrompt = job.promptSnapshot;
-    resolvedPrompt = resolvedPrompt.replaceAll(
-      "{{STOCKS}}",
-      validStocks
-        .map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`)
-        .join(", ")
-    );
-    const firstStock = validStocks[0];
-    resolvedPrompt = resolvedPrompt.replaceAll(
-      "{{TICKER}}",
-      firstStock
-        ? `${firstStock.ticker} (${firstStock.companyName}, ${firstStock.exchange})`
-        : ""
-    );
-    resolvedPrompt = resolvedPrompt.replaceAll(
-      "{{DATE}}",
-      new Date().toISOString().split("T")[0]!
-    );
-
-    const client = await getOpenAIClient(ctx);
-    if (!client) {
-      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-        id: args.jobId,
-        status: "failed",
-        error: "OpenAI API key not configured. Set it in Settings.",
-      });
-      return;
-    }
-
-    try {
-      const response = await client.responses.create({
-        model: "o3-deep-research",
-        input: resolvedPrompt,
-        tools: [{ type: "web_search_preview" }],
-        background: true,
-      });
-
-      // Store the external job ID and resolved prompt for webhook matching / audit
-      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-        id: args.jobId,
-        status: "running",
-        externalJobId: response.id,
-        resolvedPrompt,
-      });
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error occurred";
-
-      // If under max retries, schedule a retry
-      if (attempts < MAX_RETRIES) {
-        // Parse rate limit delay from error (e.g. "Please try again in 404ms" or "in 6s")
-        const isRateLimit = message.toLowerCase().includes("rate limit");
-        let delayMs: number;
-        if (isRateLimit) {
-          const msMatch = message.match(/try again in (\d+)ms/i);
-          const sMatch = message.match(/try again in ([\d.]+)s/i);
-          const parsedMs = msMatch
-            ? parseInt(msMatch[1]!, 10)
-            : sMatch
-              ? parseFloat(sMatch[1]!) * 1000
-              : 0;
-          // Use parsed delay + generous buffer, minimum 5 seconds
-          delayMs = Math.max(parsedMs + 2000, 5000);
-        } else {
-          delayMs = Math.pow(2, attempts) * 5000;
-        }
-
-        await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-          id: args.jobId,
-          status: "failed",
-          error: message,
-        });
-        await ctx.scheduler.runAfter(
-          delayMs,
-          internal.researchActions.startResearch,
-          { jobId: args.jobId }
-        );
-      } else {
-        await ctx.runMutation(internal.researchJobs.updateJobStatus, {
-          id: args.jobId,
-          status: "failed",
-          error: `Failed after ${MAX_RETRIES} attempts: ${message}`,
-        });
-      }
-    }
-  },
-});
+// Re-export so existing test files and external callers can still import this symbol.
+// (The provider-agnostic implementation lives in providers/openai.ts.)
+export { estimateOpenAICost as estimateCost } from "./providers/openai";

@@ -9,6 +9,7 @@ import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
 import { validateScheduleInput, validateEarningsConfig } from "./validation";
 import { logAuditEvent } from "./auditLog";
+import { providerValidator } from "./providers/constants";
 
 const stockSelectionValidator = v.object({
   type: v.union(
@@ -40,7 +41,7 @@ export const createSchedule = mutation({
     name: v.string(),
     promptId: v.id("prompts"),
     stockSelection: stockSelectionValidator,
-    provider: v.literal("openai"),
+    provider: providerValidator,
     cron: v.optional(v.string()),
     timezone: v.optional(v.string()),
     enabled: v.boolean(),
@@ -166,7 +167,7 @@ export const updateSchedule = mutation({
     name: v.optional(v.string()),
     promptId: v.optional(v.id("prompts")),
     stockSelection: v.optional(stockSelectionValidator),
-    provider: v.optional(v.literal("openai")),
+    provider: v.optional(providerValidator),
     cron: v.optional(v.string()),
     timezone: v.optional(v.string()),
     enabled: v.optional(v.boolean()),
@@ -645,7 +646,7 @@ export const createScheduledJob = internalMutation({
   args: {
     promptId: v.id("prompts"),
     stockIds: v.array(v.id("stocks")),
-    provider: v.literal("openai"),
+    provider: providerValidator,
     scheduleId: v.id("schedules"),
   },
   handler: async (ctx, args) => {
