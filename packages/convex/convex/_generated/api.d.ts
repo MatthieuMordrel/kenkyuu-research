@@ -21,6 +21,9 @@ import type * as earningsTriggerActions from "../earningsTriggerActions.js";
 import type * as earningsTriggers from "../earningsTriggers.js";
 import type * as http from "../http.js";
 import type * as lib_exchangeTimezones from "../lib/exchangeTimezones.js";
+import type * as lib_finnhub_mapExchange from "../lib/finnhub/mapExchange.js";
+import type * as lib_finnhub_rankSearchResults from "../lib/finnhub/rankSearchResults.js";
+import type * as lib_finnhub_types from "../lib/finnhub/types.js";
 import type * as notifications from "../notifications.js";
 import type * as prompts from "../prompts.js";
 import type * as providers_anthropic from "../providers/anthropic.js";
@@ -34,6 +37,7 @@ import type * as scheduleActions from "../scheduleActions.js";
 import type * as schedules from "../schedules.js";
 import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
+import type * as stockLookupActions from "../stockLookupActions.js";
 import type * as stocks from "../stocks.js";
 import type * as validation from "../validation.js";
 
@@ -57,6 +61,9 @@ declare const fullApi: ApiFromModules<{
   earningsTriggers: typeof earningsTriggers;
   http: typeof http;
   "lib/exchangeTimezones": typeof lib_exchangeTimezones;
+  "lib/finnhub/mapExchange": typeof lib_finnhub_mapExchange;
+  "lib/finnhub/rankSearchResults": typeof lib_finnhub_rankSearchResults;
+  "lib/finnhub/types": typeof lib_finnhub_types;
   notifications: typeof notifications;
   prompts: typeof prompts;
   "providers/anthropic": typeof providers_anthropic;
@@ -70,6 +77,7 @@ declare const fullApi: ApiFromModules<{
   schedules: typeof schedules;
   seed: typeof seed;
   settings: typeof settings;
+  stockLookupActions: typeof stockLookupActions;
   stocks: typeof stocks;
   validation: typeof validation;
 }>;

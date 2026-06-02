@@ -11,15 +11,16 @@ export interface StockFormErrors {
   exchange?: string;
 }
 
-const TICKER_PATTERN = /^[A-Z]{1,5}$/;
+/** Matches Convex `validateTicker` in packages/convex/convex/validation.ts */
+const TICKER_PATTERN = /^[A-Z0-9.^=-]{1,10}$/;
 
 export function validateTicker(ticker: string): string | undefined {
-  const trimmed = ticker.trim();
+  const trimmed = normalizeTicker(ticker);
   if (!trimmed) {
     return "Ticker is required";
   }
   if (!TICKER_PATTERN.test(trimmed)) {
-    return "Ticker must be 1-5 uppercase letters (e.g., AAPL)";
+    return "Ticker must be 1–10 uppercase letters, digits, or . ^ = -";
   }
   return undefined;
 }

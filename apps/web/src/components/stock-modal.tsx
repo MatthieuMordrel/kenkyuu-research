@@ -19,6 +19,12 @@ import {
   type StockFormData,
   type StockFormErrors,
 } from "@/lib/stock-validation";
+import { STOCK_EXCHANGES } from "@/lib/stock-exchanges";
+import { StockSymbolCombobox } from "@/components/stock-symbol-combobox";
+import {
+  useStockSymbolLookup,
+  type SymbolSuggestion,
+} from "@/hooks/use-stock-symbol-lookup";
 import { X } from "lucide-react";
 import {
   Select,
@@ -29,19 +35,6 @@ import {
 } from "@/components/ui/select";
 
 import type { Doc } from "@repo/convex/dataModel";
-
-const EXCHANGES = [
-  "NASDAQ",
-  "NYSE",
-  "LSE",
-  "TSE",
-  "HKEX",
-  "Euronext",
-  "SSE",
-  "SZSE",
-  "TSX",
-  "ASX",
-] as const;
 
 interface StockModalProps {
   open: boolean;
@@ -67,8 +60,17 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
   const [tagInput, setTagInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [lookupQuery, setLookupQuery] = useState("");
+  const [listOpen, setListOpen] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [exchangeHint, setExchangeHint] = useState<string | null>(null);
   /** Keeps the select dropdown inside the dialog DOM tree so Radix focus handling works. */
   const selectPortalContainerRef = useRef<HTMLDivElement>(null);
+
+  const lookup = useStockSymbolLookup({
+    enabled: open && !isEditing,
+    query: lookupQuery,
+  });
 
   useEffect(() => {
     if (open) {
@@ -79,12 +81,16 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
           exchange: stock.exchange,
           tags: [...stock.tags],
         });
+        setLookupQuery("");
       } else {
         setForm(INITIAL_FORM);
+        setLookupQuery("");
       }
       setErrors({});
       setTagInput("");
       setSubmitError(null);
+      setListOpen(false);
+      setExchangeHint(null);
     }
   }, [open, stock]);
 
@@ -117,13 +123,44 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
     }
   }
 
+  async function handleSymbolSelect(suggestion: SymbolSuggestion) {
+    setResolving(true);
+    setSubmitError(null);
+    setExchangeHint(null);
+    try {
+      const resolved = await lookup.resolve(suggestion.finnhubSymbol);
+      setLookupQuery(resolved.ticker);
+      setForm((prev) => ({
+        ...prev,
+        ticker: resolved.ticker,
+        companyName: resolved.companyName,
+        exchange: resolved.exchange || prev.exchange,
+      }));
+      if (resolved.exchangeUnmapped) {
+        setExchangeHint("Select the exchange manually.");
+      }
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : "Could not resolve symbol"
+      );
+      setForm((prev) => ({
+        ...prev,
+        ticker: normalizeTicker(suggestion.displaySymbol),
+        companyName: suggestion.companyName.trim(),
+      }));
+      setLookupQuery(normalizeTicker(suggestion.displaySymbol));
+    } finally {
+      setResolving(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError(null);
 
     const normalizedForm = {
       ...form,
-      ticker: normalizeTicker(form.ticker),
+      ticker: normalizeTicker(form.ticker || lookupQuery),
     };
 
     const validationErrors = validateStockForm(normalizedForm);
@@ -156,172 +193,199 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
     }
   }
 
+  const finnhubHelper = !lookup.configured
+    ? "Finnhub API key not set — enter company and exchange manually."
+    : "Search by ticker or name, then pick a match to auto-fill.";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <div ref={selectPortalContainerRef}>
           <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Stock" : "Add Stock"}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update the stock details below."
-              : "Add a new stock to your watchlist."}
-          </DialogDescription>
+            <DialogTitle>{isEditing ? "Edit Stock" : "Add Stock"}</DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? "Update the stock details below."
+                : "Add a new stock to your watchlist."}
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="ticker">Ticker *</Label>
-            <Input
-              id="ticker"
-              placeholder="e.g. AAPL"
-              value={form.ticker}
-              onChange={(e) => updateField("ticker", e.target.value)}
-              aria-invalid={!!errors.ticker}
-              autoCapitalize="characters"
-            />
-            {errors.ticker && (
-              <p className="text-xs text-destructive">{errors.ticker}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="companyName">Company Name *</Label>
-            <Input
-              id="companyName"
-              placeholder="e.g. Apple Inc."
-              value={form.companyName}
-              onChange={(e) => updateField("companyName", e.target.value)}
-              aria-invalid={!!errors.companyName}
-            />
-            {errors.companyName && (
-              <p className="text-xs text-destructive">{errors.companyName}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="exchange">Exchange *</Label>
-            <Select
-              modal={false}
-              value={form.exchange || null}
-              onValueChange={(value) => updateField("exchange", value ?? "")}
-            >
-              <SelectTrigger id="exchange" aria-invalid={!!errors.exchange}>
-                <SelectValue
-                  render={(_, { value }) =>
-                    value ?? (
-                      <span className="text-muted-foreground">
-                        Select an exchange
-                      </span>
-                    )
-                  }
+            {isEditing ? (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="ticker">Ticker *</Label>
+                <Input
+                  id="ticker"
+                  placeholder="e.g. AAPL"
+                  value={form.ticker}
+                  onChange={(e) => updateField("ticker", e.target.value)}
+                  aria-invalid={!!errors.ticker}
+                  autoCapitalize="characters"
                 />
-              </SelectTrigger>
-              <SelectContent
-                container={selectPortalContainerRef}
-                alignItemWithTrigger={false}
-              >
-                {EXCHANGES.map((ex) => (
-                  <SelectItem key={ex} value={ex}>
-                    {ex}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.exchange && (
-              <p className="text-xs text-destructive">{errors.exchange}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="tags">Tags</Label>
-            <div className="flex gap-2">
-              <Input
-                id="tags"
-                placeholder="Type a tag and press Enter"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
+                {errors.ticker && (
+                  <p className="text-xs text-destructive">{errors.ticker}</p>
+                )}
+              </div>
+            ) : (
+              <StockSymbolCombobox
+                query={lookupQuery}
+                onQueryChange={(value) => {
+                  setLookupQuery(value);
+                  updateField("ticker", value);
+                  setExchangeHint(null);
+                }}
+                suggestions={lookup.suggestions}
+                isLoading={lookup.isLoading || resolving}
+                listOpen={listOpen}
+                onListOpenChange={setListOpen}
+                onSelect={handleSymbolSelect}
+                invalid={!!errors.ticker}
+                errorMessage={errors.ticker}
+                helperText={finnhubHelper}
               />
+            )}
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="companyName">Company Name *</Label>
+              <Input
+                id="companyName"
+                placeholder="e.g. Apple Inc."
+                value={form.companyName}
+                onChange={(e) => updateField("companyName", e.target.value)}
+                aria-invalid={!!errors.companyName}
+              />
+              {errors.companyName && (
+                <p className="text-xs text-destructive">{errors.companyName}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="exchange">Exchange *</Label>
+              <Select
+                modal={false}
+                value={form.exchange || null}
+                onValueChange={(value) => updateField("exchange", value ?? "")}
+              >
+                <SelectTrigger id="exchange" aria-invalid={!!errors.exchange}>
+                  <SelectValue
+                    render={(_, { value }) =>
+                      value ?? (
+                        <span className="text-muted-foreground">
+                          Select an exchange
+                        </span>
+                      )
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent
+                  container={selectPortalContainerRef}
+                  alignItemWithTrigger={false}
+                >
+                  {STOCK_EXCHANGES.map((ex) => (
+                    <SelectItem key={ex} value={ex}>
+                      {ex}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.exchange && (
+                <p className="text-xs text-destructive">{errors.exchange}</p>
+              )}
+              {exchangeHint && (
+                <p className="text-xs text-muted-foreground">{exchangeHint}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="tags">Tags</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="tags"
+                  placeholder="Type a tag and press Enter"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addTag}
+                  className="shrink-0"
+                >
+                  Add
+                </Button>
+              </div>
+              {form.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {form.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="gap-1">
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-0.5 rounded-sm hover:bg-foreground/20"
+                      >
+                        <X className="size-3" />
+                        <span className="sr-only">Remove {tag}</span>
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {existingTags &&
+                existingTags.filter((t) => !form.tags.includes(t)).length >
+                  0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">
+                      Existing tags:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {existingTags
+                        .filter((t) => !form.tags.includes(t))
+                        .map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant="outline"
+                            className="cursor-pointer hover:bg-accent"
+                            onClick={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                tags: [...prev.tags, tag],
+                              }))
+                            }
+                          >
+                            + {tag}
+                          </Badge>
+                        ))}
+                    </div>
+                  </div>
+                )}
+            </div>
+
+            {submitError && (
+              <p className="text-sm text-destructive">{submitError}</p>
+            )}
+
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={addTag}
-                className="shrink-0"
+                onClick={() => onOpenChange(false)}
               >
-                Add
+                Cancel
               </Button>
-            </div>
-            {form.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {form.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1">
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="ml-0.5 rounded-sm hover:bg-foreground/20"
-                    >
-                      <X className="size-3" />
-                      <span className="sr-only">Remove {tag}</span>
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-            {existingTags &&
-              existingTags.filter((t) => !form.tags.includes(t)).length > 0 && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">
-                    Existing tags:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {existingTags
-                      .filter((t) => !form.tags.includes(t))
-                      .map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="outline"
-                          className="cursor-pointer hover:bg-accent"
-                          onClick={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              tags: [...prev.tags, tag],
-                            }))
-                          }
-                        >
-                          + {tag}
-                        </Badge>
-                      ))}
-                  </div>
-                </div>
-              )}
-          </div>
-
-          {submitError && (
-            <p className="text-sm text-destructive">{submitError}</p>
-          )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting
-                ? isEditing
-                  ? "Saving..."
-                  : "Adding..."
-                : isEditing
-                  ? "Save Changes"
-                  : "Add Stock"}
-            </Button>
-          </DialogFooter>
-        </form>
+              <Button type="submit" disabled={submitting || resolving}>
+                {submitting
+                  ? isEditing
+                    ? "Saving..."
+                    : "Adding..."
+                  : isEditing
+                    ? "Save Changes"
+                    : "Add Stock"}
+              </Button>
+            </DialogFooter>
+          </form>
         </div>
       </DialogContent>
     </Dialog>
