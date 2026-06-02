@@ -266,7 +266,10 @@ function ResultDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="min-w-0 max-w-full overflow-x-auto">
-              <MarkdownRenderer content={job.result} collapsible={false} />
+              <MarkdownRenderer
+                content={job.result}
+                outlineControlsStickyTopClassName="top-14 md:top-0"
+              />
             </CardContent>
           </Card>
         )}

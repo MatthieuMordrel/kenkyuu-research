@@ -1,14 +1,65 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, type HTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { cn } from "@/lib/utils";
-import { ChevronRight, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
+import { ChevronRight, ChevronsDown, ChevronsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// --- Markdown components (non-heading) ---
+// --- Heading styles (Tailwind preflight resets h1–h6; we restore hierarchy) ---
 
-const baseComponents: Components = {
+const headingStyles: Record<number, string> = {
+  1: "text-2xl font-bold tracking-tight text-foreground",
+  2: "text-xl font-semibold tracking-tight text-foreground",
+  3: "text-lg font-semibold text-foreground",
+  4: "text-base font-semibold text-foreground",
+  5: "text-sm font-semibold text-foreground",
+  6: "text-sm font-medium text-muted-foreground",
+};
+
+/** Vertical rhythm for headings inside flowing markdown (not collapsible titles). */
+const headingSpacing: Record<number, string> = {
+  1: "mt-8 mb-4 scroll-mt-20 first:mt-0",
+  2: "mt-8 mb-3 scroll-mt-20 first:mt-0",
+  3: "mt-6 mb-2 scroll-mt-20",
+  4: "mt-5 mb-2 scroll-mt-20",
+  5: "mt-4 mb-2 scroll-mt-20",
+  6: "mt-4 mb-2 scroll-mt-20",
+};
+
+/**
+ * Builds a react-markdown heading element with explicit size/weight so
+ * Tailwind preflight does not flatten headings to body text.
+ */
+function createHeadingComponent(level: 1 | 2 | 3 | 4 | 5 | 6) {
+  const Tag = `h${level}` as const;
+  return function MarkdownHeading({
+    children,
+    ...props
+  }: HTMLAttributes<HTMLHeadingElement>) {
+    return (
+      <Tag
+        className={cn(
+          headingStyles[level],
+          headingSpacing[level]
+        )}
+        {...props}
+      >
+        {children}
+      </Tag>
+    );
+  };
+}
+
+// --- Markdown components ---
+
+const markdownComponents: Components = {
+  h1: createHeadingComponent(1),
+  h2: createHeadingComponent(2),
+  h3: createHeadingComponent(3),
+  h4: createHeadingComponent(4),
+  h5: createHeadingComponent(5),
+  h6: createHeadingComponent(6),
   p: ({ children, ...props }) => (
     <p className="mb-3 leading-7" {...props}>
       {children}
@@ -344,14 +395,15 @@ function parseSections(markdown: string): ParsedMarkdown {
   return { preamble: preamble.trim(), sections: buildTree(flat) };
 }
 
-// --- Heading styles ---
+/** Depth of a collapsible section key (`"0"` → 0, `"0.2.1"` → 2). */
+function sectionKeyDepth(key: string): number {
+  return key.split(".").length - 1;
+}
 
-const headingStyles: Record<number, string> = {
-  1: "text-2xl font-bold tracking-tight",
-  2: "text-xl font-semibold tracking-tight",
-  3: "text-lg font-semibold",
-  4: "text-base font-semibold",
-};
+/** All section keys at or above a given depth (inclusive). */
+function openKeysUpToDepth(keys: string[], maxDepth: number): Set<string> {
+  return new Set(keys.filter((key) => sectionKeyDepth(key) <= maxDepth));
+}
 
 // --- Collapsible section (recursive) ---
 
@@ -381,7 +433,11 @@ function CollapsibleSection({
             isOpen && "rotate-90"
           )}
         />
-        <span className={cn(headingStyles[section.displayLevel])}>
+        <span
+          className={cn(
+            headingStyles[section.displayLevel] ?? headingStyles[4]
+          )}
+        >
           <ReactMarkdown
             remarkPlugins={remarkPlugins}
             components={{ p: ({ children }) => <>{children}</> }}
@@ -395,7 +451,7 @@ function CollapsibleSection({
           {section.content && (
             <ReactMarkdown
               remarkPlugins={remarkPlugins}
-              components={baseComponents}
+              components={markdownComponents}
             >
               {section.content}
             </ReactMarkdown>
@@ -425,12 +481,18 @@ interface MarkdownRendererProps {
   content: string;
   className?: string;
   collapsible?: boolean;
+  /**
+   * Tailwind `top-*` offset for sticky outline controls (e.g. `top-14 md:top-0`
+   * when a fixed mobile header sits above the scroll area).
+   */
+  outlineControlsStickyTopClassName?: string;
 }
 
 export function MarkdownRenderer({
   content,
   className,
   collapsible = true,
+  outlineControlsStickyTopClassName = "top-0",
 }: MarkdownRendererProps) {
   const fixedContent = useMemo(() => fixMarkdownTables(content), [content]);
   const { preamble, sections } = useMemo(
@@ -439,7 +501,7 @@ export function MarkdownRenderer({
   );
   const hasCollapsibleSections = collapsible && sections.length > 0;
 
-  // Collect all keys from the tree for expand-all
+  // Collect all collapsible section keys from the tree
   const allKeys = useMemo(() => {
     const keys: string[] = [];
     function collect(items: Section[], prefix: string) {
@@ -453,9 +515,23 @@ export function MarkdownRenderer({
     return keys;
   }, [sections]);
 
+  const maxTreeDepth = useMemo(
+    () =>
+      allKeys.length === 0
+        ? -1
+        : Math.max(...allKeys.map(sectionKeyDepth)),
+    [allKeys]
+  );
+
   const [openSet, setOpenSet] = useState<Set<string>>(() => new Set(allKeys));
 
-  const allExpanded = openSet.size === allKeys.length;
+  const maxOpenDepth = useMemo(() => {
+    if (openSet.size === 0) return -1;
+    return Math.max(...[...openSet].map(sectionKeyDepth));
+  }, [openSet]);
+
+  const canExpandOneLevel = maxOpenDepth < maxTreeDepth;
+  const canCollapseOneLevel = openSet.size > 0;
 
   const toggleSection = useCallback((key: string) => {
     setOpenSet((prev) => {
@@ -469,13 +545,19 @@ export function MarkdownRenderer({
     });
   }, []);
 
-  const collapseAll = useCallback(() => {
-    setOpenSet(new Set());
-  }, []);
+  const expandOneLevel = useCallback(() => {
+    const targetDepth = maxOpenDepth + 1;
+    if (targetDepth > maxTreeDepth) return;
+    setOpenSet(openKeysUpToDepth(allKeys, targetDepth));
+  }, [allKeys, maxOpenDepth, maxTreeDepth]);
 
-  const expandAll = useCallback(() => {
-    setOpenSet(new Set(allKeys));
-  }, [allKeys]);
+  const collapseOneLevel = useCallback(() => {
+    if (openSet.size === 0) return;
+    const targetDepth = maxOpenDepth - 1;
+    setOpenSet(
+      targetDepth < 0 ? new Set() : openKeysUpToDepth(allKeys, targetDepth)
+    );
+  }, [allKeys, maxOpenDepth, openSet.size]);
 
   if (!hasCollapsibleSections) {
     return (
@@ -487,7 +569,7 @@ export function MarkdownRenderer({
       >
         <ReactMarkdown
           remarkPlugins={remarkPlugins}
-          components={baseComponents}
+          components={markdownComponents}
         >
           {fixedContent}
         </ReactMarkdown>
@@ -502,25 +584,34 @@ export function MarkdownRenderer({
         className
       )}
     >
-      {/* Collapse / Expand controls */}
-      <div className="flex items-center justify-end gap-1 mb-2">
+      {/* Outline depth controls — sticky while scrolling long reports */}
+      <div
+        className={cn(
+          "sticky z-20 -mx-1 mb-3 flex items-center justify-end gap-1 rounded-lg border border-border/60 bg-background/95 px-2 py-1.5 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/80 dark:bg-background/90",
+          outlineControlsStickyTopClassName
+        )}
+      >
         <Button
           variant="ghost"
           size="sm"
           className="h-7 text-xs text-muted-foreground"
-          onClick={allExpanded ? collapseAll : expandAll}
+          onClick={expandOneLevel}
+          disabled={!canExpandOneLevel}
+          title="Expand one more level of sections"
         >
-          {allExpanded ? (
-            <>
-              <ChevronsDownUp className="size-3.5" />
-              Collapse all
-            </>
-          ) : (
-            <>
-              <ChevronsUpDown className="size-3.5" />
-              Expand all
-            </>
-          )}
+          <ChevronsDown className="size-3.5" />
+          Expand level
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-muted-foreground"
+          onClick={collapseOneLevel}
+          disabled={!canCollapseOneLevel}
+          title="Collapse one level of sections"
+        >
+          <ChevronsUp className="size-3.5" />
+          Collapse level
         </Button>
       </div>
 
@@ -529,7 +620,7 @@ export function MarkdownRenderer({
         <div className="mb-3">
           <ReactMarkdown
             remarkPlugins={remarkPlugins}
-            components={baseComponents}
+            components={markdownComponents}
           >
             {preamble}
           </ReactMarkdown>
