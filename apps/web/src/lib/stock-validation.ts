@@ -2,8 +2,6 @@ export interface StockFormData {
   ticker: string;
   companyName: string;
   exchange: string;
-  sector?: string;
-  notes?: string;
   tags: string[];
 }
 

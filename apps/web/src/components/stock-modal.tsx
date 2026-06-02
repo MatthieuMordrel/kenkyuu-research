@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAddStock, useUpdateStock, useTags } from "@/hooks/use-stocks";
 import {
@@ -54,8 +53,6 @@ const INITIAL_FORM: StockFormData = {
   ticker: "",
   companyName: "",
   exchange: "",
-  sector: "",
-  notes: "",
   tags: [],
 };
 
@@ -70,6 +67,8 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
   const [tagInput, setTagInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  /** Keeps the select dropdown inside the dialog DOM tree so Radix focus handling works. */
+  const selectPortalContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -78,8 +77,6 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
           ticker: stock.ticker,
           companyName: stock.companyName,
           exchange: stock.exchange,
-          sector: stock.sector ?? "",
-          notes: stock.notes ?? "",
           tags: [...stock.tags],
         });
       } else {
@@ -141,8 +138,6 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
           ticker: normalizedForm.ticker,
           companyName: normalizedForm.companyName.trim(),
           exchange: normalizedForm.exchange.trim(),
-          sector: normalizedForm.sector?.trim() || undefined,
-          notes: normalizedForm.notes?.trim() || undefined,
           tags: normalizedForm.tags,
         });
       } else {
@@ -150,8 +145,6 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
           ticker: normalizedForm.ticker,
           companyName: normalizedForm.companyName.trim(),
           exchange: normalizedForm.exchange.trim(),
-          sector: normalizedForm.sector?.trim() || undefined,
-          notes: normalizedForm.notes?.trim() || undefined,
           tags: normalizedForm.tags,
         });
       }
@@ -165,28 +158,18 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-h-[90vh] overflow-y-auto sm:max-w-md"
-        onPointerDownOutside={(e) => {
-          // Prevent dialog from closing when clicking on portaled Base UI select content
-          const target = (
-            e as unknown as { detail: { originalEvent: PointerEvent } }
-          ).detail.originalEvent.target as HTMLElement | null;
-          if (target?.closest?.("[data-slot='select-content']")) {
-            e.preventDefault();
-          }
-        }}
-      >
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+        <div ref={selectPortalContainerRef}>
+          <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Stock" : "Add Stock"}</DialogTitle>
           <DialogDescription>
             {isEditing
               ? "Update the stock details below."
               : "Add a new stock to your watchlist."}
           </DialogDescription>
-        </DialogHeader>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="ticker">Ticker *</Label>
             <Input
@@ -219,6 +202,7 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
           <div className="flex flex-col gap-2">
             <Label htmlFor="exchange">Exchange *</Label>
             <Select
+              modal={false}
               value={form.exchange || null}
               onValueChange={(value) => updateField("exchange", value ?? "")}
             >
@@ -233,7 +217,10 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
                   }
                 />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                container={selectPortalContainerRef}
+                alignItemWithTrigger={false}
+              >
                 {EXCHANGES.map((ex) => (
                   <SelectItem key={ex} value={ex}>
                     {ex}
@@ -244,27 +231,6 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
             {errors.exchange && (
               <p className="text-xs text-destructive">{errors.exchange}</p>
             )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="sector">Sector</Label>
-            <Input
-              id="sector"
-              placeholder="e.g. Technology"
-              value={form.sector}
-              onChange={(e) => updateField("sector", e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Add any notes about this stock..."
-              value={form.notes}
-              onChange={(e) => updateField("notes", e.target.value)}
-              rows={3}
-            />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -356,6 +322,7 @@ export function StockModal({ open, onOpenChange, stock }: StockModalProps) {
             </Button>
           </DialogFooter>
         </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
