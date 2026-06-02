@@ -61,10 +61,11 @@ export function prepassResearchMarkdown(markdown: string): string {
 }
 
 /** Target max characters per LLM formatting chunk (avoids action timeouts). */
-export const FORMAT_CHUNK_TARGET_CHARS = 12_000;
+export const FORMAT_CHUNK_TARGET_CHARS = 8_000;
 
 /**
- * Splits a long report at ## headings into chunks sized for sequential formatting.
+ * Splits a long report at paragraph boundaries (not ##) so chunk formatters
+ * do not each invent a full duplicate outline.
  */
 export function splitMarkdownForFormatting(markdown: string): string[] {
   const preprocessed = prepassResearchMarkdown(markdown);
@@ -72,33 +73,73 @@ export function splitMarkdownForFormatting(markdown: string): string[] {
     return [preprocessed];
   }
 
-  const parts = preprocessed.split(/(?=^## )/m);
-  if (parts.length <= 1) {
-    return [preprocessed];
-  }
-
   const chunks: string[] = [];
-  let buffer = "";
+  let start = 0;
 
-  for (const part of parts) {
-    const next = buffer.length === 0 ? part : buffer + part;
-    if (
-      buffer.length > 0 &&
-      next.length > FORMAT_CHUNK_TARGET_CHARS &&
-      buffer.trim().length > 0
-    ) {
-      chunks.push(buffer.trim());
-      buffer = part;
-    } else {
-      buffer = next;
+  while (start < preprocessed.length) {
+    let end = Math.min(start + FORMAT_CHUNK_TARGET_CHARS, preprocessed.length);
+    if (end < preprocessed.length) {
+      const breakAt = preprocessed.lastIndexOf("\n\n", end);
+      if (breakAt > start + 2_000) {
+        end = breakAt;
+      }
     }
-  }
-
-  if (buffer.trim().length > 0) {
-    chunks.push(buffer.trim());
+    const slice = preprocessed.slice(start, end).trim();
+    if (slice.length > 0) {
+      chunks.push(slice);
+    }
+    start = end;
   }
 
   return chunks.length > 0 ? chunks : [preprocessed];
+}
+
+/**
+ * Merges consecutive duplicate ## sections (can happen after chunked formatting).
+ */
+/** Keeps the first # title; demotes any later # lines to ##. */
+export function keepSingleTopTitle(markdown: string): string {
+  let seenH1 = false;
+  return markdown.replace(/^# (.+)$/gm, (line, title) => {
+    if (!seenH1) {
+      seenH1 = true;
+      return `# ${title}`;
+    }
+    return `## ${title}`;
+  });
+}
+
+export function mergeDuplicateH2Sections(markdown: string): string {
+  const parts = markdown.split(/(?=^## )/m);
+  if (parts.length <= 1) {
+    return markdown;
+  }
+
+  const merged: string[] = [];
+  const indexByTitle = new Map<string, number>();
+
+  for (const part of parts) {
+    const titleMatch = part.match(/^## (.+?)(?:\n|$)/);
+    if (!titleMatch) {
+      merged.push(part);
+      continue;
+    }
+
+    const title = titleMatch[1].trim();
+    const existing = indexByTitle.get(title);
+    if (existing === undefined) {
+      indexByTitle.set(title, merged.length);
+      merged.push(part.trim());
+      continue;
+    }
+
+    const body = part.replace(/^## .+?\n+/, "").trim();
+    if (body) {
+      merged[existing] = `${merged[existing]}\n\n${body}`.trim();
+    }
+  }
+
+  return merged.join("\n\n").trim();
 }
 
 /**
@@ -107,6 +148,8 @@ export function splitMarkdownForFormatting(markdown: string): string[] {
 export function postpassResearchMarkdown(markdown: string): string {
   let text = prepassResearchMarkdown(markdown);
   text = demoteShallowHeadings(text);
+  text = keepSingleTopTitle(text);
+  text = mergeDuplicateH2Sections(text);
   text = text.replace(/^(#{1,6}\s+.+)\n([^\n#])/gm, "$1\n\n$2");
   return text.trim();
 }

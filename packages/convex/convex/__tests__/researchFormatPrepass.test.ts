@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   fixInlineSectionTitles,
+  mergeDuplicateH2Sections,
   prepassResearchMarkdown,
 } from "../researchFormatPrepass";
 
@@ -14,12 +15,23 @@ describe("fixInlineSectionTitles", () => {
   });
 });
 
+describe("mergeDuplicateH2Sections", () => {
+  it("merges two ## Executive Summary blocks", () => {
+    const input =
+      "## Executive Summary\n\nPart A.\n\n## Executive Summary\n\nPart B.";
+    const out = mergeDuplicateH2Sections(input);
+    expect(out).toContain("Part A.");
+    expect(out).toContain("Part B.");
+    expect(out.match(/^## Executive Summary/gm)?.length).toBe(1);
+  });
+});
+
 describe("prepassResearchMarkdown", () => {
   it("applies multiple normalizations", () => {
     const input =
       " Model mechanics.** Foo.\r\n\r\n<thinking>x</thinking>\r\n\r\n\r\n\r\nBar";
     const out = prepassResearchMarkdown(input);
-    expect(out).toContain("### Model mechanics");
+    expect(out).toContain("**Model mechanics:**");
     expect(out).not.toContain("<thinking>");
     expect(out).not.toMatch(/^ /m);
   });

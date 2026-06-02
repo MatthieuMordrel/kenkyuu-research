@@ -781,18 +781,21 @@ export const debugJobFormatting = internalQuery({
       return null;
     };
 
-    const hasHeading = (text: string | undefined) =>
-      text?.includes("### Model mechanics") ?? false;
-    const hasBlockquote = (text: string | undefined) =>
-      text?.includes("> Demand again exceeded") ?? false;
+    const countH2 = (text: string | undefined) =>
+      text?.match(/^## /gm)?.length ?? 0;
+    const countH3 = (text: string | undefined) =>
+      text?.match(/^### /gm)?.length ?? 0;
+    const h2Titles =
+      job.result?.match(/^## (.+)$/gm)?.map((line) => line.slice(3)) ?? [];
 
     return {
       status: job.status,
       rawLen: job.rawResult?.length ?? 0,
       resultLen: job.result?.length ?? 0,
       identical: job.rawResult === job.result,
-      resultHasSectionHeading: hasHeading(job.result),
-      resultHasQuoteBlock: hasBlockquote(job.result),
+      resultH2Count: countH2(job.result),
+      resultH3Count: countH3(job.result),
+      resultH2Titles: h2Titles.slice(0, 20),
       rawSnippet: snippet(job.rawResult),
       resultSnippet: snippet(job.result),
     };

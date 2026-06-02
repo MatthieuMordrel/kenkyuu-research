@@ -31,6 +31,10 @@
     "./format-models": {
       "types": "./src/format-models.ts",
       "import": "./src/format-models.ts"
+    },
+    "./format-prompt": {
+      "types": "./src/format-prompt.ts",
+      "import": "./src/format-prompt.ts"
     }
   },
   "scripts": {

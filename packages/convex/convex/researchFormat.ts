@@ -13,40 +13,16 @@ import {
   resolveFormatModel,
   type FormatModelDefinition,
 } from "@repo/research-models/format-models";
+import {
+  buildFormatUserMessageForChunk,
+  getFormatSystemPrompt,
+} from "@repo/research-models/format-prompt";
 import type { NormalizedUsage } from "@repo/research-models/types";
 import {
   postpassResearchMarkdown,
   prepassResearchMarkdown,
   splitMarkdownForFormatting,
 } from "./researchFormatPrepass";
-
-const FORMAT_SYSTEM_PROMPT = `You are a publication-quality markdown editor for institutional equity research. The report renders in a web app where only ## headings become collapsible sections. Everything collapsed by default except the reader expands a few major parts — so structure must be disciplined.
-
-## Outline rules (critical)
-
-- Exactly ONE # title at the top (company / report name). Do not repeat the company name as ## later.
-- Use ## only for major parts (about 6–12 for a long report): e.g. Executive summary, Investment thesis, Business model, Financials & KPIs, Competitive landscape, Risks, Valuation, Data verification (if needed), Sources.
-- Do NOT use ## for: numbered stubs ("Section 1", "Section 2"), quarters (Q1 2026, Q4 2025), single months, one-line facts, or duplicate company titles.
-- Use ### sparingly — only when a subsection has several paragraphs or a substantial bullet list beneath it.
-- Dates, quarters, and short labels (Q1 2026, December 2025, End 2025) must be **bold lead-ins** or bullet items, NEVER ### or ## headings.
-- Merge redundant blocks: one "Nebius Group" chapter with Section 1/2/3 content nested as ### or bold sub-parts under a single ##, not multiple duplicate ## company headers.
-- Remove empty "Data verification" style headers unless they contain real content; fold verification notes into bullets under Financials.
-
-## Readability
-
-- NEVER leave "Label.** sentence" blobs — use **Label:** or ### Label (only if enough body text follows).
-- Clusters of metrics → bullet lists. Verbatim quotes → blockquotes (> …).
-- One idea per paragraph; fix hard line breaks and dangling em dashes.
-
-## Example
-
-BAD: ## Nebius Group / ## Data verification / ## Section 1 / ### Q1 2026 / ### December 2025 (one line each)
-GOOD: ## Business model & unit economics with **Q1 2026:** and **FY2025:** as bold bullets inside the section
-
-## Fidelity
-
-- Keep all numbers, dates, tickers, and claims exact. Preserve citations and ## Sources.
-- Output GitHub-flavored Markdown only — no preamble or wrapper fences.`;
 
 const MIN_LENGTH_RATIO = 0.7;
 const MAX_LENGTH_RATIO = 1.35;
@@ -116,20 +92,27 @@ function mergeUsage(
 async function callFormatter(
   formatModel: FormatModelDefinition,
   apiKey: string,
-  rawMarkdown: string
+  rawMarkdown: string,
+  chunkIndex = 0,
+  chunkTotal = 1
 ): Promise<{ text: string; usage: NormalizedUsage }> {
   const client = new Anthropic({ apiKey });
   const preprocessed = prepassResearchMarkdown(rawMarkdown);
+  const system = getFormatSystemPrompt(chunkTotal);
 
   const stream = client.messages.stream({
     model: formatModel.apiModel,
     max_tokens: maxOutputTokensForInput(preprocessed.length),
     temperature: 0,
-    system: FORMAT_SYSTEM_PROMPT,
+    system,
     messages: [
       {
         role: "user",
-        content: `Rewrite for readability. Use ONE # title, ~6-12 ## major sections only (no ## for quarters/dates/section numbers). Use **bold** for Q1 2026-style labels. No duplicate company ## headers. Preserve all facts exactly. Return only markdown.\n\n---\n\n${preprocessed}`,
+        content: buildFormatUserMessageForChunk(
+          preprocessed,
+          chunkIndex,
+          chunkTotal
+        ),
       },
     ],
   });
@@ -155,10 +138,18 @@ async function callFormatter(
 async function formatChunk(
   formatModel: FormatModelDefinition,
   apiKey: string,
-  chunk: string
+  chunk: string,
+  chunkIndex: number,
+  chunkTotal: number
 ): Promise<{ text: string; usage: NormalizedUsage }> {
-  const { text, usage } = await callFormatter(formatModel, apiKey, chunk);
-  return { text: postpassResearchMarkdown(text), usage };
+  const { text, usage } = await callFormatter(
+    formatModel,
+    apiKey,
+    chunk,
+    chunkIndex,
+    chunkTotal
+  );
+  return { text, usage };
 }
 
 /**
@@ -178,7 +169,13 @@ export async function formatResearchMarkdown(
     if (chunks.length === 1) {
       let lastText = preprocessed;
       for (let attempt = 0; attempt < MAX_FORMAT_ATTEMPTS; attempt++) {
-        const formatted = await formatChunk(formatModel, apiKey, chunks[0]);
+        const formatted = await formatChunk(
+          formatModel,
+          apiKey,
+          chunks[0],
+          0,
+          1
+        );
         usage = mergeUsage(usage, formatted.usage);
         lastText = formatted.text;
         if (passesFormattingGuards(preprocessed, lastText)) {
@@ -193,8 +190,14 @@ export async function formatResearchMarkdown(
     }
 
     const formattedParts: string[] = [];
-    for (const chunk of chunks) {
-      const formatted = await formatChunk(formatModel, apiKey, chunk);
+    for (let i = 0; i < chunks.length; i++) {
+      const formatted = await formatChunk(
+        formatModel,
+        apiKey,
+        chunks[i],
+        i,
+        chunks.length
+      );
       usage = mergeUsage(usage, formatted.usage);
       formattedParts.push(formatted.text);
     }

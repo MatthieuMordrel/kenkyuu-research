@@ -2,9 +2,9 @@ import type { ModelPricing, NormalizedUsage } from "./types";
 
 /**
  * Registry id for the default research output formatter (not a research model).
- * Sonnet follows layout instructions more reliably than Haiku for long reports.
+ * Haiku is fast enough for chunked passes; Sonnet available when quality trumps speed.
  */
-export const DEFAULT_FORMAT_MODEL_ID = "anthropic/claude-sonnet-4-5" as const;
+export const DEFAULT_FORMAT_MODEL_ID = "anthropic/claude-haiku-4-5" as const;
 
 export type FormatModelId =
   | "anthropic/claude-haiku-4-5"
