@@ -1,5 +1,6 @@
 "use node";
 
+import type { ResearchModelDefinition } from "@repo/research-models/types";
 import OpenAI from "openai";
 import type {
   Response,
@@ -140,22 +141,59 @@ function renderResearchMarkdown(response: Response): string {
   return response.output_text.trim();
 }
 
+/** Responses create body including API fields not yet in all SDK typings. */
+type OpenAIResponseCreateBody =
+  OpenAI.Responses.ResponseCreateParamsNonStreaming & {
+    max_tool_calls?: number;
+  };
+
+/**
+ * Build Responses API create params from registry metadata.
+ * Legacy models without `openai` runtime config keep the original defaults.
+ */
+export function buildOpenAIResponseCreateParams(
+  model: ResearchModelDefinition,
+  prompt: string
+): OpenAIResponseCreateBody {
+  const runtime = model.openai;
+  const webSearchTool = runtime?.webSearchTool ?? "web_search_preview";
+
+  const tools: OpenAI.Responses.ResponseCreateParamsNonStreaming["tools"] =
+    webSearchTool === "web_search"
+      ? [
+          {
+            type: "web_search",
+            search_context_size: runtime?.webSearchContextSize ?? "medium",
+          },
+        ]
+      : [{ type: "web_search_preview" }];
+
+  tools.push({ type: "code_interpreter", container: { type: "auto" } });
+
+  return {
+    model: model.apiModel,
+    instructions: RESEARCH_INSTRUCTIONS,
+    input: prompt,
+    reasoning: runtime
+      ? { effort: runtime.reasoningEffort, summary: "auto" }
+      : { summary: "auto" },
+    max_tool_calls: runtime?.maxToolCalls,
+    max_output_tokens: runtime?.maxOutputTokens,
+    tools,
+    background: true,
+  };
+}
+
 export const openaiAdapter: ResearchProviderAdapter = {
   providerId: "openai",
 
   async start(model, prompt, apiKey) {
     const client = new OpenAI({ apiKey });
-    const response = await client.responses.create({
-      model: model.apiModel,
-      instructions: RESEARCH_INSTRUCTIONS,
-      input: prompt,
-      reasoning: { summary: "auto" },
-      tools: [
-        { type: "web_search_preview" },
-        { type: "code_interpreter", container: { type: "auto" } },
-      ],
-      background: true,
-    });
+    const body = buildOpenAIResponseCreateParams(model, prompt);
+    // max_tool_calls is supported by the API; SDK typings may lag behind.
+    const response = await client.responses.create(
+      body as OpenAI.Responses.ResponseCreateParamsNonStreaming
+    );
     return { externalId: response.id };
   },
 

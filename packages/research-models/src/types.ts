@@ -12,7 +12,49 @@ export type ProviderId = "openai" | "anthropic";
 export type ResearchModelId =
   | "anthropic/claude-opus-4-8"
   | "openai/o3-deep-research"
-  | "openai/o4-mini-deep-research";
+  | "openai/o4-mini-deep-research"
+  | "openai/gpt-5.5";
+
+/** OpenAI reasoning effort levels for Responses API models. */
+export type OpenAIReasoningEffort =
+  | "none"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh";
+
+/**
+ * Per-model OpenAI Responses API runtime settings.
+ * @property reasoningEffort - Thinking depth (`xhigh` for deep research)
+ * @property maxToolCalls - Cap on total built-in tool invocations per response
+ * @property maxOutputTokens - Upper bound on generated tokens including reasoning
+ * @property webSearchTool - Modern `web_search` vs legacy `web_search_preview`
+ * @property webSearchContextSize - How much search context to retain
+ */
+export interface OpenAIModelRuntimeConfig {
+  reasoningEffort: OpenAIReasoningEffort;
+  maxToolCalls: number;
+  maxOutputTokens?: number;
+  webSearchTool?: "web_search" | "web_search_preview";
+  webSearchContextSize?: "low" | "medium" | "high";
+}
+
+/** Anthropic adaptive thinking effort levels. */
+export type AnthropicEffort = "low" | "medium" | "high" | "xhigh";
+
+/**
+ * Per-model Anthropic Batch API runtime settings.
+ * @property effort - Adaptive thinking depth
+ * @property maxTokens - Max output tokens for the research turn
+ * @property webSearchMaxUses - Cap on web search tool invocations
+ * @property thinkingType - Thinking mode (adaptive for Opus 4.8)
+ */
+export interface AnthropicModelRuntimeConfig {
+  effort: AnthropicEffort;
+  maxTokens: number;
+  webSearchMaxUses: number;
+  thinkingType: "adaptive" | "enabled" | "disabled";
+}
 
 /** How job completion is detected for a model integration. */
 export type CompletionMode = "webhook" | "polling";
@@ -40,6 +82,8 @@ export interface ModelPricing {
  * @property completionMode - Webhook vs polling completion strategy
  * @property estimatedCostLabel - Rough cost range shown in the wizard
  * @property pricing - Rates used by estimateModelCost
+ * @property openai - OpenAI-specific runtime parameters (when providerId is openai)
+ * @property anthropic - Anthropic-specific runtime parameters (when providerId is anthropic)
  */
 export interface ResearchModelDefinition {
   id: ResearchModelId;
@@ -51,6 +95,8 @@ export interface ResearchModelDefinition {
   completionMode: CompletionMode;
   estimatedCostLabel: string;
   pricing: ModelPricing;
+  openai?: OpenAIModelRuntimeConfig;
+  anthropic?: AnthropicModelRuntimeConfig;
 }
 
 /**

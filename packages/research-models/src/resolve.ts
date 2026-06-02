@@ -18,7 +18,7 @@ export const DEFAULT_RESEARCH_MODEL_ID: ResearchModelId =
 export const LEGACY_PROVIDER_DEFAULT_MODEL: Record<ProviderId, ResearchModelId> =
   {
     anthropic: "anthropic/claude-opus-4-8",
-    openai: "openai/o3-deep-research",
+    openai: "openai/gpt-5.5",
   };
 
 /**

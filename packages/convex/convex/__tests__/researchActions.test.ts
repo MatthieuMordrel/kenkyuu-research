@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { estimateAnthropicCost } from "../providers/anthropic";
 import {
+  buildOpenAIResponseCreateParams,
   estimateOpenAICost,
   renderOpenAITextWithCitations,
 } from "../providers/openai";
+import { RESEARCH_MODELS } from "@repo/research-models/models";
 
 describe("openai estimateCost", () => {
   it("returns 0 for zero tokens", () => {
@@ -75,6 +77,39 @@ describe("anthropic estimateCost", () => {
         webSearchRequests: 10,
       })
     ).toBeCloseTo(0.975, 10);
+  });
+});
+
+describe("buildOpenAIResponseCreateParams", () => {
+  it("configures GPT-5.5 for deep research with xhigh effort and high tool budget", () => {
+    const params = buildOpenAIResponseCreateParams(
+      RESEARCH_MODELS["openai/gpt-5.5"],
+      "Analyze AAPL"
+    );
+
+    expect(params.model).toBe("gpt-5.5");
+    expect(params.reasoning).toEqual({ effort: "xhigh", summary: "auto" });
+    expect(params.max_tool_calls).toBe(150);
+    expect(params.max_output_tokens).toBe(128_000);
+    expect(params.tools).toEqual([
+      { type: "web_search", search_context_size: "high" },
+      { type: "code_interpreter", container: { type: "auto" } },
+    ]);
+    expect(params.background).toBe(true);
+  });
+
+  it("keeps legacy defaults for o3 deep research", () => {
+    const params = buildOpenAIResponseCreateParams(
+      RESEARCH_MODELS["openai/o3-deep-research"],
+      "Analyze AAPL"
+    );
+
+    expect(params.reasoning).toEqual({ summary: "auto" });
+    expect(params.max_tool_calls).toBeUndefined();
+    expect(params.tools).toEqual([
+      { type: "web_search_preview" },
+      { type: "code_interpreter", container: { type: "auto" } },
+    ]);
   });
 });
 

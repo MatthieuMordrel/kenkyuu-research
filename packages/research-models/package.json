@@ -23,6 +23,10 @@
     "./resolve": {
       "types": "./src/resolve.ts",
       "import": "./src/resolve.ts"
+    },
+    "./model-details": {
+      "types": "./src/model-details.ts",
+      "import": "./src/model-details.ts"
     }
   },
   "scripts": {

@@ -20,6 +20,10 @@ describe("resolveActiveModelId", () => {
       "anthropic/claude-opus-4-8"
     );
   });
+
+  it("keeps active OpenAI models unchanged", () => {
+    expect(resolveActiveModelId("openai/gpt-5.5")).toBe("openai/gpt-5.5");
+  });
 });
 
 describe("resolveStoredModelId", () => {
@@ -34,7 +38,7 @@ describe("resolveStoredModelId", () => {
 
   it("maps legacy provider when modelId is missing", () => {
     expect(resolveStoredModelId({ provider: "openai" })).toBe(
-      "anthropic/claude-opus-4-8"
+      "openai/gpt-5.5"
     );
   });
 });
@@ -58,6 +62,7 @@ describe("getActiveResearchModels", () => {
     expect(active.some((model) => model.id === "anthropic/claude-opus-4-8")).toBe(
       true
     );
+    expect(active.some((model) => model.id === "openai/gpt-5.5")).toBe(true);
     expect(active.some((model) => model.id === "openai/o3-deep-research")).toBe(
       false
     );

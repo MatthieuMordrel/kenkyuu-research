@@ -26,6 +26,12 @@ export const RESEARCH_MODELS = {
       outputPerM: 12.5,
       webSearchPerCall: 0.01,
     },
+    anthropic: {
+      effort: "xhigh",
+      maxTokens: 64_000,
+      webSearchMaxUses: 100,
+      thinkingType: "adaptive",
+    },
   },
   "openai/o3-deep-research": {
     id: "openai/o3-deep-research",
@@ -55,6 +61,28 @@ export const RESEARCH_MODELS = {
     pricing: {
       inputPerM: 5,
       outputPerM: 20,
+    },
+  },
+  "openai/gpt-5.5": {
+    id: "openai/gpt-5.5",
+    providerId: "openai",
+    label: "GPT-5.5",
+    description:
+      "OpenAI's latest frontier model — xhigh reasoning with deep web search for long-form research.",
+    apiModel: "gpt-5.5",
+    active: true,
+    completionMode: "webhook",
+    estimatedCostLabel: "~$2–5",
+    pricing: {
+      inputPerM: 5,
+      outputPerM: 30,
+    },
+    openai: {
+      reasoningEffort: "xhigh",
+      maxToolCalls: 150,
+      maxOutputTokens: 128_000,
+      webSearchTool: "web_search",
+      webSearchContextSize: "high",
     },
   },
 } as const satisfies Record<string, ResearchModelDefinition>;

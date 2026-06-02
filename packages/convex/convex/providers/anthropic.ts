@@ -6,14 +6,24 @@ import type {
   TextBlock,
 } from "@anthropic-ai/sdk/resources/messages";
 import type { ResearchProviderAdapter } from "./types";
+import type { ResearchModelDefinition } from "@repo/research-models/types";
 import { estimateModelCost } from "@repo/research-models/pricing";
 import { RESEARCH_MODELS } from "@repo/research-models/models";
 
-// At xhigh effort the docs recommend ~64k so the model has room to think and
-// run repeated tool calls across a long research turn.
-const MAX_TOKENS = 64_000;
-const EFFORT = "xhigh" as const;
-const WEB_SEARCH_MAX_USES = 40;
+/** Map registry thinking type to Anthropic SDK thinking config. */
+function buildThinkingConfig(
+  thinkingType: NonNullable<ResearchModelDefinition["anthropic"]>["thinkingType"]
+): Anthropic.Messages.MessageCreateParams["thinking"] {
+  switch (thinkingType) {
+    case "adaptive":
+      return { type: "adaptive" };
+    case "disabled":
+      return { type: "disabled" };
+    case "enabled":
+      // Enabled mode requires an explicit budget; adaptive is preferred for research.
+      return { type: "enabled", budget_tokens: 10_000 };
+  }
+}
 
 /** Custom-id convention: every batch contains exactly one request with this id. */
 const REQUEST_ID = "research";
@@ -40,6 +50,11 @@ export const anthropicAdapter: ResearchProviderAdapter = {
   providerId: "anthropic",
 
   async start(model, prompt, apiKey) {
+    const runtime = model.anthropic;
+    if (!runtime) {
+      throw new Error(`Missing anthropic runtime config for model ${model.id}`);
+    }
+
     const client = new Anthropic({ apiKey });
     const batch = await client.messages.batches.create({
       requests: [
@@ -47,15 +62,14 @@ export const anthropicAdapter: ResearchProviderAdapter = {
           custom_id: REQUEST_ID,
           params: {
             model: model.apiModel,
-            max_tokens: MAX_TOKENS,
-            // Opus 4.8 supports adaptive thinking; depth is steered by effort.
-            thinking: { type: "adaptive" },
-            output_config: { effort: EFFORT },
+            max_tokens: runtime.maxTokens,
+            thinking: buildThinkingConfig(runtime.thinkingType),
+            output_config: { effort: runtime.effort },
             tools: [
               {
                 type: "web_search_20250305",
                 name: "web_search",
-                max_uses: WEB_SEARCH_MAX_USES,
+                max_uses: runtime.webSearchMaxUses,
               },
             ],
             messages: [{ role: "user", content: prompt }],

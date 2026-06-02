@@ -28,6 +28,7 @@ import {
   resolvePromptModelId,
   type ResearchModelId,
 } from "@/lib/research-flow";
+import { ResearchModelPicker } from "@/components/research-model-picker";
 import type { Doc } from "@repo/convex/dataModel";
 
 type PromptType = "single-stock" | "multi-stock" | "discovery";
@@ -59,12 +60,6 @@ const INITIAL_FORM: PromptFormData = {
   template: "",
   defaultModelId: DEFAULT_MODEL_ID,
 };
-
-const MODEL_OPTIONS = ACTIVE_RESEARCH_MODELS.map((model) => ({
-  value: model.id,
-  label: model.label,
-  description: model.description,
-}));
 
 const TYPE_OPTIONS: {
   value: PromptType;
@@ -258,38 +253,16 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label>Default Model</Label>
-            <div
-              className={cn(
-                "grid gap-2",
-                MODEL_OPTIONS.length > 1 ? "grid-cols-2" : "grid-cols-1"
-              )}
-            >
-              {MODEL_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => updateField("defaultModelId", option.value)}
-                  className={cn(
-                    "rounded-md border p-2 text-left text-sm transition-colors",
-                    form.defaultModelId === option.value
-                      ? "border-primary bg-primary/5 font-medium"
-                      : "border-border hover:bg-accent"
-                  )}
-                >
-                  <span className="block">{option.label}</span>
-                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                    {option.description}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Used as the default for new research runs and schedules of this
-              prompt.
-            </p>
-          </div>
+          <ResearchModelPicker
+            label="Default Model"
+            value={form.defaultModelId}
+            onChange={(modelId) => updateField("defaultModelId", modelId)}
+            models={ACTIVE_RESEARCH_MODELS}
+          />
+          <p className="text-xs text-muted-foreground">
+            Used as the default for new research runs and schedules of this
+            prompt.
+          </p>
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">

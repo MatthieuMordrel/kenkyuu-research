@@ -22,6 +22,7 @@ import { usePrompts, usePrompt } from "@/hooks/use-prompts";
 import { useStocks, useTags } from "@/hooks/use-stocks";
 import { useActiveJobs } from "@/hooks/use-research";
 import { PromptPreviewDialog } from "@/components/prompt-preview-dialog";
+import { ResearchModelPicker } from "@/components/research-model-picker";
 import { injectVariables } from "@/lib/prompt-preview";
 import { cn } from "@/lib/utils";
 import {
@@ -32,7 +33,6 @@ import {
   Loader2,
   Play,
   Search,
-  Zap,
 } from "lucide-react";
 import type { Doc } from "@repo/convex/dataModel";
 import type { GenericId } from "convex/values";
@@ -426,45 +426,11 @@ function ModelPicker({
   onChange: (modelId: ResearchModelId) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium text-muted-foreground">Model</span>
-      <div
-        className={cn(
-          "grid gap-2",
-          ACTIVE_RESEARCH_MODELS.length > 1 ? "grid-cols-2" : "grid-cols-1"
-        )}
-      >
-        {ACTIVE_RESEARCH_MODELS.map((model) => {
-          const selected = value === model.id;
-          return (
-            <button
-              key={model.id}
-              type="button"
-              onClick={() => onChange(model.id)}
-              className={cn(
-                "flex items-start gap-2 rounded-lg border p-3 text-left transition-colors",
-                selected
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-accent"
-              )}
-            >
-              <Zap
-                className={cn(
-                  "size-4 shrink-0 mt-0.5",
-                  selected ? "text-primary" : "text-muted-foreground"
-                )}
-              />
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-sm font-medium">{model.label}</span>
-                <span className="text-xs text-muted-foreground line-clamp-2">
-                  {model.description}
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <ResearchModelPicker
+      value={value}
+      onChange={onChange}
+      models={ACTIVE_RESEARCH_MODELS}
+    />
   );
 }
 
