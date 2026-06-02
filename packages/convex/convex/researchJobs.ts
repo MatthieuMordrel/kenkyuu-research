@@ -5,7 +5,7 @@ import {
   mutation,
   query,
 } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
 import { validateSearchTerm, truncateResult } from "./validation";
@@ -15,9 +15,12 @@ import {
   modelIdValidator,
   providerValidator,
   resolveMutationModelId,
+  type ProviderName,
 } from "./providers/constants";
-
-const MAX_CONCURRENT_JOBS = 3;
+import {
+  buildAllProviderConcurrencySnapshots,
+  MAX_ACTIVE_JOBS_SCAN,
+} from "./researchConcurrency";
 
 const jobStatus = v.union(
   v.literal("pending"),
@@ -26,22 +29,30 @@ const jobStatus = v.union(
   v.literal("failed")
 );
 
-/** Throws if concurrent job limit is reached. */
-async function enforceConcurrentJobLimit(ctx: MutationCtx) {
+/** Loads pending and running jobs for concurrency calculations. */
+async function loadActiveJobsForConcurrency(ctx: QueryCtx) {
   const pendingJobs = await ctx.db
     .query("researchJobs")
     .withIndex("by_status", (q) => q.eq("status", "pending"))
-    .take(MAX_CONCURRENT_JOBS);
+    .take(MAX_ACTIVE_JOBS_SCAN);
   const runningJobs = await ctx.db
     .query("researchJobs")
     .withIndex("by_status", (q) => q.eq("status", "running"))
-    .take(MAX_CONCURRENT_JOBS);
+    .take(MAX_ACTIVE_JOBS_SCAN);
 
-  if (pendingJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
-    throw new Error(
-      `Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed`
-    );
-  }
+  return [...pendingJobs, ...runningJobs];
+}
+
+/**
+ * Schedules dispatch for the oldest pending job when a provider slot opens.
+ */
+async function scheduleProviderQueueDrain(
+  ctx: MutationCtx,
+  provider: ProviderName
+) {
+  await ctx.scheduler.runAfter(0, internal.researchJobs.drainProviderQueue, {
+    provider,
+  });
 }
 
 // --- Mutations ---
@@ -62,8 +73,6 @@ export const createResearchJob = mutation({
     if (!prompt) {
       throw new Error("Prompt not found");
     }
-
-    await enforceConcurrentJobLimit(ctx);
 
     const resolvedModelId = resolveMutationModelId({
       modelId: args.modelId ?? prompt.defaultModelId,
@@ -102,8 +111,6 @@ export const createAndStartResearch = mutation({
       throw new Error("Prompt not found");
     }
 
-    await enforceConcurrentJobLimit(ctx);
-
     const resolvedModelId = resolveMutationModelId({
       modelId: args.modelId ?? prompt.defaultModelId,
       provider: args.provider ?? prompt.defaultProvider,
@@ -122,16 +129,8 @@ export const createAndStartResearch = mutation({
       createdAt: now,
     });
 
-    // Stagger job starts to avoid hitting OpenAI rate limits.
-    // If other jobs are already running/pending, add a 10s delay per job.
-    const currentRunning = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "running"))
-      .take(MAX_CONCURRENT_JOBS);
-    const staggerDelayMs = currentRunning.length * 10_000; // 10s per running job
-
     await ctx.scheduler.runAfter(
-      staggerDelayMs,
+      0,
       internal.researchActions.startResearch,
       { jobId }
     );
@@ -182,6 +181,11 @@ export const updateJobStatus = internalMutation({
     }
 
     await ctx.db.patch(id, patch);
+
+    if (updates.status === "completed" || updates.status === "failed") {
+      await scheduleProviderQueueDrain(ctx, job.provider);
+    }
+
     return id;
   },
 });
@@ -241,6 +245,7 @@ export const cancelJob = mutation({
       error: "Cancelled by user",
       completedAt: Date.now(),
     });
+    await scheduleProviderQueueDrain(ctx, job.provider);
     await logAuditEvent(ctx, {
       action: "job.cancel",
       resourceType: "researchJobs",
@@ -267,9 +272,6 @@ export const retryJob = mutation({
     if (job.status !== "failed") {
       throw new Error("Can only retry failed jobs");
     }
-
-    // Enforce concurrent job limit on retry to prevent bypass
-    await enforceConcurrentJobLimit(ctx);
 
     if (job.attempts >= 3) {
       // Reset attempts to allow manual retry
@@ -407,19 +409,13 @@ export const getActiveJobs = query({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
-    const pendingJobs = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .take(MAX_CONCURRENT_JOBS);
-    const runningJobs = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "running"))
-      .take(MAX_CONCURRENT_JOBS);
+    const activeJobs = await loadActiveJobsForConcurrency(ctx);
+    const byProvider = buildAllProviderConcurrencySnapshots(activeJobs);
 
     return {
-      jobs: [...pendingJobs, ...runningJobs],
-      count: pendingJobs.length + runningJobs.length,
-      limit: MAX_CONCURRENT_JOBS,
+      jobs: activeJobs,
+      byProvider,
+      count: activeJobs.length,
     };
   },
 });
@@ -465,7 +461,6 @@ export const listResults = query({
         .query("researchJobs")
         .withIndex("by_promptId", (q) => q.eq("promptId", args.promptId!));
     } else if (args.dateFrom && args.dateTo) {
-      // Use createdAt index for date-range filtering to avoid post-filter pagination issues
       jobsQuery = ctx.db
         .query("researchJobs")
         .withIndex("by_createdAt", (q) =>
@@ -490,12 +485,10 @@ export const listResults = query({
 
     let results = paginatedResult.page;
 
-    // Filter by stockId in memory (stockIds is an array field — can't index)
     if (args.stockId) {
       results = results.filter((j) => j.stockIds.includes(args.stockId!));
     }
 
-    // Filter by date range in memory only when another index was chosen above
     if ((args.status || args.promptId) && args.dateFrom) {
       results = results.filter((j) => j.createdAt >= args.dateFrom!);
     }
@@ -528,8 +521,6 @@ export const searchResults = query({
       return [];
     }
 
-    // Search through recent completed jobs that have results
-    // Limit scan to avoid reading entire table for text search
     const scanLimit = maxResults * 10;
     const completedJobs = await ctx.db
       .query("researchJobs")
@@ -574,11 +565,10 @@ export const getStaleRunningJobs = internalQuery({
   args: { staleThresholdMs: v.number() },
   handler: async (ctx, args) => {
     const cutoff = Date.now() - args.staleThresholdMs;
-    // Running jobs are bounded by MAX_CONCURRENT_JOBS, but use a safe limit
     const runningJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "running"))
-      .take(50);
+      .take(MAX_ACTIVE_JOBS_SCAN);
 
     return runningJobs.filter(
       (job) => job.externalJobId && job.createdAt < cutoff
@@ -586,16 +576,45 @@ export const getStaleRunningJobs = internalQuery({
   },
 });
 
-/** Returns the count of jobs currently in "running" status (with an external ID = submitted to OpenAI). */
-export const getRunningJobCount = internalQuery({
+/** Active jobs used by dispatch logic in researchActions. */
+export const getConcurrencyJobsInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const runningJobs = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "running"))
-      .take(10);
-    // Only count jobs that have actually been submitted to OpenAI
-    return runningJobs.filter((j) => j.externalJobId).length;
+    return await loadActiveJobsForConcurrency(ctx);
+  },
+});
+
+/**
+ * Starts the oldest pending job for a provider when a dispatch slot is available.
+ */
+export const drainProviderQueue = internalMutation({
+  args: { provider: providerValidator },
+  handler: async (ctx, args) => {
+    const activeJobs = await loadActiveJobsForConcurrency(ctx);
+    const snapshot = buildAllProviderConcurrencySnapshots(activeJobs)[
+      args.provider
+    ];
+
+    if (!snapshot.hasDispatchSlot) {
+      return null;
+    }
+
+    const pendingJobs = activeJobs
+      .filter(
+        (job) => job.provider === args.provider && job.status === "pending"
+      )
+      .sort((left, right) => left.createdAt - right.createdAt);
+
+    const nextJob = pendingJobs[0];
+    if (!nextJob) {
+      return null;
+    }
+
+    await ctx.scheduler.runAfter(0, internal.researchActions.startResearch, {
+      jobId: nextJob._id,
+    });
+
+    return nextJob._id;
   },
 });
 

@@ -169,7 +169,7 @@ function SidebarActiveJobs() {
       <SidebarGroupLabel>
         <span>Active Jobs</span>
         <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary tabular-nums">
-          {activeJobs.count}/{activeJobs.limit}
+          {activeJobs.count}
         </span>
       </SidebarGroupLabel>
       <SidebarGroupContent>

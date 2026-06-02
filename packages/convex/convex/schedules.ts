@@ -681,23 +681,6 @@ export const createScheduledJob = internalMutation({
       throw new Error("Prompt not found");
     }
 
-    // Enforce concurrent job limit on scheduled jobs to prevent bypass
-    const MAX_CONCURRENT_JOBS = 3;
-    const pendingJobs = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .take(MAX_CONCURRENT_JOBS);
-    const runningJobs = await ctx.db
-      .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "running"))
-      .take(MAX_CONCURRENT_JOBS);
-
-    if (pendingJobs.length + runningJobs.length >= MAX_CONCURRENT_JOBS) {
-      throw new Error(
-        `Maximum of ${MAX_CONCURRENT_JOBS} concurrent jobs allowed. Scheduled job deferred.`
-      );
-    }
-
     const now = Date.now();
     const resolvedModelId = resolveMutationModelId({
       modelId: args.modelId,
@@ -716,10 +699,8 @@ export const createScheduledJob = internalMutation({
       createdAt: now,
     });
 
-    // Stagger start to avoid hitting OpenAI rate limits
-    const staggerDelayMs = runningJobs.length * 10_000; // 10s per running job
     await ctx.scheduler.runAfter(
-      staggerDelayMs,
+      0,
       internal.researchActions.startResearch,
       {
         jobId,

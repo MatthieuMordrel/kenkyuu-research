@@ -18,6 +18,9 @@ import {
   useResearchFlow,
   type ResearchModelId,
 } from "@/hooks/use-research-flow";
+import { getResearchModel } from "@/lib/research-flow";
+import { RESEARCH_PROVIDERS } from "@repo/research-models/providers";
+import type { ProviderId } from "@repo/research-models/types";
 import { usePrompts, usePrompt } from "@/hooks/use-prompts";
 import { useStocks, useTags } from "@/hooks/use-stocks";
 import { useActiveJobs } from "@/hooks/use-research";
@@ -440,9 +443,13 @@ function ProviderConfirmStep() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const slotsUsed = activeJobs?.count ?? 0;
-  const slotsLimit = activeJobs?.limit ?? 5;
-  const hasCapacity = slotsUsed < slotsLimit;
+  const selectedModel = getResearchModel(flow.modelId);
+  const providerId = selectedModel.providerId as ProviderId;
+  const providerSnapshot = activeJobs?.byProvider[providerId];
+  const providerLabel = RESEARCH_PROVIDERS[providerId].label;
+  const slotsUsed = providerSnapshot?.active ?? 0;
+  const slotsLimit = providerSnapshot?.limit ?? 0;
+  const willQueue = providerSnapshot?.atCapacity ?? false;
 
   async function handleRun() {
     setError(null);
@@ -489,9 +496,12 @@ function ProviderConfirmStep() {
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Active Jobs</span>
+            <span className="text-muted-foreground">{providerLabel} Slots</span>
             <span
-              className={cn("font-medium", !hasCapacity && "text-destructive")}
+              className={cn(
+                "font-medium",
+                willQueue && "text-amber-600 dark:text-amber-400"
+              )}
             >
               {slotsUsed}/{slotsLimit}
             </span>
@@ -504,10 +514,10 @@ function ProviderConfirmStep() {
         <PromptPreview promptId={flow.promptId} stockIds={flow.stockIds} />
       )}
 
-      {!hasCapacity && (
-        <p className="text-xs text-destructive">
-          Maximum concurrent jobs reached. Wait for an active job to complete or
-          cancel one before starting a new research.
+      {willQueue && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          {providerLabel} is at capacity ({slotsUsed}/{slotsLimit}). Your job
+          will be queued and start automatically when a slot opens.
         </p>
       )}
 
@@ -526,7 +536,7 @@ function ProviderConfirmStep() {
         <Button
           type="button"
           onClick={handleRun}
-          disabled={submitting || !flow.canExecute || !hasCapacity}
+          disabled={submitting || !flow.canExecute}
         >
           {submitting ? (
             <>

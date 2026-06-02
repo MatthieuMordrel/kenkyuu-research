@@ -264,7 +264,6 @@ async function handleEachMode(
         console.error(
           `Earnings trigger failed for stock ${earnings.stockId}, schedule "${schedule.name}": ${message}`
         );
-        if (message.includes("concurrent jobs")) break;
       }
     }
   }
@@ -396,7 +395,6 @@ async function handleAggregateMode(
             console.error(
               `Earnings trigger [after_last] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`
             );
-            if (message.includes("concurrent jobs")) break;
           }
         }
       } else {
@@ -460,7 +458,6 @@ async function handleAggregateMode(
             console.error(
               `Earnings trigger [before_first] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`
             );
-            if (message.includes("concurrent jobs")) break;
           }
         }
       } else {

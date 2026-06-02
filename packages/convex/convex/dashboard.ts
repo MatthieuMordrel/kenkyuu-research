@@ -1,8 +1,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
-
-const MAX_CONCURRENT_JOBS = 5;
+import { buildAllProviderConcurrencySnapshots, MAX_ACTIVE_JOBS_SCAN } from "./researchConcurrency";
 
 /** Recent research: last 5 completed or failed jobs with prompt and stock info. */
 export const recentResearch = query({
@@ -55,7 +54,6 @@ export const upcomingSchedules = query({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
-    // Use compound index to get only enabled schedules sorted by nextRunAt
     const enabledSchedules = await ctx.db
       .query("schedules")
       .withIndex("by_enabled_nextRunAt", (q) => q.eq("enabled", true))
@@ -73,7 +71,6 @@ export const upcomingSchedules = query({
         timezone: s.timezone,
       }));
 
-    // Enrich with prompt names
     const enriched = await Promise.all(
       upcoming.map(async (s) => {
         const prompt = await ctx.db.get(s.promptId);
@@ -113,7 +110,6 @@ export const monthlySpend = query({
 
     const totalCost = logs.reduce((sum, log) => sum + log.costUsd, 0);
 
-    // Get budget threshold from settings
     const budgetSetting = await ctx.db
       .query("settings")
       .withIndex("by_key", (q) => q.eq("key", "budget_threshold"))
@@ -134,7 +130,7 @@ export const monthlySpend = query({
   },
 });
 
-/** Active jobs count: number of pending + running jobs and the max limit. */
+/** Active jobs count with per-provider concurrency snapshots. */
 export const activeJobsCount = query({
   args: { token: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -143,17 +139,19 @@ export const activeJobsCount = query({
     const pendingJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .take(MAX_CONCURRENT_JOBS + 1);
+      .take(MAX_ACTIVE_JOBS_SCAN);
     const runningJobs = await ctx.db
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "running"))
-      .take(MAX_CONCURRENT_JOBS + 1);
+      .take(MAX_ACTIVE_JOBS_SCAN);
+    const activeJobs = [...pendingJobs, ...runningJobs];
+    const byProvider = buildAllProviderConcurrencySnapshots(activeJobs);
 
     return {
       pending: pendingJobs.length,
       running: runningJobs.length,
-      total: pendingJobs.length + runningJobs.length,
-      limit: MAX_CONCURRENT_JOBS,
+      total: activeJobs.length,
+      byProvider,
     };
   },
 });

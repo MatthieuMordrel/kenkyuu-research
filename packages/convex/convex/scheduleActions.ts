@@ -276,7 +276,6 @@ export const executeRunNow = internalAction({
             console.error(
               `Run Now failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`
             );
-            if (message.includes("concurrent jobs")) break;
           }
         }
       } else {
@@ -452,7 +451,6 @@ export const executeScheduledRun = internalAction({
             console.error(
               `Scheduled run failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`
             );
-            if (message.includes("concurrent jobs")) break;
           }
         }
       } else {

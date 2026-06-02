@@ -15,9 +15,19 @@ import {
   type ProviderName,
 } from "./providers";
 import type { ResearchModelDefinition } from "@repo/research-models/types";
+import {
+  countSubmittedJobs,
+  DISPATCH_RETRY_DELAY_MS,
+  hasDispatchSlot,
+  openAiStartStaggerMs,
+} from "./researchConcurrency";
 
 const MAX_RETRIES = 3;
-const MAX_RUNNING = 3;
+
+/** Pause execution in Node actions (used for OpenAI start stagger). */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // Scheduled-poll cadence for providers without webhooks. Start aggressive,
 // back off so long jobs don't burn scheduler invocations.
@@ -128,18 +138,25 @@ export const startResearch = internalAction({
     });
     if (!job) throw new Error("Research job not found");
 
+    if (job.status === "running") {
+      // Another startResearch invocation is already dispatching this job.
+      return;
+    }
+
     if (job.status !== "pending" && job.status !== "failed") {
       throw new Error(`Job is not in a startable state: ${job.status}`);
     }
 
-    // Pre-flight: cap concurrent submitted jobs. If at limit, re-queue.
-    const runningJobs = await ctx.runQuery(
-      internal.researchJobs.getRunningJobCount,
+    const model = resolveJobModel(job);
+    const activeJobs = await ctx.runQuery(
+      internal.researchJobs.getConcurrencyJobsInternal,
       {}
     );
-    if (runningJobs >= MAX_RUNNING) {
+
+    // Provider-aware dispatch gate: re-queue when this provider is at capacity.
+    if (!hasDispatchSlot(activeJobs, model.providerId)) {
       await ctx.scheduler.runAfter(
-        30_000,
+        DISPATCH_RETRY_DELAY_MS,
         internal.researchActions.startResearch,
         { jobId: args.jobId }
       );
@@ -164,7 +181,14 @@ export const startResearch = internalAction({
       status: "running",
     });
 
-    const model = resolveJobModel(job);
+    if (model.providerId === "openai") {
+      const submittedOpenAiCount = countSubmittedJobs(activeJobs, "openai");
+      const staggerMs = openAiStartStaggerMs(submittedOpenAiCount);
+      if (staggerMs > 0) {
+        await sleep(staggerMs);
+      }
+    }
+
     const adapter = getProviderAdapter(model.providerId);
     const apiKey = await getProviderApiKey(ctx, model.providerId);
     if (!apiKey) {

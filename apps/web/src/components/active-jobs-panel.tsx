@@ -98,7 +98,7 @@ export function ActiveJobsPanel() {
     );
   }
 
-  const { jobs, count, limit } = activeJobs;
+  const { jobs, count, byProvider } = activeJobs;
 
   // Build a map of prompts for quick lookup
   const promptMap = new Map<string, Doc<"prompts">>();
@@ -117,7 +117,9 @@ export function ActiveJobsPanel() {
             Active Jobs
           </span>
           <Badge variant="outline" className="text-xs font-normal">
-            {count}/{limit} slots
+            {count} active · OpenAI {byProvider.openai.active}/
+            {byProvider.openai.limit}, Anthropic {byProvider.anthropic.active}/
+            {byProvider.anthropic.limit}
           </Badge>
         </CardTitle>
       </CardHeader>

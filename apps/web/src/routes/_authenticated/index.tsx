@@ -80,6 +80,14 @@ function OverviewCards() {
 
   const budget = monthlySpend.budgetThreshold ?? null;
   const percentUsed = budget ? (monthlySpend.totalCost / budget) * 100 : null;
+  const openai = activeJobs.byProvider.openai;
+  const anthropic = activeJobs.byProvider.anthropic;
+  const totalCapacity = openai.limit + anthropic.limit;
+  const totalActive = openai.active + anthropic.active;
+  const slotsAvailable = Math.max(totalCapacity - totalActive, 0);
+  const capacityUsedPercent =
+    totalCapacity > 0 ? (totalActive / totalCapacity) * 100 : 0;
+  const atAnyCapacity = openai.atCapacity || anthropic.atCapacity;
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -150,8 +158,9 @@ function OverviewCards() {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
-            {activeJobs.running} running, {activeJobs.pending} pending (limit{" "}
-            {activeJobs.limit})
+            {activeJobs.running} running, {activeJobs.pending} pending · OpenAI{" "}
+            {openai.active}/{openai.limit}, Anthropic {anthropic.active}/
+            {anthropic.limit}
           </p>
         </CardContent>
       </Card>
@@ -163,7 +172,7 @@ function OverviewCards() {
             <FlaskConical className="size-4 text-muted-foreground" />
           </div>
           <CardTitle className="text-2xl tabular-nums">
-            {activeJobs.limit - activeJobs.total}/{activeJobs.limit}
+            {slotsAvailable}/{totalCapacity}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -171,21 +180,21 @@ function OverviewCards() {
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className={`h-full rounded-full transition-all ${
-                  activeJobs.total >= activeJobs.limit
-                    ? "bg-destructive"
-                    : activeJobs.total >= activeJobs.limit - 1
+                  atAnyCapacity
+                    ? "bg-amber-500"
+                    : capacityUsedPercent > 85
                       ? "bg-amber-500"
                       : "bg-primary"
                 }`}
                 style={{
-                  width: `${(activeJobs.total / activeJobs.limit) * 100}%`,
+                  width: `${Math.min(capacityUsedPercent, 100)}%`,
                 }}
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {activeJobs.total >= activeJobs.limit
-                ? "At capacity"
-                : "Slots available"}
+              {atAnyCapacity
+                ? "One or more providers at capacity — new jobs queue automatically"
+                : "Slots available across providers"}
             </p>
           </div>
         </CardContent>
