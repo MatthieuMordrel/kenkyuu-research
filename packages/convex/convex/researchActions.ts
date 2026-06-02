@@ -83,8 +83,9 @@ async function applyCompletedResult(
     costUsd,
   });
 
-  await ctx.scheduler.runAfter(0, internal.researchFormat.formatResearchResult, {
+  await ctx.scheduler.runAfter(0, internal.researchFormatActions.startFormat, {
     jobId: job._id,
+    mode: "pipeline",
   });
 }
 

@@ -7,6 +7,9 @@ import type {
   ResponseFailedWebhookEvent,
 } from "openai/resources/webhooks";
 
+/** First scheduled poll after a format webhook (matches researchFormatActions). */
+const FORMAT_POLL_INITIAL_DELAY_MS = 30_000;
+
 const http = httpRouter();
 
 http.route({
@@ -95,7 +98,11 @@ export function uint8ArrayToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-async function handleWebhookPayload(
+/**
+ * Routes OpenAI response webhooks to research (running) or format (formatExternalId) handlers.
+ * @internal Exported for testing
+ */
+export async function handleWebhookPayload(
   ctx: Parameters<Parameters<typeof httpAction>[0]>[0],
   body: string
 ): Promise<Response> {
@@ -124,23 +131,35 @@ async function handleWebhookPayload(
     return new Response("Missing response ID in payload", { status: 400 });
   }
 
-  // Look up the research job by external ID
-  const job = await ctx.runQuery(internal.researchJobs.getJobByExternalId, {
+  const researchJob = await ctx.runQuery(internal.researchJobs.getJobByExternalId, {
     externalJobId: responseId,
   });
 
-  if (!job) {
-    return new Response("No matching research job found", { status: 404 });
+  if (researchJob) {
+    await ctx.scheduler.runAfter(
+      0,
+      internal.researchActions.processWebhookEvent,
+      { jobId: researchJob._id, eventType: event.type }
+    );
+    return new Response("OK", { status: 200 });
   }
 
-  // Schedule a Node.js action to fetch the full response via the SDK
-  await ctx.scheduler.runAfter(
-    0,
-    internal.researchActions.processWebhookEvent,
-    { jobId: job._id, eventType: event.type }
+  const formatJob = await ctx.runQuery(
+    internal.researchJobs.getJobByFormatExternalId,
+    { formatExternalId: responseId }
   );
 
-  return new Response("OK", { status: 200 });
+  if (formatJob) {
+    const mode = formatJob.status === "formatting" ? "pipeline" : "backfill";
+    await ctx.scheduler.runAfter(0, internal.researchFormatActions.pollFormat, {
+      jobId: formatJob._id,
+      mode,
+      nextDelayMs: FORMAT_POLL_INITIAL_DELAY_MS,
+    });
+    return new Response("OK", { status: 200 });
+  }
+
+  return new Response("No matching research job found", { status: 404 });
 }
 
 export default http;

@@ -6,19 +6,11 @@ import type {
   Response,
   ResponseOutputText,
 } from "openai/resources/responses/responses";
-import type { NormalizedUsage, ResearchProviderAdapter } from "./types";
+import type { ResearchProviderAdapter } from "./types";
 import { estimateModelCost } from "@repo/research-models/pricing";
 import { RESEARCH_MODELS } from "@repo/research-models/models";
 import { RESEARCH_SYSTEM_PROMPT } from "@repo/research-models/research-prompt";
-
-function normalizeUsage(
-  usage: OpenAI.Responses.ResponseUsage | undefined
-): NormalizedUsage {
-  return {
-    inputTokens: usage?.input_tokens ?? 0,
-    outputTokens: usage?.output_tokens ?? 0,
-  };
-}
+import { mapOpenAIResponseToPollResult } from "./openaiResponses";
 
 /**
  * Renders an OpenAI output-text part into markdown with clickable inline
@@ -185,24 +177,7 @@ export const openaiAdapter: ResearchProviderAdapter = {
     void model;
     const client = new OpenAI({ apiKey });
     const response = await client.responses.retrieve(externalId);
-
-    switch (response.status) {
-      case "completed":
-        return {
-          status: "completed",
-          text: renderResearchMarkdown(response),
-          usage: normalizeUsage(response.usage),
-        };
-      case "failed":
-        return {
-          status: "failed",
-          error: response.error?.message ?? "Research failed",
-        };
-      case "cancelled":
-        return { status: "cancelled" };
-      default:
-        return { status: "running" };
-    }
+    return mapOpenAIResponseToPollResult(response, renderResearchMarkdown);
   },
 };
 
@@ -210,7 +185,9 @@ export const openaiAdapter: ResearchProviderAdapter = {
 export const openaiProvider = openaiAdapter;
 
 /** @internal Exported for testing — uses o3-deep-research registry pricing */
-export function estimateOpenAICost(usage: NormalizedUsage): number {
+export function estimateOpenAICost(
+  usage: import("./types").NormalizedUsage
+): number {
   return estimateModelCost(RESEARCH_MODELS["openai/o3-deep-research"], usage);
 }
 

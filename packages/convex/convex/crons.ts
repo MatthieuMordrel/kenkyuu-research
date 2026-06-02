@@ -18,6 +18,13 @@ crons.interval(
   internal.researchActions.recoverStaleJobs
 );
 
+// Recover research jobs stuck in formatting (action timeout, missed scheduler, etc.).
+crons.interval(
+  "recover-stale-formatting",
+  { minutes: 15 },
+  internal.researchFormatActions.recoverStaleFormatting
+);
+
 // Check earnings-based schedule triggers every hour.
 // Evaluates all earnings-type schedules against current earnings data
 // and creates research jobs for stocks with matching earnings dates.

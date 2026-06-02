@@ -1,15 +1,15 @@
 "use node";
 
 import Anthropic from "@anthropic-ai/sdk";
-import type {
-  MessageBatchIndividualResponse,
-  TextBlock,
-} from "@anthropic-ai/sdk/resources/messages";
 import type { ResearchProviderAdapter } from "./types";
 import type { ResearchModelDefinition } from "@repo/research-models/types";
 import { estimateModelCost } from "@repo/research-models/pricing";
 import { RESEARCH_MODELS } from "@repo/research-models/models";
 import { RESEARCH_SYSTEM_PROMPT } from "@repo/research-models/research-prompt";
+import {
+  extractAnthropicMessageText,
+  findAnthropicBatchResult,
+} from "../lib/anthropicBatchHelpers";
 import { resolveAnthropicMaxOutputTokens } from "./anthropicModelLimits";
 
 /** Map registry thinking type to Anthropic SDK thinking config. */
@@ -27,26 +27,8 @@ function buildThinkingConfig(
   }
 }
 
-/** Custom-id convention: every batch contains exactly one request with this id. */
-const REQUEST_ID = "research";
-
-/** Concatenate every text block in a Claude message into a single string. */
-function extractText(content: readonly unknown[]): string {
-  return content
-    .filter((b): b is TextBlock => (b as { type?: string }).type === "text")
-    .map((b) => b.text)
-    .join("\n\n");
-}
-
-async function findResult(
-  client: Anthropic,
-  batchId: string
-): Promise<MessageBatchIndividualResponse | undefined> {
-  for await (const result of await client.messages.batches.results(batchId)) {
-    if (result.custom_id === REQUEST_ID) return result;
-  }
-  return undefined;
-}
+/** Custom-id convention: every research batch contains exactly one request with this id. */
+const RESEARCH_BATCH_REQUEST_ID = "research";
 
 export const anthropicAdapter: ResearchProviderAdapter = {
   providerId: "anthropic",
@@ -62,7 +44,7 @@ export const anthropicAdapter: ResearchProviderAdapter = {
     const batch = await client.messages.batches.create({
       requests: [
         {
-          custom_id: REQUEST_ID,
+          custom_id: RESEARCH_BATCH_REQUEST_ID,
           params: {
             model: model.apiModel,
             max_tokens: maxTokens,
@@ -93,7 +75,11 @@ export const anthropicAdapter: ResearchProviderAdapter = {
       return { status: "running" };
     }
 
-    const result = await findResult(client, externalId);
+    const result = await findAnthropicBatchResult(
+      client,
+      externalId,
+      RESEARCH_BATCH_REQUEST_ID
+    );
     if (!result) {
       return {
         status: "failed",
@@ -104,7 +90,7 @@ export const anthropicAdapter: ResearchProviderAdapter = {
     switch (result.result.type) {
       case "succeeded": {
         const message = result.result.message;
-        const text = extractText(message.content);
+        const text = extractAnthropicMessageText(message.content);
         return {
           status: "completed",
           text,

@@ -49,6 +49,12 @@ export default defineSchema({
       v.literal("failed")
     ),
     externalJobId: v.optional(v.string()),
+    /** OpenAI Responses id while the post-research format pass is in flight. */
+    formatExternalId: v.optional(v.string()),
+    /** When the current format pass started (for polling recovery and timeouts). */
+    formatStartedAt: v.optional(v.number()),
+    /** Format batch attempts when guard checks fail (separate from research retries). */
+    formatAttempts: v.optional(v.number()),
     /** Provider output before the formatting pass (audit / re-format). */
     rawResult: v.optional(v.string()),
     result: v.optional(v.string()),
@@ -65,6 +71,7 @@ export default defineSchema({
     .index("by_promptId", ["promptId"])
     .index("by_scheduleId", ["scheduleId"])
     .index("by_externalJobId", ["externalJobId"])
+    .index("by_formatExternalId", ["formatExternalId"])
     .index("by_createdAt", ["createdAt"])
     .index("by_isFavorited", ["isFavorited"]),
 

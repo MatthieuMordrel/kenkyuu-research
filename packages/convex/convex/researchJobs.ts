@@ -218,12 +218,87 @@ export const beginFormattingPhase = internalMutation({
       rawResult: truncateResult(args.rawResult),
       costUsd: args.costUsd,
       durationMs: args.durationMs,
+      externalJobId: undefined,
+      formatExternalId: undefined,
+      formatStartedAt: Date.now(),
+      formatAttempts: 0,
     });
 
     await scheduleProviderQueueDrain(ctx, job.provider);
     return args.id;
   },
 });
+
+/** Resets format tracking for a backfill on an already-completed job. */
+export const beginBackfillFormat = internalMutation({
+  args: { id: v.id("researchJobs") },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    await ctx.db.patch(args.id, {
+      formatExternalId: undefined,
+      formatStartedAt: Date.now(),
+      formatAttempts: 0,
+    });
+
+    return args.id;
+  },
+});
+
+/** Stores the OpenAI response id after submitting the format pass. */
+export const setFormatExternalId = internalMutation({
+  args: {
+    id: v.id("researchJobs"),
+    formatExternalId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    await ctx.db.patch(args.id, { formatExternalId: args.formatExternalId });
+    return args.id;
+  },
+});
+
+/** Clears the external id so a new format response can be submitted (guard retry). */
+export const clearFormatExternalId = internalMutation({
+  args: { id: v.id("researchJobs") },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    await ctx.db.patch(args.id, { formatExternalId: undefined });
+    return args.id;
+  },
+});
+
+export const incrementFormatAttempts = internalMutation({
+  args: { id: v.id("researchJobs") },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    await ctx.db.patch(args.id, {
+      formatAttempts: (job.formatAttempts ?? 0) + 1,
+    });
+    return (job.formatAttempts ?? 0) + 1;
+  },
+});
+
+const clearFormatTrackingFields = {
+  formatExternalId: undefined,
+  formatStartedAt: undefined,
+  formatAttempts: undefined,
+} as const;
 
 /** Writes the polished report and marks the job completed. */
 export const completeFormattedJob = internalMutation({
@@ -243,6 +318,7 @@ export const completeFormattedJob = internalMutation({
       result: truncateResult(args.result),
       costUsd: args.costUsd,
       completedAt: Date.now(),
+      ...clearFormatTrackingFields,
     });
 
     await scheduleProviderQueueDrain(ctx, job.provider);
@@ -268,6 +344,7 @@ export const applyReformattedResult = internalMutation({
       rawResult: truncateResult(args.rawResult),
       result: truncateResult(args.result),
       costUsd: (job.costUsd ?? 0) + args.additionalCostUsd,
+      ...clearFormatTrackingFields,
     });
 
     return args.id;
@@ -692,6 +769,24 @@ export const getStaleRunningJobs = internalQuery({
   },
 });
 
+/** Returns formatting jobs whose format pass started before the cutoff. */
+export const getStaleFormattingJobs = internalQuery({
+  args: { staleThresholdMs: v.number() },
+  handler: async (ctx, args) => {
+    const cutoff = Date.now() - args.staleThresholdMs;
+    const formattingJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "formatting"))
+      .take(MAX_ACTIVE_JOBS_SCAN);
+
+    return formattingJobs.filter((job) => {
+      if (job.rawResult === undefined) return false;
+      const started = job.formatStartedAt ?? job.createdAt;
+      return started < cutoff;
+    });
+  },
+});
+
 /** Active jobs used by dispatch logic in researchActions. */
 export const getConcurrencyJobsInternal = internalQuery({
   args: {},
@@ -848,6 +943,19 @@ export const getJobByExternalId = internalQuery({
       .query("researchJobs")
       .withIndex("by_externalJobId", (q) =>
         q.eq("externalJobId", args.externalJobId)
+      )
+      .unique();
+  },
+});
+
+/** Looks up a job by the OpenAI response id used for the formatting pass. */
+export const getJobByFormatExternalId = internalQuery({
+  args: { formatExternalId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("researchJobs")
+      .withIndex("by_formatExternalId", (q) =>
+        q.eq("formatExternalId", args.formatExternalId)
       )
       .unique();
   },

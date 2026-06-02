@@ -8,6 +8,17 @@ Research jobs use OpenAI's `o3-deep-research` model in **background mode**, whic
 2. **Stale job recovery (fallback)**: A cron runs every 15 minutes to poll OpenAI for any job that has been running >30 minutes. This catches missed webhooks.
 3. **90-minute timeout**: Jobs running longer than 90 minutes are automatically marked as failed.
 
+### Formatting phase (after research)
+
+When research finishes, the job moves to `formatting` and an **OpenAI background response** polishes the full report (one pass, no chunking):
+
+1. **startFormat** submits `responses.create` with `background: true` and stores `formatExternalId` (`resp_…`).
+2. **pollFormat** polls the response with backoff; the same OpenAI webhook as research can trigger an immediate poll.
+3. **recover-stale-formatting** cron (every 15 minutes) resumes jobs stuck in `formatting` for >20 minutes.
+4. **60-minute format timeout**: Falls back to deterministic prepass-only markdown and marks the job completed.
+
+Key fields: `formatExternalId`, `formatStartedAt`, `formatAttempts` (guard retries, separate from research `attempts`). Requires **OpenAI API key** in Settings (independent of which provider ran research).
+
 ## Verifying Status via the UI
 
 Each active job card in the **Active Jobs** panel has a **heart-pulse icon button** (Check Health). Clicking it:

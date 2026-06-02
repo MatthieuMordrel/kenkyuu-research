@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   countMarkdownLinks,
+  evaluateFormattedOutput,
   maxOutputTokensForInput,
   passesFormattingGuards,
-  prepassMarkdown,
-} from "../researchFormat";
+  MAX_FORMAT_ATTEMPTS,
+} from "../researchFormatCore";
 import { prepassResearchMarkdown } from "../researchFormatPrepass";
+import { prepassMarkdown } from "../researchFormat";
 
 describe("prepassMarkdown", () => {
   it("strips thinking blocks and normalizes blank lines", () => {
@@ -49,5 +51,40 @@ describe("passesFormattingGuards", () => {
   it("rejects drastic length shrink", () => {
     const raw = "a".repeat(1000);
     expect(passesFormattingGuards(raw, "short")).toBe(false);
+  });
+});
+
+describe("evaluateFormattedOutput", () => {
+  const preprocessed = "a".repeat(1000);
+  const formatted = "a".repeat(1000);
+
+  it("accepts output that passes guards", () => {
+    expect(
+      evaluateFormattedOutput({
+        preprocessed,
+        formatted,
+        formatAttempts: 0,
+      }).decision
+    ).toBe("accept");
+  });
+
+  it("retries after first guard failure when under max attempts", () => {
+    expect(
+      evaluateFormattedOutput({
+        preprocessed,
+        formatted: "short",
+        formatAttempts: 0,
+      }).decision
+    ).toBe("retry");
+  });
+
+  it("falls back after exhausting format attempts", () => {
+    const result = evaluateFormattedOutput({
+      preprocessed,
+      formatted: "short",
+      formatAttempts: MAX_FORMAT_ATTEMPTS - 1,
+    });
+    expect(result.decision).toBe("fallback");
+    expect(result.text.length).toBeGreaterThan(0);
   });
 });

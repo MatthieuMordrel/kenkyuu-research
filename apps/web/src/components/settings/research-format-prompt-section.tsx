@@ -80,9 +80,8 @@ export function ResearchFormatPromptSection() {
           <CardTitle className="text-base">Research formatting</CardTitle>
         </div>
         <CardDescription>
-          Second pass only: one Haiku call polishes the full raw report after
-          research completes (system prompt + preprocessed report as the user
-          message).
+          {formatPromptView.completionDescription} One background response
+          polishes the full raw report after research completes.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">

@@ -1,57 +1,44 @@
-import type { ModelPricing, NormalizedUsage } from "./types";
+import type { ModelPricing, NormalizedUsage, ProviderId } from "./types";
 
 /**
- * Registry id for the default research output formatter (not a research model).
- * Haiku is fast enough for chunked passes; Sonnet available when quality trumps speed.
+ * Registry id for the default research output formatter (OpenAI Responses, background).
  */
-export const DEFAULT_FORMAT_MODEL_ID = "anthropic/claude-haiku-4-5" as const;
+export const DEFAULT_FORMAT_MODEL_ID = "openai/gpt-4.1-mini" as const;
 
-export type FormatModelId =
-  | "anthropic/claude-haiku-4-5"
-  | "anthropic/claude-sonnet-4-5";
+export type FormatModelId = typeof DEFAULT_FORMAT_MODEL_ID;
 
 /**
- * Metadata for a cheap model used only to polish completed research markdown.
+ * Metadata for the model used only to polish completed research markdown.
  * @property id - Stable registry key for cost logs
  * @property providerId - Vendor providing the API key
  * @property label - Display name
  * @property apiModel - Provider API model string
- * @property pricing - Token rates for estimateModelCost
+ * @property pricing - Token rates for estimateFormatCost
  */
 export interface FormatModelDefinition {
   id: FormatModelId;
-  providerId: "anthropic";
+  providerId: ProviderId;
   label: string;
   apiModel: string;
   pricing: ModelPricing;
 }
 
-/** Selectable formatter models (sync Messages API, no web search). */
+/** Formatter model registry (OpenAI Responses API, no tools). */
 export const FORMAT_MODELS: Record<FormatModelId, FormatModelDefinition> = {
-  "anthropic/claude-sonnet-4-5": {
-    id: "anthropic/claude-sonnet-4-5",
-    providerId: "anthropic",
-    label: "Claude Sonnet 4.5",
-    apiModel: "claude-sonnet-4-5",
+  "openai/gpt-4.1-mini": {
+    id: "openai/gpt-4.1-mini",
+    providerId: "openai",
+    label: "GPT-4.1 mini",
+    apiModel: "gpt-4.1-mini",
     pricing: {
-      inputPerM: 3,
-      outputPerM: 15,
-    },
-  },
-  "anthropic/claude-haiku-4-5": {
-    id: "anthropic/claude-haiku-4-5",
-    providerId: "anthropic",
-    label: "Claude Haiku 4.5",
-    apiModel: "claude-haiku-4-5",
-    pricing: {
-      inputPerM: 0.8,
-      outputPerM: 4,
+      inputPerM: 0.4,
+      outputPerM: 1.6,
     },
   },
 };
 
 /**
- * Resolves a formatter model id, falling back to the default Haiku entry.
+ * Resolves a formatter model id, falling back to the default OpenAI entry.
  */
 export function resolveFormatModel(
   modelId?: string

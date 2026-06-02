@@ -20,6 +20,7 @@ export const FORMAT_SYSTEM_PROMPT = `Format the research report in the user mess
  * @property temperature - Sampling temperature for formatter calls
  * @property systemPrompt - System message sent to the formatter
  * @property userMessageDescription - How the user role content is built at runtime
+ * @property completionDescription - How the async OpenAI job is run and completed
  */
 export interface ResearchFormatPromptView {
   modelId: FormatModelId;
@@ -29,6 +30,7 @@ export interface ResearchFormatPromptView {
   temperature: number;
   systemPrompt: string;
   userMessageDescription: string;
+  completionDescription: string;
 }
 
 /**
@@ -47,5 +49,7 @@ export function getResearchFormatPromptView(): ResearchFormatPromptView {
     systemPrompt: FORMAT_SYSTEM_PROMPT,
     userMessageDescription:
       "Preprocessed research markdown only (no extra instructions in the user message).",
+    completionDescription:
+      "OpenAI Responses API in background mode (same webhook and polling pattern as OpenAI research). Requires an OpenAI API key in Settings.",
   };
 }

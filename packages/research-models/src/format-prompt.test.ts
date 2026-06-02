@@ -10,6 +10,8 @@ describe("getResearchFormatPromptView", () => {
     expect(view.systemPrompt).toContain("GitHub-flavored markdown");
     expect(view.systemPrompt).toContain("user message");
     expect(view.userMessageDescription).toContain("markdown only");
+    expect(view.completionDescription).toContain("OpenAI");
+    expect(view.providerLabel).toBe("OpenAI");
     expect(view.temperature).toBe(0);
   });
 });
