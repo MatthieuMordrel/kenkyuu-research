@@ -257,22 +257,17 @@ function ResultDetailPage() {
         )}
 
         {/* Research result content */}
-        {job.result && (
-          <Card className="min-w-0">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FlaskConical className="size-4" />
-                Research Output
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="min-w-0 max-w-full overflow-x-auto">
-              <MarkdownRenderer
-                content={job.result}
-                outlineControlsStickyTopClassName="top-14 md:top-0"
-              />
-            </CardContent>
+        {job.result ? (
+          <Card className="min-w-0 gap-0 py-0">
+            <MarkdownRenderer
+              content={job.result}
+              headerTitle="Research Output"
+              headerIcon={FlaskConical}
+              outlineControlsStickyTopClassName="top-14 md:top-0"
+              className="overflow-x-auto"
+            />
           </Card>
-        )}
+        ) : null}
       </div>
 
       {/* Delete confirmation dialog */}

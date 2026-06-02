@@ -1,4 +1,11 @@
-import { useState, useCallback, useMemo, type HTMLAttributes } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  type ComponentType,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
@@ -475,12 +482,110 @@ function CollapsibleSection({
   );
 }
 
+// --- Outline depth controls ---
+
+interface OutlineDepthControlsProps {
+  /** Expands one additional heading level in the outline */
+  onExpandOneLevel: () => void;
+  /** Collapses one heading level in the outline */
+  onCollapseOneLevel: () => void;
+  /** Whether another level can be expanded */
+  canExpandOneLevel: boolean;
+  /** Whether another level can be collapsed */
+  canCollapseOneLevel: boolean;
+}
+
+/**
+ * Expand/collapse buttons for hierarchical markdown section outlines.
+ */
+function OutlineDepthControls({
+  onExpandOneLevel,
+  onCollapseOneLevel,
+  canExpandOneLevel,
+  canCollapseOneLevel,
+}: OutlineDepthControlsProps) {
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 text-xs text-muted-foreground"
+        onClick={onExpandOneLevel}
+        disabled={!canExpandOneLevel}
+        title="Expand one more level of sections"
+      >
+        <ChevronsDown className="size-3.5" />
+        <span className="hidden sm:inline">Expand level</span>
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 text-xs text-muted-foreground"
+        onClick={onCollapseOneLevel}
+        disabled={!canCollapseOneLevel}
+        title="Collapse one level of sections"
+      >
+        <ChevronsUp className="size-3.5" />
+        <span className="hidden sm:inline">Collapse level</span>
+      </Button>
+    </div>
+  );
+}
+
+interface MarkdownRendererHeaderProps {
+  /** Title shown on the left side of the header row */
+  title: string;
+  /** Optional icon rendered before the title */
+  icon?: ComponentType<{ className?: string }>;
+  /** Outline controls rendered on the right; omitted when sections are not collapsible */
+  outlineControls?: ReactNode;
+  /** Tailwind `top-*` offset when the header is sticky */
+  stickyTopClassName?: string;
+  /** Whether the header should stick while scrolling */
+  sticky?: boolean;
+}
+
+/**
+ * Sticky card-style header with a title on the left and optional outline controls on the right.
+ */
+function MarkdownRendererHeader({
+  title,
+  icon: Icon,
+  outlineControls,
+  stickyTopClassName = "top-0",
+  sticky = true,
+}: MarkdownRendererHeaderProps) {
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-6 py-4 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/80 dark:bg-background/90",
+        sticky && cn("sticky z-20", stickyTopClassName)
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        {Icon ? <Icon className="size-4 shrink-0" /> : null}
+        <span className="truncate text-base font-semibold leading-none">
+          {title}
+        </span>
+      </div>
+      {outlineControls}
+    </div>
+  );
+}
+
 // --- Main component ---
 
 interface MarkdownRendererProps {
   content: string;
   className?: string;
   collapsible?: boolean;
+  /**
+   * Optional title for a header row at the top of the renderer. When set, outline
+   * controls (if any) appear on the same row as the title.
+   */
+  headerTitle?: string;
+  /** Optional icon shown before {@link MarkdownRendererProps.headerTitle}. */
+  headerIcon?: ComponentType<{ className?: string }>;
   /**
    * Tailwind `top-*` offset for sticky outline controls (e.g. `top-14 md:top-0`
    * when a fixed mobile header sits above the scroll area).
@@ -492,6 +597,8 @@ export function MarkdownRenderer({
   content,
   className,
   collapsible = true,
+  headerTitle,
+  headerIcon,
   outlineControlsStickyTopClassName = "top-0",
 }: MarkdownRendererProps) {
   const fixedContent = useMemo(() => fixMarkdownTables(content), [content]);
@@ -559,85 +666,85 @@ export function MarkdownRenderer({
     );
   }, [allKeys, maxOpenDepth, openSet.size]);
 
+  const outlineControls = hasCollapsibleSections ? (
+    <OutlineDepthControls
+      onExpandOneLevel={expandOneLevel}
+      onCollapseOneLevel={collapseOneLevel}
+      canExpandOneLevel={canExpandOneLevel}
+      canCollapseOneLevel={canCollapseOneLevel}
+    />
+  ) : undefined;
+
+  const header = headerTitle ? (
+    <MarkdownRendererHeader
+      title={headerTitle}
+      icon={headerIcon}
+      outlineControls={outlineControls}
+      stickyTopClassName={outlineControlsStickyTopClassName}
+      sticky={hasCollapsibleSections}
+    />
+  ) : hasCollapsibleSections ? (
+    <div
+      className={cn(
+        "sticky z-20 -mx-1 mb-3 flex items-center justify-end gap-1 rounded-lg border border-border/60 bg-background/95 px-2 py-1.5 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/80 dark:bg-background/90",
+        outlineControlsStickyTopClassName
+      )}
+    >
+      {outlineControls}
+    </div>
+  ) : null;
+
+  const contentClassName = cn(
+    "text-foreground min-w-0 max-w-full text-sm leading-relaxed break-words",
+    headerTitle && "px-6 pb-6 pt-4",
+    className
+  );
+
   if (!hasCollapsibleSections) {
     return (
-      <div
-        className={cn(
-          "text-foreground min-w-0 max-w-full text-sm leading-relaxed break-words",
-          className
-        )}
-      >
-        <ReactMarkdown
-          remarkPlugins={remarkPlugins}
-          components={markdownComponents}
-        >
-          {fixedContent}
-        </ReactMarkdown>
+      <div className="min-w-0 max-w-full">
+        {header}
+        <div className={contentClassName}>
+          <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            components={markdownComponents}
+          >
+            {fixedContent}
+          </ReactMarkdown>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      className={cn(
-        "text-foreground min-w-0 max-w-full text-sm leading-relaxed break-words",
-        className
-      )}
-    >
-      {/* Outline depth controls — sticky while scrolling long reports */}
-      <div
-        className={cn(
-          "sticky z-20 -mx-1 mb-3 flex items-center justify-end gap-1 rounded-lg border border-border/60 bg-background/95 px-2 py-1.5 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/80 dark:bg-background/90",
-          outlineControlsStickyTopClassName
-        )}
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs text-muted-foreground"
-          onClick={expandOneLevel}
-          disabled={!canExpandOneLevel}
-          title="Expand one more level of sections"
-        >
-          <ChevronsDown className="size-3.5" />
-          Expand level
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs text-muted-foreground"
-          onClick={collapseOneLevel}
-          disabled={!canCollapseOneLevel}
-          title="Collapse one level of sections"
-        >
-          <ChevronsUp className="size-3.5" />
-          Collapse level
-        </Button>
-      </div>
+    <div className="min-w-0 max-w-full">
+      {header}
 
-      {/* Preamble (content before any heading, or h1's content) */}
-      {preamble && (
-        <div className="mb-3">
-          <ReactMarkdown
-            remarkPlugins={remarkPlugins}
-            components={markdownComponents}
-          >
-            {preamble}
-          </ReactMarkdown>
+      <div className={contentClassName}>
+        {/* Preamble (content before any heading, or h1's content) */}
+        {preamble ? (
+          <div className="mb-3">
+            <ReactMarkdown
+              remarkPlugins={remarkPlugins}
+              components={markdownComponents}
+            >
+              {preamble}
+            </ReactMarkdown>
+          </div>
+        ) : null}
+
+        {/* Collapsible sections (hierarchical) */}
+        <div className="flex flex-col">
+          {sections.map((section, i) => (
+            <CollapsibleSection
+              key={i}
+              section={section}
+              openSet={openSet}
+              pathKey={`${i}`}
+              onToggle={toggleSection}
+            />
+          ))}
         </div>
-      )}
-
-      {/* Collapsible sections (hierarchical) */}
-      <div className="flex flex-col">
-        {sections.map((section, i) => (
-          <CollapsibleSection
-            key={i}
-            section={section}
-            openSet={openSet}
-            pathKey={`${i}`}
-            onToggle={toggleSection}
-          />
-        ))}
       </div>
     </div>
   );
