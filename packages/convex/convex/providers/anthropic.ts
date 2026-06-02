@@ -7,14 +7,14 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages";
 import type { NormalizedUsage, ResearchProvider } from "./types";
 
-const MODEL = "claude-opus-4-7";
+const MODEL = "claude-opus-4-8";
 // At xhigh effort the docs recommend ~64k so the model has room to think and
 // run repeated tool calls across a long research turn.
 const MAX_TOKENS = 64_000;
 const EFFORT = "xhigh" as const;
 const WEB_SEARCH_MAX_USES = 40;
 
-// Batch API pricing for Claude Opus 4.7 (50% discount vs on-demand), USD/MTok.
+// Batch API pricing for Claude Opus 4.8 (50% discount vs on-demand), USD/MTok.
 const INPUT_COST_PER_M = 2.5;
 const OUTPUT_COST_PER_M = 12.5;
 // Web search add-on: $10 per 1,000 searches (not discounted by batch).
@@ -64,7 +64,7 @@ export const anthropicProvider: ResearchProvider = {
           params: {
             model: MODEL,
             max_tokens: MAX_TOKENS,
-            // Opus 4.7 requires adaptive thinking; depth is steered by effort.
+            // Opus 4.8 supports adaptive thinking; depth is steered by effort.
             thinking: { type: "adaptive" },
             output_config: { effort: EFFORT },
             tools: [

@@ -15,5 +15,13 @@ export function getProvider(name: ProviderName): ResearchProvider {
 }
 
 export type { ResearchProvider, PollResult, NormalizedUsage } from "./types";
-export { PROVIDER_NAMES, SETTING_KEY_BY_PROVIDER } from "./constants";
-export type { ProviderName } from "./constants";
+export {
+  ACTIVE_PROVIDER_NAMES,
+  assertProviderActive,
+  DEFAULT_ACTIVE_PROVIDER,
+  isProviderActive,
+  PROVIDER_NAMES,
+  resolveActiveProvider,
+  SETTING_KEY_BY_PROVIDER,
+} from "./constants";
+export type { ActiveProviderName, ProviderName } from "./constants";

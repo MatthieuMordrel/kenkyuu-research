@@ -10,7 +10,7 @@ import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
 import { validateSearchTerm, truncateResult } from "./validation";
 import { logAuditEvent } from "./auditLog";
-import { providerValidator } from "./providers/constants";
+import { providerValidator, resolveActiveProvider } from "./providers/constants";
 
 const MAX_CONCURRENT_JOBS = 3;
 
@@ -59,12 +59,13 @@ export const createResearchJob = mutation({
 
     await enforceConcurrentJobLimit(ctx);
 
+    const provider = resolveActiveProvider(args.provider);
     const now = Date.now();
     return await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
       stockIds: args.stockIds,
-      provider: args.provider,
+      provider,
       status: "pending",
       attempts: 0,
       scheduleId: args.scheduleId,
@@ -91,12 +92,13 @@ export const createAndStartResearch = mutation({
 
     await enforceConcurrentJobLimit(ctx);
 
+    const provider = resolveActiveProvider(args.provider);
     const now = Date.now();
     const jobId = await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
       stockIds: args.stockIds,
-      provider: args.provider,
+      provider,
       status: "pending",
       attempts: 0,
       scheduleId: args.scheduleId,

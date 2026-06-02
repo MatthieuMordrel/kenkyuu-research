@@ -12,10 +12,21 @@ export type ProviderName = "openai" | "anthropic";
 
 export const PROVIDER_LABELS: Record<ProviderName, string> = {
   openai: "OpenAI Deep Research",
-  anthropic: "Claude Opus 4.7 (Anthropic)",
+  anthropic: "Claude Opus 4.8 (Anthropic)",
 };
 
-export const DEFAULT_PROVIDER: ProviderName = "openai";
+/** Providers users can pick when starting new research or editing prompts. */
+export const ACTIVE_PROVIDERS: readonly ProviderName[] = ["anthropic"];
+
+export const DEFAULT_PROVIDER: ProviderName = "anthropic";
+
+/**
+ * Map a stored provider to an active one when a prompt/schedule still references
+ * a disabled provider.
+ */
+export function resolveActiveProvider(provider: ProviderName): ProviderName {
+  return ACTIVE_PROVIDERS.includes(provider) ? provider : DEFAULT_PROVIDER;
+}
 
 interface ResearchFlowState {
   step: ResearchFlowStep;
@@ -80,7 +91,7 @@ export const useResearchFlowStore = create<ResearchFlowStore>()((set, get) => ({
       promptId,
       promptType,
       stockIds: [],
-      provider: defaultProvider ?? DEFAULT_PROVIDER,
+      provider: resolveActiveProvider(defaultProvider ?? DEFAULT_PROVIDER),
       step: nextStep,
     });
   },

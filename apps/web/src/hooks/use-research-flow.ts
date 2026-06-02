@@ -80,7 +80,11 @@ export function useResearchFlow() {
 
 // Re-export types for consumers
 export type { ResearchFlowStep, ProviderName } from "@/lib/research-flow";
-export { PROVIDER_LABELS } from "@/lib/research-flow";
+export {
+  ACTIVE_PROVIDERS,
+  PROVIDER_LABELS,
+  resolveActiveProvider,
+} from "@/lib/research-flow";
 
 // Re-export individual selectors for components that only need one piece
 export {

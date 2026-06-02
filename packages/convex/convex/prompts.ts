@@ -3,7 +3,7 @@ import { internalQuery, mutation, query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
 import { validatePromptInput } from "./validation";
 import { logAuditEvent } from "./auditLog";
-import { providerValidator } from "./providers/constants";
+import { providerValidator, assertProviderActive, DEFAULT_ACTIVE_PROVIDER } from "./providers/constants";
 
 const promptType = v.union(
   v.literal("single-stock"),
@@ -27,13 +27,17 @@ export const createPrompt = mutation({
     await requireAuth(ctx, args.token);
     validatePromptInput(args);
 
+    if (args.defaultProvider !== undefined) {
+      assertProviderActive(args.defaultProvider);
+    }
+
     const now = Date.now();
     const id = await ctx.db.insert("prompts", {
       name: args.name,
       description: args.description,
       type: args.type,
       template: args.template,
-      defaultProvider: args.defaultProvider ?? "openai",
+      defaultProvider: args.defaultProvider ?? DEFAULT_ACTIVE_PROVIDER,
       isBuiltIn: args.isBuiltIn ?? false,
       createdAt: now,
       updatedAt: now,
@@ -75,8 +79,10 @@ export const updatePrompt = mutation({
       patch.description = updates.description;
     if (updates.type !== undefined) patch.type = updates.type;
     if (updates.template !== undefined) patch.template = updates.template;
-    if (updates.defaultProvider !== undefined)
+    if (updates.defaultProvider !== undefined) {
+      assertProviderActive(updates.defaultProvider);
       patch.defaultProvider = updates.defaultProvider;
+    }
 
     await ctx.db.patch(id, patch);
     await logAuditEvent(ctx, {

@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  ACTIVE_PROVIDERS,
   PROVIDER_LABELS,
   useResearchFlow,
   type ProviderName,
@@ -40,7 +41,7 @@ const PROVIDER_COST_ESTIMATE: Record<ProviderName, string> = {
   anthropic: "~$1–2",
 };
 
-const PROVIDER_ORDER: readonly ProviderName[] = ["openai", "anthropic"];
+const PROVIDER_ORDER: readonly ProviderName[] = ACTIVE_PROVIDERS;
 
 const STEP_LABELS: Record<string, string> = {
   "prompt-selection": "Select Prompt",

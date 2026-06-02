@@ -22,10 +22,16 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  ACTIVE_PROVIDERS,
+  DEFAULT_PROVIDER,
+  PROVIDER_LABELS,
+  resolveActiveProvider,
+  type ProviderName,
+} from "@/lib/research-flow";
 import type { Doc } from "@repo/convex/dataModel";
 
 type PromptType = "single-stock" | "multi-stock" | "discovery";
-type ProviderName = "openai" | "anthropic";
 
 interface PromptModalProps {
   open: boolean;
@@ -52,13 +58,14 @@ const INITIAL_FORM: PromptFormData = {
   description: "",
   type: "single-stock",
   template: "",
-  defaultProvider: "openai",
+  defaultProvider: DEFAULT_PROVIDER,
 };
 
-const PROVIDER_OPTIONS: { value: ProviderName; label: string }[] = [
-  { value: "openai", label: "OpenAI Deep Research" },
-  { value: "anthropic", label: "Claude Opus 4.7" },
-];
+const PROVIDER_OPTIONS: { value: ProviderName; label: string }[] =
+  ACTIVE_PROVIDERS.map((value) => ({
+    value,
+    label: PROVIDER_LABELS[value].replace(" (Anthropic)", ""),
+  }));
 
 const TYPE_OPTIONS: {
   value: PromptType;
@@ -113,7 +120,9 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: prompt.description,
           type: prompt.type,
           template: prompt.template,
-          defaultProvider: (prompt.defaultProvider ?? "openai") as ProviderName,
+          defaultProvider: resolveActiveProvider(
+            (prompt.defaultProvider ?? DEFAULT_PROVIDER) as ProviderName
+          ),
         });
       } else {
         setForm(INITIAL_FORM);

@@ -9,7 +9,11 @@ import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
 import { validateScheduleInput, validateEarningsConfig } from "./validation";
 import { logAuditEvent } from "./auditLog";
-import { providerValidator } from "./providers/constants";
+import {
+  providerValidator,
+  assertProviderActive,
+  resolveActiveProvider,
+} from "./providers/constants";
 
 const stockSelectionValidator = v.object({
   type: v.union(
@@ -113,6 +117,8 @@ export const createSchedule = mutation({
         "Stock IDs are required when stock selection type is 'specific'"
       );
     }
+
+    assertProviderActive(args.provider);
 
     const now = Date.now();
     const scheduleData: Record<string, unknown> = {
@@ -230,7 +236,10 @@ export const updateSchedule = mutation({
         );
       }
     }
-    if (updates.provider !== undefined) patch.provider = updates.provider;
+    if (updates.provider !== undefined) {
+      assertProviderActive(updates.provider);
+      patch.provider = updates.provider;
+    }
     if (updates.cron !== undefined) patch.cron = updates.cron;
     if (updates.timezone !== undefined) patch.timezone = updates.timezone;
     if (updates.enabled !== undefined) patch.enabled = updates.enabled;
@@ -673,11 +682,12 @@ export const createScheduledJob = internalMutation({
     }
 
     const now = Date.now();
+    const provider = resolveActiveProvider(args.provider);
     const jobId = await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
       stockIds: args.stockIds,
-      provider: args.provider,
+      provider,
       status: "pending",
       attempts: 0,
       scheduleId: args.scheduleId,
