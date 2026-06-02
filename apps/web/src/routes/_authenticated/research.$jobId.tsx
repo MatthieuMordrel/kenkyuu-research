@@ -31,6 +31,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getResearchModelLabel, resolvePromptModelId } from "@/lib/research-flow";
 import type { GenericId } from "convex/values";
 
 export const Route = createFileRoute("/_authenticated/research/$jobId")({
@@ -198,8 +199,13 @@ function ResultDetailPage() {
           <MetadataCard icon={DollarSign} label="Cost" value={costStr ?? "—"} />
           <MetadataCard
             icon={Cpu}
-            label="Provider"
-            value={job.provider.toUpperCase()}
+            label="Model"
+            value={getResearchModelLabel(
+              resolvePromptModelId({
+                defaultModelId: job.modelId,
+                defaultProvider: job.provider,
+              })
+            )}
           />
         </div>
 

@@ -49,6 +49,7 @@ const BUILT_IN_PROMPTS = [
       "Institutional-grade stock screening and discovery analysis. Identifies top investment opportunities using quantitative filters and fundamental deep dives.",
     type: "discovery" as const,
     template: SENIOR_EQUITY_RESEARCH_SCREEN_TEMPLATE,
+    defaultModelId: "anthropic/claude-opus-4-8" as const,
     defaultProvider: "anthropic" as const,
     isBuiltIn: true,
   },

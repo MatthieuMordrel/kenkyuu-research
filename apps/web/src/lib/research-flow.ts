@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import type { GenericId } from "convex/values";
+import {
+  DEFAULT_RESEARCH_MODEL_ID,
+  getActiveResearchModels,
+  getResearchModel,
+  getResearchModelLabel,
+  resolveStoredModelId,
+} from "@repo/research-models/resolve";
+import type { ResearchModelId } from "@repo/research-models/types";
+import { RESEARCH_MODELS } from "@repo/research-models/models";
+
+export type { ResearchModelId, ProviderId } from "@repo/research-models/types";
 
 export type ResearchFlowStep =
   | "prompt-selection"
@@ -8,24 +19,27 @@ export type ResearchFlowStep =
   | "provider-confirm"
   | "executing";
 
-export type ProviderName = "openai" | "anthropic";
+/** Active models available in research and prompt pickers. */
+export const ACTIVE_RESEARCH_MODELS = getActiveResearchModels();
 
-export const PROVIDER_LABELS: Record<ProviderName, string> = {
-  openai: "OpenAI Deep Research",
-  anthropic: "Claude Opus 4.8 (Anthropic)",
-};
+export const DEFAULT_MODEL_ID: ResearchModelId = DEFAULT_RESEARCH_MODEL_ID;
 
-/** Providers users can pick when starting new research or editing prompts. */
-export const ACTIVE_PROVIDERS: readonly ProviderName[] = ["anthropic"];
-
-export const DEFAULT_PROVIDER: ProviderName = "anthropic";
+/** @deprecated Use getResearchModelLabel(modelId) */
+export function getModelLabel(modelId: ResearchModelId): string {
+  return getResearchModelLabel(modelId);
+}
 
 /**
- * Map a stored provider to an active one when a prompt/schedule still references
- * a disabled provider.
+ * Resolve a stored model id, including legacy provider-only prompt defaults.
  */
-export function resolveActiveProvider(provider: ProviderName): ProviderName {
-  return ACTIVE_PROVIDERS.includes(provider) ? provider : DEFAULT_PROVIDER;
+export function resolvePromptModelId(args: {
+  defaultModelId?: string | null;
+  defaultProvider?: "openai" | "anthropic" | null;
+}): ResearchModelId {
+  return resolveStoredModelId({
+    modelId: args.defaultModelId,
+    provider: args.defaultProvider,
+  });
 }
 
 interface ResearchFlowState {
@@ -33,7 +47,7 @@ interface ResearchFlowState {
   promptId: GenericId<"prompts"> | null;
   promptType: "single-stock" | "multi-stock" | "discovery" | null;
   stockIds: GenericId<"stocks">[];
-  provider: ProviderName;
+  modelId: ResearchModelId;
   isOpen: boolean;
 }
 
@@ -44,20 +58,21 @@ interface ResearchFlowActions {
   close: () => void;
   /**
    * Select a prompt and advance to the next step.
-   * The prompt's defaultProvider seeds the provider field for this run;
+   * The prompt's default model seeds modelId for this run;
    * the user can still override it in the confirm step.
    */
   selectPrompt: (
     promptId: GenericId<"prompts">,
     promptType: "single-stock" | "multi-stock" | "discovery",
-    defaultProvider?: ProviderName
+    defaultModelId?: ResearchModelId,
+    defaultProvider?: "openai" | "anthropic"
   ) => void;
-  /** Select stocks and advance to provider confirmation */
+  /** Select stocks and advance to model confirmation */
   selectStocks: (stockIds: GenericId<"stocks">[]) => void;
-  /** Pick a provider for this run (overrides the prompt's default) */
-  selectProvider: (provider: ProviderName) => void;
-  /** Confirm provider and move to executing step */
-  confirmProvider: () => void;
+  /** Pick a model for this run (overrides the prompt default) */
+  selectModel: (modelId: ResearchModelId) => void;
+  /** Confirm model and move to executing step */
+  confirmModel: () => void;
   /** Mark execution as started (called after mutation succeeds) */
   markExecuting: () => void;
   /** Go back one step */
@@ -73,7 +88,7 @@ const initialState: ResearchFlowState = {
   promptId: null,
   promptType: null,
   stockIds: [],
-  provider: DEFAULT_PROVIDER,
+  modelId: DEFAULT_MODEL_ID,
   isOpen: false,
 };
 
@@ -84,14 +99,17 @@ export const useResearchFlowStore = create<ResearchFlowStore>()((set, get) => ({
 
   close: () => set(initialState),
 
-  selectPrompt: (promptId, promptType, defaultProvider) => {
+  selectPrompt: (promptId, promptType, defaultModelId, defaultProvider) => {
     const nextStep =
       promptType === "discovery" ? "provider-confirm" : "stock-selection";
     set({
       promptId,
       promptType,
       stockIds: [],
-      provider: resolveActiveProvider(defaultProvider ?? DEFAULT_PROVIDER),
+      modelId: resolvePromptModelId({
+        defaultModelId,
+        defaultProvider,
+      }),
       step: nextStep,
     });
   },
@@ -100,11 +118,11 @@ export const useResearchFlowStore = create<ResearchFlowStore>()((set, get) => ({
     set({ stockIds, step: "provider-confirm" });
   },
 
-  selectProvider: (provider) => {
-    set({ provider });
+  selectModel: (modelId) => {
+    set({ modelId });
   },
 
-  confirmProvider: () => {
+  confirmModel: () => {
     set({ step: "executing" });
   },
 
@@ -133,7 +151,6 @@ export const useResearchFlowStore = create<ResearchFlowStore>()((set, get) => ({
   reset: () => set(initialState),
 }));
 
-// Atomic selectors
 export const useResearchFlowStep = () => useResearchFlowStore((s) => s.step);
 export const useResearchFlowIsOpen = () =>
   useResearchFlowStore((s) => s.isOpen);
@@ -143,10 +160,9 @@ export const useResearchFlowPromptType = () =>
   useResearchFlowStore((s) => s.promptType);
 export const useResearchFlowStockIds = () =>
   useResearchFlowStore((s) => s.stockIds);
-export const useResearchFlowProvider = () =>
-  useResearchFlowStore((s) => s.provider);
+export const useResearchFlowModelId = () =>
+  useResearchFlowStore((s) => s.modelId);
 
-// Actions hook
 export const useResearchFlowActions = () =>
   useResearchFlowStore(
     useShallow((s) => ({
@@ -154,10 +170,18 @@ export const useResearchFlowActions = () =>
       close: s.close,
       selectPrompt: s.selectPrompt,
       selectStocks: s.selectStocks,
-      selectProvider: s.selectProvider,
-      confirmProvider: s.confirmProvider,
+      selectModel: s.selectModel,
+      confirmModel: s.confirmModel,
       markExecuting: s.markExecuting,
       back: s.back,
       reset: s.reset,
     }))
   );
+
+/** Estimated cost label for a model id. */
+export function getModelCostEstimate(modelId: ResearchModelId): string {
+  return getResearchModel(modelId).estimatedCostLabel;
+}
+
+/** Registry lookup re-exported for UI components. */
+export { RESEARCH_MODELS, getResearchModel, getResearchModelLabel };

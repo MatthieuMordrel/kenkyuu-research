@@ -26,6 +26,7 @@ export default defineSchema({
     ),
     template: v.string(),
     defaultProvider: providerValidator,
+    defaultModelId: v.optional(v.string()),
     isBuiltIn: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -39,6 +40,7 @@ export default defineSchema({
     resolvedPrompt: v.optional(v.string()),
     stockIds: v.array(v.id("stocks")),
     provider: providerValidator,
+    modelId: v.optional(v.string()),
     status: v.union(
       v.literal("pending"),
       v.literal("running"),
@@ -77,6 +79,7 @@ export default defineSchema({
       stockIds: v.optional(v.array(v.id("stocks"))),
     }),
     provider: providerValidator,
+    modelId: v.optional(v.string()),
     timezone: v.optional(v.string()),
     enabled: v.boolean(),
     lastRunAt: v.optional(v.number()),
@@ -128,6 +131,7 @@ export default defineSchema({
   costLogs: defineTable({
     jobId: v.id("researchJobs"),
     provider: providerValidator,
+    modelId: v.optional(v.string()),
     costUsd: v.number(),
     timestamp: v.number(),
   })

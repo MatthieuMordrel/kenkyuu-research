@@ -243,6 +243,7 @@ async function handleEachMode(
             promptId: schedule.promptId,
             stockIds: [earnings.stockId],
             provider: schedule.provider,
+            modelId: schedule.modelId,
             scheduleId: schedule._id,
           }
         );
@@ -386,6 +387,7 @@ async function handleAggregateMode(
               promptId: schedule.promptId,
               stockIds: [stockId],
               provider: schedule.provider,
+              modelId: schedule.modelId,
               scheduleId: schedule._id,
             });
           } catch (error: unknown) {
@@ -402,6 +404,7 @@ async function handleAggregateMode(
           promptId: schedule.promptId,
           stockIds: selectedStockIds,
           provider: schedule.provider,
+          modelId: schedule.modelId,
           scheduleId: schedule._id,
         });
       }
@@ -448,6 +451,7 @@ async function handleAggregateMode(
               promptId: schedule.promptId,
               stockIds: [stockId],
               provider: schedule.provider,
+              modelId: schedule.modelId,
               scheduleId: schedule._id,
             });
           } catch (error: unknown) {
@@ -464,6 +468,7 @@ async function handleAggregateMode(
           promptId: schedule.promptId,
           stockIds: selectedStockIds,
           provider: schedule.provider,
+          modelId: schedule.modelId,
           scheduleId: schedule._id,
         });
       }
@@ -624,6 +629,7 @@ export const testCheckEarningsTriggers = internalAction({
                 promptId: schedule.promptId,
                 stockIds: [stockId],
                 provider: schedule.provider,
+                modelId: schedule.modelId,
                 scheduleId: schedule._id,
               }
             );

@@ -10,7 +10,12 @@ import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
 import { validateSearchTerm, truncateResult } from "./validation";
 import { logAuditEvent } from "./auditLog";
-import { providerValidator, resolveActiveProvider } from "./providers/constants";
+import {
+  jobFieldsForModel,
+  modelIdValidator,
+  providerValidator,
+  resolveMutationModelId,
+} from "./providers/constants";
 
 const MAX_CONCURRENT_JOBS = 3;
 
@@ -45,7 +50,8 @@ export const createResearchJob = mutation({
   args: {
     promptId: v.id("prompts"),
     stockIds: v.array(v.id("stocks")),
-    provider: providerValidator,
+    modelId: v.optional(modelIdValidator),
+    provider: v.optional(providerValidator),
     scheduleId: v.optional(v.id("schedules")),
     token: v.optional(v.string()),
   },
@@ -59,12 +65,17 @@ export const createResearchJob = mutation({
 
     await enforceConcurrentJobLimit(ctx);
 
-    const provider = resolveActiveProvider(args.provider);
+    const resolvedModelId = resolveMutationModelId({
+      modelId: args.modelId ?? prompt.defaultModelId,
+      provider: args.provider ?? prompt.defaultProvider,
+    });
+    const { modelId, provider } = jobFieldsForModel(resolvedModelId);
     const now = Date.now();
     return await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
       stockIds: args.stockIds,
+      modelId,
       provider,
       status: "pending",
       attempts: 0,
@@ -78,7 +89,8 @@ export const createAndStartResearch = mutation({
   args: {
     promptId: v.id("prompts"),
     stockIds: v.array(v.id("stocks")),
-    provider: providerValidator,
+    modelId: v.optional(modelIdValidator),
+    provider: v.optional(providerValidator),
     scheduleId: v.optional(v.id("schedules")),
     token: v.optional(v.string()),
   },
@@ -92,12 +104,17 @@ export const createAndStartResearch = mutation({
 
     await enforceConcurrentJobLimit(ctx);
 
-    const provider = resolveActiveProvider(args.provider);
+    const resolvedModelId = resolveMutationModelId({
+      modelId: args.modelId ?? prompt.defaultModelId,
+      provider: args.provider ?? prompt.defaultProvider,
+    });
+    const { modelId, provider } = jobFieldsForModel(resolvedModelId);
     const now = Date.now();
     const jobId = await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
       stockIds: args.stockIds,
+      modelId,
       provider,
       status: "pending",
       attempts: 0,
@@ -188,12 +205,14 @@ export const logCost = internalMutation({
   args: {
     jobId: v.id("researchJobs"),
     provider: providerValidator,
+    modelId: v.optional(v.string()),
     costUsd: v.number(),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("costLogs", {
       jobId: args.jobId,
       provider: args.provider,
+      modelId: args.modelId,
       costUsd: args.costUsd,
       timestamp: Date.now(),
     });

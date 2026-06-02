@@ -7,21 +7,13 @@ import {
   useResearchFlowPromptId,
   useResearchFlowPromptType,
   useResearchFlowStockIds,
-  useResearchFlowProvider,
+  useResearchFlowModelId,
 } from "@/lib/research-flow";
 import { useStartResearch } from "./use-research";
 
 /**
  * Orchestrates the research wizard flow by combining
  * the Zustand state machine with Convex mutations.
- *
- * Usage:
- *   const flow = useResearchFlow();
- *   flow.open();                     // open wizard
- *   flow.selectPrompt(id, t, dp);    // step 1: pick prompt
- *   flow.selectStocks([...]);        // step 2: pick stocks
- *   flow.selectProvider("anthropic");// step 3: optional override
- *   await flow.execute();            // step 3: confirm & run
  */
 export function useResearchFlow() {
   const step = useResearchFlowStep();
@@ -29,7 +21,7 @@ export function useResearchFlow() {
   const promptId = useResearchFlowPromptId();
   const promptType = useResearchFlowPromptType();
   const stockIds = useResearchFlowStockIds();
-  const provider = useResearchFlowProvider();
+  const modelId = useResearchFlowModelId();
   const actions = useResearchFlowActions();
   const startResearch = useStartResearch();
 
@@ -44,53 +36,49 @@ export function useResearchFlow() {
       throw new Error("No stocks selected");
     }
 
-    actions.confirmProvider();
+    actions.confirmModel();
 
     const jobId = await startResearch({
       promptId,
       stockIds,
-      provider,
+      modelId,
     });
 
     actions.markExecuting();
     return jobId;
-  }, [promptId, promptType, stockIds, provider, actions, startResearch]);
+  }, [promptId, promptType, stockIds, modelId, actions, startResearch]);
 
   return {
-    // State
     step,
     isOpen,
     promptId,
     promptType,
     stockIds,
-    provider,
+    modelId,
     canExecute,
-
-    // Actions
     open: actions.open,
     close: actions.close,
     selectPrompt: actions.selectPrompt,
     selectStocks: actions.selectStocks,
-    selectProvider: actions.selectProvider,
+    selectModel: actions.selectModel,
     back: actions.back,
     reset: actions.reset,
     execute,
   } as const;
 }
 
-// Re-export types for consumers
-export type { ResearchFlowStep, ProviderName } from "@/lib/research-flow";
+export type { ResearchFlowStep, ResearchModelId } from "@/lib/research-flow";
 export {
-  ACTIVE_PROVIDERS,
-  PROVIDER_LABELS,
-  resolveActiveProvider,
+  ACTIVE_RESEARCH_MODELS,
+  getModelCostEstimate,
+  getModelLabel,
+  getResearchModelLabel,
+  RESEARCH_MODELS,
 } from "@/lib/research-flow";
 
-// Re-export individual selectors for components that only need one piece
 export {
   useResearchFlowStep,
   useResearchFlowIsOpen,
 } from "@/lib/research-flow";
 
-// Direct store access for non-React contexts
 export const getResearchFlowState = () => useResearchFlowStore.getState();

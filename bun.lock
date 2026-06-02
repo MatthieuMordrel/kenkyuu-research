@@ -21,6 +21,7 @@
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-slot": "^1.2.4",
         "@repo/convex": "workspace:*",
+        "@repo/research-models": "workspace:*",
         "@tailwindcss/vite": "^4.2.2",
         "@tanstack/react-devtools": "^0.9.13",
         "@tanstack/react-query": "^5.99.0",
@@ -71,6 +72,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.91.0",
+        "@repo/research-models": "workspace:*",
         "bcryptjs": "^3.0.3",
         "convex": "^1.35.1",
         "openai": "^6.34.0",
@@ -78,6 +80,14 @@
       "devDependencies": {
         "@types/bcryptjs": "^3.0.0",
         "@types/node": "^25.6.0",
+        "vitest": "^4.1.4",
+      },
+    },
+    "packages/research-models": {
+      "name": "@repo/research-models",
+      "version": "0.0.0",
+      "devDependencies": {
+        "typescript": "catalog:",
         "vitest": "^4.1.4",
       },
     },
@@ -446,6 +456,8 @@
     "@repo/brand-colors": ["@repo/brand-colors@workspace:packages/brand-colors"],
 
     "@repo/convex": ["@repo/convex@workspace:packages/convex"],
+
+    "@repo/research-models": ["@repo/research-models@workspace:packages/research-models"],
 
     "@repo/utils": ["@repo/utils@workspace:packages/utils"],
 

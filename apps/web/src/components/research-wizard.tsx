@@ -12,10 +12,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  ACTIVE_PROVIDERS,
-  PROVIDER_LABELS,
+  ACTIVE_RESEARCH_MODELS,
+  getModelCostEstimate,
+  getResearchModelLabel,
   useResearchFlow,
-  type ProviderName,
+  type ResearchModelId,
 } from "@/hooks/use-research-flow";
 import { usePrompts, usePrompt } from "@/hooks/use-prompts";
 import { useStocks, useTags } from "@/hooks/use-stocks";
@@ -35,13 +36,6 @@ import {
 } from "lucide-react";
 import type { Doc } from "@repo/convex/dataModel";
 import type { GenericId } from "convex/values";
-
-const PROVIDER_COST_ESTIMATE: Record<ProviderName, string> = {
-  openai: "~$3–4",
-  anthropic: "~$1–2",
-};
-
-const PROVIDER_ORDER: readonly ProviderName[] = ACTIVE_PROVIDERS;
 
 const STEP_LABELS: Record<string, string> = {
   "prompt-selection": "Select Prompt",
@@ -151,7 +145,8 @@ function PromptSelectionStep() {
             flow.selectPrompt(
               prompt._id,
               prompt.type,
-              prompt.defaultProvider as ProviderName | undefined
+              prompt.defaultModelId as ResearchModelId | undefined,
+              prompt.defaultProvider
             )
           }
           className={cn(
@@ -423,28 +418,31 @@ function PromptPreview({
   return <PromptPreviewDialog content={resolvedPrompt} />;
 }
 
-function ProviderPicker({
+function ModelPicker({
   value,
   onChange,
 }: {
-  value: ProviderName;
-  onChange: (provider: ProviderName) => void;
+  value: ResearchModelId;
+  onChange: (modelId: ResearchModelId) => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium text-muted-foreground">
-        Provider
-      </span>
-      <div className="grid grid-cols-2 gap-2">
-        {PROVIDER_ORDER.map((provider) => {
-          const selected = value === provider;
+      <span className="text-xs font-medium text-muted-foreground">Model</span>
+      <div
+        className={cn(
+          "grid gap-2",
+          ACTIVE_RESEARCH_MODELS.length > 1 ? "grid-cols-2" : "grid-cols-1"
+        )}
+      >
+        {ACTIVE_RESEARCH_MODELS.map((model) => {
+          const selected = value === model.id;
           return (
             <button
-              key={provider}
+              key={model.id}
               type="button"
-              onClick={() => onChange(provider)}
+              onClick={() => onChange(model.id)}
               className={cn(
-                "flex items-center gap-2 rounded-lg border p-3 text-left transition-colors",
+                "flex items-start gap-2 rounded-lg border p-3 text-left transition-colors",
                 selected
                   ? "border-primary bg-primary/5"
                   : "border-border hover:bg-accent"
@@ -452,13 +450,16 @@ function ProviderPicker({
             >
               <Zap
                 className={cn(
-                  "size-4 shrink-0",
+                  "size-4 shrink-0 mt-0.5",
                   selected ? "text-primary" : "text-muted-foreground"
                 )}
               />
-              <span className="text-sm font-medium truncate">
-                {PROVIDER_LABELS[provider]}
-              </span>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-sm font-medium">{model.label}</span>
+                <span className="text-xs text-muted-foreground line-clamp-2">
+                  {model.description}
+                </span>
+              </div>
             </button>
           );
         })}
@@ -490,11 +491,7 @@ function ProviderConfirmStep() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Provider selector */}
-      <ProviderPicker
-        value={flow.provider}
-        onChange={flow.selectProvider}
-      />
+      <ModelPicker value={flow.modelId} onChange={flow.selectModel} />
 
       {/* Summary */}
       <Card className="py-3">
@@ -504,6 +501,12 @@ function ProviderConfirmStep() {
             <Badge variant="outline" className="text-xs">
               {flow.promptType}
             </Badge>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Model</span>
+            <span className="font-medium">
+              {getResearchModelLabel(flow.modelId)}
+            </span>
           </div>
           {flow.promptType !== "discovery" && (
             <div className="flex items-center justify-between">
@@ -516,7 +519,7 @@ function ProviderConfirmStep() {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Est. Cost</span>
             <span className="font-medium">
-              {PROVIDER_COST_ESTIMATE[flow.provider]}
+              {getModelCostEstimate(flow.modelId)}
             </span>
           </div>
           <div className="flex items-center justify-between">

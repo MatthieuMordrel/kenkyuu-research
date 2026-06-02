@@ -5,32 +5,18 @@ import type {
   MessageBatchIndividualResponse,
   TextBlock,
 } from "@anthropic-ai/sdk/resources/messages";
-import type { NormalizedUsage, ResearchProvider } from "./types";
+import type { ResearchProviderAdapter } from "./types";
+import { estimateModelCost } from "@repo/research-models/pricing";
+import { RESEARCH_MODELS } from "@repo/research-models/models";
 
-const MODEL = "claude-opus-4-8";
 // At xhigh effort the docs recommend ~64k so the model has room to think and
 // run repeated tool calls across a long research turn.
 const MAX_TOKENS = 64_000;
 const EFFORT = "xhigh" as const;
 const WEB_SEARCH_MAX_USES = 40;
 
-// Batch API pricing for Claude Opus 4.8 (50% discount vs on-demand), USD/MTok.
-const INPUT_COST_PER_M = 2.5;
-const OUTPUT_COST_PER_M = 12.5;
-// Web search add-on: $10 per 1,000 searches (not discounted by batch).
-const WEB_SEARCH_COST_PER_CALL = 0.01;
-
 /** Custom-id convention: every batch contains exactly one request with this id. */
 const REQUEST_ID = "research";
-
-function estimateCost(usage: NormalizedUsage): number {
-  const tokenCost =
-    (usage.inputTokens * INPUT_COST_PER_M +
-      usage.outputTokens * OUTPUT_COST_PER_M) /
-    1_000_000;
-  const searchCost = (usage.webSearchRequests ?? 0) * WEB_SEARCH_COST_PER_CALL;
-  return tokenCost + searchCost;
-}
 
 /** Concatenate every text block in a Claude message into a single string. */
 function extractText(content: readonly unknown[]): string {
@@ -50,19 +36,17 @@ async function findResult(
   return undefined;
 }
 
-export const anthropicProvider: ResearchProvider = {
-  name: "anthropic",
-  // Anthropic has no completion webhook — we must poll batches until they end.
-  completionMode: "polling",
+export const anthropicAdapter: ResearchProviderAdapter = {
+  providerId: "anthropic",
 
-  async start(prompt, apiKey) {
+  async start(model, prompt, apiKey) {
     const client = new Anthropic({ apiKey });
     const batch = await client.messages.batches.create({
       requests: [
         {
           custom_id: REQUEST_ID,
           params: {
-            model: MODEL,
+            model: model.apiModel,
             max_tokens: MAX_TOKENS,
             // Opus 4.8 supports adaptive thinking; depth is steered by effort.
             thinking: { type: "adaptive" },
@@ -82,12 +66,12 @@ export const anthropicProvider: ResearchProvider = {
     return { externalId: batch.id };
   },
 
-  async poll(externalId, apiKey) {
+  async poll(model, externalId, apiKey) {
+    void model;
     const client = new Anthropic({ apiKey });
     const batch = await client.messages.batches.retrieve(externalId);
 
     if (batch.processing_status !== "ended") {
-      // "in_progress" | "canceling"
       return { status: "running" };
     }
 
@@ -128,9 +112,12 @@ export const anthropicProvider: ResearchProvider = {
         };
     }
   },
-
-  estimateCost,
 };
 
-/** @internal Exported for testing */
-export { estimateCost as estimateAnthropicCost };
+/** @deprecated Use anthropicAdapter */
+export const anthropicProvider = anthropicAdapter;
+
+/** @internal Exported for testing — uses opus registry pricing */
+export function estimateAnthropicCost(usage: import("./types").NormalizedUsage): number {
+  return estimateModelCost(RESEARCH_MODELS["anthropic/claude-opus-4-8"], usage);
+}

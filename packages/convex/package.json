@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.0",
+    "@repo/research-models": "workspace:*",
     "bcryptjs": "^3.0.3",
     "convex": "^1.35.1",
     "openai": "^6.34.0"

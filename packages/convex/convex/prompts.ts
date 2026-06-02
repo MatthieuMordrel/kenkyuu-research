@@ -3,7 +3,13 @@ import { internalQuery, mutation, query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
 import { validatePromptInput } from "./validation";
 import { logAuditEvent } from "./auditLog";
-import { providerValidator, assertProviderActive, DEFAULT_ACTIVE_PROVIDER } from "./providers/constants";
+import {
+  assertModelActive,
+  jobFieldsForModel,
+  modelIdValidator,
+  providerValidator,
+  resolveMutationModelId,
+} from "./providers/constants";
 
 const promptType = v.union(
   v.literal("single-stock"),
@@ -19,6 +25,7 @@ export const createPrompt = mutation({
     description: v.string(),
     type: promptType,
     template: v.string(),
+    defaultModelId: v.optional(modelIdValidator),
     defaultProvider: v.optional(providerValidator),
     isBuiltIn: v.optional(v.boolean()),
     token: v.optional(v.string()),
@@ -27,9 +34,12 @@ export const createPrompt = mutation({
     await requireAuth(ctx, args.token);
     validatePromptInput(args);
 
-    if (args.defaultProvider !== undefined) {
-      assertProviderActive(args.defaultProvider);
-    }
+    const resolvedModelId = resolveMutationModelId({
+      modelId: args.defaultModelId,
+      provider: args.defaultProvider,
+    });
+    assertModelActive(resolvedModelId);
+    const { modelId, provider } = jobFieldsForModel(resolvedModelId);
 
     const now = Date.now();
     const id = await ctx.db.insert("prompts", {
@@ -37,7 +47,8 @@ export const createPrompt = mutation({
       description: args.description,
       type: args.type,
       template: args.template,
-      defaultProvider: args.defaultProvider ?? DEFAULT_ACTIVE_PROVIDER,
+      defaultModelId: modelId,
+      defaultProvider: provider,
       isBuiltIn: args.isBuiltIn ?? false,
       createdAt: now,
       updatedAt: now,
@@ -59,6 +70,7 @@ export const updatePrompt = mutation({
     description: v.optional(v.string()),
     type: v.optional(promptType),
     template: v.optional(v.string()),
+    defaultModelId: v.optional(modelIdValidator),
     defaultProvider: v.optional(providerValidator),
     token: v.optional(v.string()),
   },
@@ -79,9 +91,15 @@ export const updatePrompt = mutation({
       patch.description = updates.description;
     if (updates.type !== undefined) patch.type = updates.type;
     if (updates.template !== undefined) patch.template = updates.template;
-    if (updates.defaultProvider !== undefined) {
-      assertProviderActive(updates.defaultProvider);
-      patch.defaultProvider = updates.defaultProvider;
+    if (updates.defaultModelId !== undefined || updates.defaultProvider !== undefined) {
+      const resolvedModelId = resolveMutationModelId({
+        modelId: updates.defaultModelId ?? existing.defaultModelId,
+        provider: updates.defaultProvider ?? existing.defaultProvider,
+      });
+      assertModelActive(resolvedModelId);
+      const fields = jobFieldsForModel(resolvedModelId);
+      patch.defaultModelId = fields.modelId;
+      patch.defaultProvider = fields.provider;
     }
 
     await ctx.db.patch(id, patch);

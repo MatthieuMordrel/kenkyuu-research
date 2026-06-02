@@ -267,6 +267,7 @@ export const executeRunNow = internalAction({
               promptId: schedule.promptId,
               stockIds: [stockId],
               provider: schedule.provider,
+              modelId: schedule.modelId,
               scheduleId: args.scheduleId,
             });
           } catch (error: unknown) {
@@ -283,6 +284,7 @@ export const executeRunNow = internalAction({
           promptId: schedule.promptId,
           stockIds,
           provider: schedule.provider,
+          modelId: schedule.modelId,
           scheduleId: args.scheduleId,
         });
       }
@@ -441,6 +443,7 @@ export const executeScheduledRun = internalAction({
               promptId: schedule.promptId,
               stockIds: [stockId],
               provider: schedule.provider,
+              modelId: schedule.modelId,
               scheduleId: args.scheduleId,
             });
           } catch (error: unknown) {
@@ -457,6 +460,7 @@ export const executeScheduledRun = internalAction({
           promptId: schedule.promptId,
           stockIds,
           provider: schedule.provider,
+          modelId: schedule.modelId,
           scheduleId: args.scheduleId,
         });
       }

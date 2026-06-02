@@ -10,9 +10,11 @@ import { requireAuth } from "./authHelpers";
 import { validateScheduleInput, validateEarningsConfig } from "./validation";
 import { logAuditEvent } from "./auditLog";
 import {
+  assertModelActive,
+  jobFieldsForModel,
+  modelIdValidator,
   providerValidator,
-  assertProviderActive,
-  resolveActiveProvider,
+  resolveMutationModelId,
 } from "./providers/constants";
 
 const stockSelectionValidator = v.object({
@@ -45,7 +47,8 @@ export const createSchedule = mutation({
     name: v.string(),
     promptId: v.id("prompts"),
     stockSelection: stockSelectionValidator,
-    provider: providerValidator,
+    modelId: v.optional(modelIdValidator),
+    provider: v.optional(providerValidator),
     cron: v.optional(v.string()),
     timezone: v.optional(v.string()),
     enabled: v.boolean(),
@@ -118,14 +121,20 @@ export const createSchedule = mutation({
       );
     }
 
-    assertProviderActive(args.provider);
+    const resolvedModelId = resolveMutationModelId({
+      modelId: args.modelId,
+      provider: args.provider ?? prompt.defaultProvider,
+    });
+    assertModelActive(resolvedModelId);
+    const scheduleModel = jobFieldsForModel(resolvedModelId);
 
     const now = Date.now();
     const scheduleData: Record<string, unknown> = {
       name: args.name,
       promptId: args.promptId,
       stockSelection: args.stockSelection,
-      provider: args.provider,
+      modelId: scheduleModel.modelId,
+      provider: scheduleModel.provider,
       enabled: args.enabled,
       createdAt: now,
     };
@@ -173,6 +182,7 @@ export const updateSchedule = mutation({
     name: v.optional(v.string()),
     promptId: v.optional(v.id("prompts")),
     stockSelection: v.optional(stockSelectionValidator),
+    modelId: v.optional(modelIdValidator),
     provider: v.optional(providerValidator),
     cron: v.optional(v.string()),
     timezone: v.optional(v.string()),
@@ -236,9 +246,15 @@ export const updateSchedule = mutation({
         );
       }
     }
-    if (updates.provider !== undefined) {
-      assertProviderActive(updates.provider);
-      patch.provider = updates.provider;
+    if (updates.modelId !== undefined || updates.provider !== undefined) {
+      const resolvedModelId = resolveMutationModelId({
+        modelId: updates.modelId ?? schedule.modelId,
+        provider: updates.provider ?? schedule.provider,
+      });
+      assertModelActive(resolvedModelId);
+      const fields = jobFieldsForModel(resolvedModelId);
+      patch.modelId = fields.modelId;
+      patch.provider = fields.provider;
     }
     if (updates.cron !== undefined) patch.cron = updates.cron;
     if (updates.timezone !== undefined) patch.timezone = updates.timezone;
@@ -655,6 +671,7 @@ export const createScheduledJob = internalMutation({
   args: {
     promptId: v.id("prompts"),
     stockIds: v.array(v.id("stocks")),
+    modelId: v.optional(v.string()),
     provider: providerValidator,
     scheduleId: v.id("schedules"),
   },
@@ -682,11 +699,16 @@ export const createScheduledJob = internalMutation({
     }
 
     const now = Date.now();
-    const provider = resolveActiveProvider(args.provider);
+    const resolvedModelId = resolveMutationModelId({
+      modelId: args.modelId,
+      provider: args.provider,
+    });
+    const { modelId, provider } = jobFieldsForModel(resolvedModelId);
     const jobId = await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
       stockIds: args.stockIds,
+      modelId,
       provider,
       status: "pending",
       attempts: 0,

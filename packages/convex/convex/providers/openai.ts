@@ -5,13 +5,9 @@ import type {
   Response,
   ResponseOutputText,
 } from "openai/resources/responses/responses";
-import type { NormalizedUsage, ResearchProvider } from "./types";
-
-const MODEL = "o3-deep-research";
-
-// o3-deep-research pricing, USD per million tokens.
-const INPUT_COST_PER_M = 10;
-const OUTPUT_COST_PER_M = 40;
+import type { NormalizedUsage, ResearchProviderAdapter } from "./types";
+import { estimateModelCost } from "@repo/research-models/pricing";
+import { RESEARCH_MODELS } from "@repo/research-models/models";
 
 const RESEARCH_INSTRUCTIONS = `You are producing a publication-quality research report.
 
@@ -29,14 +25,6 @@ Research rules:
 - Include specific figures, dates, and named evidence wherever available.
 - Surface the strongest bull case, bear case, catalysts, and the main unresolved uncertainties.
 - If evidence is mixed or incomplete, say so explicitly instead of smoothing over it.`;
-
-function estimateCost(usage: NormalizedUsage): number {
-  return (
-    (usage.inputTokens * INPUT_COST_PER_M +
-      usage.outputTokens * OUTPUT_COST_PER_M) /
-    1_000_000
-  );
-}
 
 function normalizeUsage(
   usage: OpenAI.Responses.ResponseUsage | undefined
@@ -152,16 +140,13 @@ function renderResearchMarkdown(response: Response): string {
   return response.output_text.trim();
 }
 
-export const openaiProvider: ResearchProvider = {
-  name: "openai",
-  // OpenAI sends a Standard Webhook on completion, so we only poll as
-  // a fallback for missed webhooks via the 15-min recovery cron.
-  completionMode: "webhook",
+export const openaiAdapter: ResearchProviderAdapter = {
+  providerId: "openai",
 
-  async start(prompt, apiKey) {
+  async start(model, prompt, apiKey) {
     const client = new OpenAI({ apiKey });
     const response = await client.responses.create({
-      model: MODEL,
+      model: model.apiModel,
       instructions: RESEARCH_INSTRUCTIONS,
       input: prompt,
       reasoning: { summary: "auto" },
@@ -174,7 +159,8 @@ export const openaiProvider: ResearchProvider = {
     return { externalId: response.id };
   },
 
-  async poll(externalId, apiKey) {
+  async poll(model, externalId, apiKey) {
+    void model;
     const client = new OpenAI({ apiKey });
     const response = await client.responses.retrieve(externalId);
 
@@ -193,16 +179,18 @@ export const openaiProvider: ResearchProvider = {
       case "cancelled":
         return { status: "cancelled" };
       default:
-        // "in_progress" | "queued" | null
         return { status: "running" };
     }
   },
-
-  estimateCost,
 };
+
+/** @deprecated Use openaiAdapter */
+export const openaiProvider = openaiAdapter;
+
+/** @internal Exported for testing — uses o3-deep-research registry pricing */
+export function estimateOpenAICost(usage: NormalizedUsage): number {
+  return estimateModelCost(RESEARCH_MODELS["openai/o3-deep-research"], usage);
+}
 
 /** @internal Exported for testing */
-export {
-  estimateCost as estimateOpenAICost,
-  renderOutputTextWithCitations as renderOpenAITextWithCitations,
-};
+export { renderOutputTextWithCitations as renderOpenAITextWithCitations };

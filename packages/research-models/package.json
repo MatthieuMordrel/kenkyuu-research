@@ -1,0 +1,36 @@
+{
+  "name": "@repo/research-models",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./types": {
+      "types": "./src/types.ts",
+      "import": "./src/types.ts"
+    },
+    "./models": {
+      "types": "./src/models.ts",
+      "import": "./src/models.ts"
+    },
+    "./providers": {
+      "types": "./src/providers.ts",
+      "import": "./src/providers.ts"
+    },
+    "./pricing": {
+      "types": "./src/pricing.ts",
+      "import": "./src/pricing.ts"
+    },
+    "./resolve": {
+      "types": "./src/resolve.ts",
+      "import": "./src/resolve.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "^4.1.4"
+  }
+}

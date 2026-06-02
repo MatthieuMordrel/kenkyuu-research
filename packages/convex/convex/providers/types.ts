@@ -1,4 +1,5 @@
-import type { ProviderName } from "./constants";
+import type { ResearchModelDefinition } from "@repo/research-models/types";
+import type { ProviderId } from "@repo/research-models/types";
 
 /**
  * Minimal usage shape normalized across providers for cost estimation.
@@ -23,35 +24,40 @@ export type PollResult =
   | { status: "cancelled" };
 
 /**
- * Whether the provider reports completion via webhook (push) or requires
- * us to poll until the job finishes.
- *   - "webhook": we rely on the provider's webhook; poll only as fallback
- *   - "polling": we must schedule recurring `pollJob` actions until terminal
+ * Vendor adapter — one implementation per external AI SDK.
+ * Model-specific API parameters live in the registry; adapters receive the
+ * resolved model definition at runtime.
  */
-export type CompletionMode = "webhook" | "polling";
-
-/**
- * Provider interface. One implementation per external AI service.
- * Providers are stateless — every call receives the API key explicitly so
- * we can rotate keys without reconstructing provider objects.
- */
-export interface ResearchProvider {
-  readonly name: ProviderName;
-  readonly completionMode: CompletionMode;
+export interface ResearchProviderAdapter {
+  readonly providerId: ProviderId;
 
   /**
-   * Submit a research prompt.
+   * Submit a research prompt for the given model.
    * Returns the provider-side job/response ID and, when available, the exact
    * prompt that was ultimately submitted after any provider-specific rewriting.
    */
   start(
+    model: ResearchModelDefinition,
     prompt: string,
     apiKey: string
   ): Promise<{ externalId: string; submittedPrompt?: string }>;
 
   /** Check current status of a previously-started job. */
-  poll(externalId: string, apiKey: string): Promise<PollResult>;
-
-  /** Estimate the USD cost of a completed job from its usage stats. */
-  estimateCost(usage: NormalizedUsage): number;
+  poll(
+    model: ResearchModelDefinition,
+    externalId: string,
+    apiKey: string
+  ): Promise<PollResult>;
 }
+
+/** @deprecated Use ResearchProviderAdapter */
+export type ResearchProvider = ResearchProviderAdapter & {
+  readonly name: ProviderId;
+  readonly completionMode: ResearchModelDefinition["completionMode"];
+  start(prompt: string, apiKey: string): Promise<{
+    externalId: string;
+    submittedPrompt?: string;
+  }>;
+  poll(externalId: string, apiKey: string): Promise<PollResult>;
+  estimateCost(usage: NormalizedUsage): number;
+};

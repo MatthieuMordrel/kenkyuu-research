@@ -6,12 +6,15 @@ import type { ActionCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import {
-  getProvider,
-  SETTING_KEY_BY_PROVIDER,
+  estimateModelCost,
+  getProviderAdapter,
+  getSettingsKeyForProvider,
+  resolveJobModel,
+  RESEARCH_PROVIDERS,
   type PollResult,
   type ProviderName,
-  type ResearchProvider,
 } from "./providers";
+import type { ResearchModelDefinition } from "@repo/research-models/types";
 
 const MAX_RETRIES = 3;
 const MAX_RUNNING = 3;
@@ -32,16 +35,15 @@ const STALE_JOB_THRESHOLD_MS = 30 * 60_000;
 
 async function getProviderApiKey(
   ctx: ActionCtx,
-  provider: ProviderName
+  providerId: ProviderName
 ): Promise<string | null> {
   return await ctx.runQuery(internal.authHelpers.getSettingValue, {
-    key: SETTING_KEY_BY_PROVIDER[provider],
+    key: getSettingsKeyForProvider(providerId),
   });
 }
 
-function missingKeyMessage(provider: ProviderName): string {
-  const label = provider === "openai" ? "OpenAI" : "Anthropic";
-  return `${label} API key not configured. Set it in Settings.`;
+function missingKeyMessage(providerId: ProviderName): string {
+  return `${RESEARCH_PROVIDERS[providerId].label} API key not configured. Set it in Settings.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -51,10 +53,10 @@ function missingKeyMessage(provider: ProviderName): string {
 async function applyCompletedResult(
   ctx: ActionCtx,
   job: Doc<"researchJobs">,
-  provider: ResearchProvider,
+  model: ResearchModelDefinition,
   result: Extract<PollResult, { status: "completed" }>
 ) {
-  const costUsd = provider.estimateCost(result.usage);
+  const costUsd = estimateModelCost(model, result.usage);
   const durationMs = Date.now() - job.createdAt;
 
   await ctx.runMutation(internal.researchJobs.updateJobStatus, {
@@ -67,7 +69,8 @@ async function applyCompletedResult(
 
   await ctx.runMutation(internal.researchJobs.logCost, {
     jobId: job._id,
-    provider: provider.name,
+    provider: model.providerId,
+    modelId: model.id,
     costUsd,
   });
 
@@ -161,13 +164,14 @@ export const startResearch = internalAction({
       status: "running",
     });
 
-    const provider = getProvider(job.provider);
-    const apiKey = await getProviderApiKey(ctx, job.provider);
+    const model = resolveJobModel(job);
+    const adapter = getProviderAdapter(model.providerId);
+    const apiKey = await getProviderApiKey(ctx, model.providerId);
     if (!apiKey) {
       await ctx.runMutation(internal.researchJobs.updateJobStatus, {
         id: args.jobId,
         status: "failed",
-        error: missingKeyMessage(job.provider),
+        error: missingKeyMessage(model.providerId),
       });
       return;
     }
@@ -175,7 +179,8 @@ export const startResearch = internalAction({
     const resolvedPrompt = await resolvePrompt(ctx, job);
 
     try {
-      const { externalId, submittedPrompt } = await provider.start(
+      const { externalId, submittedPrompt } = await adapter.start(
+        model,
         resolvedPrompt,
         apiKey
       );
@@ -187,8 +192,8 @@ export const startResearch = internalAction({
         resolvedPrompt: submittedPrompt ?? resolvedPrompt,
       });
 
-      // Providers without webhooks need us to poll until they finish.
-      if (provider.completionMode === "polling") {
+      // Models without webhooks need us to poll until they finish.
+      if (model.completionMode === "polling") {
         await ctx.scheduler.runAfter(
           POLL_INITIAL_DELAY_MS,
           internal.researchActions.pollJob,
@@ -291,23 +296,24 @@ export const pollJob = internalAction({
     if (isTerminal(job.status)) return;
     if (!job.externalJobId) return;
 
-    const provider = getProvider(job.provider);
-    const apiKey = await getProviderApiKey(ctx, job.provider);
+    const model = resolveJobModel(job);
+    const adapter = getProviderAdapter(model.providerId);
+    const apiKey = await getProviderApiKey(ctx, model.providerId);
     if (!apiKey) {
       await ctx.runMutation(internal.researchJobs.updateJobStatus, {
         id: args.jobId,
         status: "failed",
-        error: missingKeyMessage(job.provider),
+        error: missingKeyMessage(model.providerId),
       });
       return;
     }
 
     let result: PollResult;
     try {
-      result = await provider.poll(job.externalJobId, apiKey);
+      result = await adapter.poll(model, job.externalJobId, apiKey);
     } catch (error) {
       console.error(
-        `pollJob: ${job.provider} poll failed for ${args.jobId}:`,
+        `pollJob: ${model.id} poll failed for ${args.jobId}:`,
         error instanceof Error ? error.message : error
       );
       // Transient: keep the job alive unless it's older than the hard timeout.
@@ -317,7 +323,7 @@ export const pollJob = internalAction({
 
     switch (result.status) {
       case "completed":
-        await applyCompletedResult(ctx, job, provider, result);
+        await applyCompletedResult(ctx, job, model, result);
         return;
       case "failed":
         await applyFailedResult(ctx, job, result.error, { retryable: true });
@@ -471,21 +477,22 @@ export const checkJobHealth = action({
       };
     }
 
-    const provider = getProvider(job.provider);
-    const apiKey = await getProviderApiKey(ctx, job.provider);
+    const model = resolveJobModel(job);
+    const adapter = getProviderAdapter(model.providerId);
+    const apiKey = await getProviderApiKey(ctx, model.providerId);
     if (!apiKey) {
       return {
         jobId,
         provider: job.provider,
         convexStatus: job.status,
         providerStatus: null,
-        message: `${missingKeyMessage(job.provider)} Cannot verify external status.`,
+        message: `${missingKeyMessage(model.providerId)} Cannot verify external status.`,
         checkedAt: now,
       };
     }
 
     try {
-      const result = await provider.poll(job.externalJobId, apiKey);
+      const result = await adapter.poll(model, job.externalJobId, apiKey);
       const elapsedMs = now - job.createdAt;
       const elapsedMin = Math.floor(elapsedMs / 60_000);
       return {
@@ -494,7 +501,7 @@ export const checkJobHealth = action({
         convexStatus: job.status,
         providerStatus: result.status,
         elapsedMs,
-        message: statusMessage(job.provider, result, elapsedMin),
+        message: statusMessage(model, result, elapsedMin),
         checkedAt: now,
       };
     } catch (error) {
@@ -513,23 +520,21 @@ export const checkJobHealth = action({
 });
 
 function statusMessage(
-  provider: ProviderName,
+  model: ResearchModelDefinition,
   result: PollResult,
   elapsedMin: number
 ): string {
-  const label = provider === "openai" ? "OpenAI" : "Anthropic";
   switch (result.status) {
     case "running":
-      return `Job is running on ${label} (${elapsedMin}m elapsed). This is normal for deep research.`;
+      return `${model.label} is running (${elapsedMin}m elapsed). This is normal for deep research.`;
     case "completed":
-      return `${label} reports completed — processing will follow shortly.`;
+      return `${model.label} reports completed — processing will follow shortly.`;
     case "failed":
-      return `${label} reports failed: ${result.error}`;
+      return `${model.label} reports failed: ${result.error}`;
     case "cancelled":
-      return `${label} reports cancelled.`;
+      return `${model.label} reports cancelled.`;
   }
 }
 
-// Re-export so existing test files and external callers can still import this symbol.
-// (The provider-agnostic implementation lives in providers/openai.ts.)
+// Re-export so existing test files can still import cost helpers.
 export { estimateOpenAICost as estimateCost } from "./providers/openai";

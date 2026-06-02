@@ -16,6 +16,7 @@
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@repo/convex": "workspace:*",
+    "@repo/research-models": "workspace:*",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-devtools": "^0.9.13",
     "@tanstack/react-query": "^5.99.0",

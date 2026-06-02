@@ -21,11 +21,7 @@ import {
   type PromptType,
 } from "@/lib/schedule-validation";
 import { cn } from "@/lib/utils";
-import {
-  DEFAULT_PROVIDER,
-  resolveActiveProvider,
-  type ProviderName,
-} from "@/lib/research-flow";
+import { resolvePromptModelId } from "@/lib/research-flow";
 import type { Doc, Id } from "@repo/convex/dataModel";
 
 import {
@@ -307,13 +303,14 @@ export function ScheduleModal({
       } else {
         // Schedules inherit the selected prompt's default provider. To change
         // provider for a schedule, update the prompt's default.
-        const provider = resolveActiveProvider(
-          (selectedPrompt?.defaultProvider ?? DEFAULT_PROVIDER) as ProviderName
-        );
+        const modelId = resolvePromptModelId({
+          defaultModelId: selectedPrompt?.defaultModelId,
+          defaultProvider: selectedPrompt?.defaultProvider,
+        });
         await createSchedule({
           ...commonFields,
           ...triggerFields,
-          provider,
+          modelId,
         });
       }
       onOpenChange(false);

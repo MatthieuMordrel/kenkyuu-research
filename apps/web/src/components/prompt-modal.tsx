@@ -23,11 +23,10 @@ import remarkGfm from "remark-gfm";
 import { Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  ACTIVE_PROVIDERS,
-  DEFAULT_PROVIDER,
-  PROVIDER_LABELS,
-  resolveActiveProvider,
-  type ProviderName,
+  ACTIVE_RESEARCH_MODELS,
+  DEFAULT_MODEL_ID,
+  resolvePromptModelId,
+  type ResearchModelId,
 } from "@/lib/research-flow";
 import type { Doc } from "@repo/convex/dataModel";
 
@@ -44,7 +43,7 @@ interface PromptFormData {
   description: string;
   type: PromptType;
   template: string;
-  defaultProvider: ProviderName;
+  defaultModelId: ResearchModelId;
 }
 
 interface PromptFormErrors {
@@ -58,14 +57,14 @@ const INITIAL_FORM: PromptFormData = {
   description: "",
   type: "single-stock",
   template: "",
-  defaultProvider: DEFAULT_PROVIDER,
+  defaultModelId: DEFAULT_MODEL_ID,
 };
 
-const PROVIDER_OPTIONS: { value: ProviderName; label: string }[] =
-  ACTIVE_PROVIDERS.map((value) => ({
-    value,
-    label: PROVIDER_LABELS[value].replace(" (Anthropic)", ""),
-  }));
+const MODEL_OPTIONS = ACTIVE_RESEARCH_MODELS.map((model) => ({
+  value: model.id,
+  label: model.label,
+  description: model.description,
+}));
 
 const TYPE_OPTIONS: {
   value: PromptType;
@@ -120,9 +119,10 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: prompt.description,
           type: prompt.type,
           template: prompt.template,
-          defaultProvider: resolveActiveProvider(
-            (prompt.defaultProvider ?? DEFAULT_PROVIDER) as ProviderName
-          ),
+          defaultModelId: resolvePromptModelId({
+            defaultModelId: prompt.defaultModelId,
+            defaultProvider: prompt.defaultProvider,
+          }),
         });
       } else {
         setForm(INITIAL_FORM);
@@ -172,7 +172,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: form.description.trim(),
           type: form.type,
           template: form.template,
-          defaultProvider: form.defaultProvider,
+          defaultModelId: form.defaultModelId,
         });
       } else {
         await createPrompt({
@@ -180,7 +180,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: form.description.trim(),
           type: form.type,
           template: form.template,
-          defaultProvider: form.defaultProvider,
+          defaultModelId: form.defaultModelId,
         });
       }
       onOpenChange(false);
@@ -259,21 +259,29 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label>Default Provider</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {PROVIDER_OPTIONS.map((option) => (
+            <Label>Default Model</Label>
+            <div
+              className={cn(
+                "grid gap-2",
+                MODEL_OPTIONS.length > 1 ? "grid-cols-2" : "grid-cols-1"
+              )}
+            >
+              {MODEL_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => updateField("defaultProvider", option.value)}
+                  onClick={() => updateField("defaultModelId", option.value)}
                   className={cn(
                     "rounded-md border p-2 text-left text-sm transition-colors",
-                    form.defaultProvider === option.value
+                    form.defaultModelId === option.value
                       ? "border-primary bg-primary/5 font-medium"
                       : "border-border hover:bg-accent"
                   )}
                 >
-                  {option.label}
+                  <span className="block">{option.label}</span>
+                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                    {option.description}
+                  </span>
                 </button>
               ))}
             </div>
@@ -291,10 +299,10 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
                   type="button"
                   onClick={() => setShowPreview(false)}
                   className={cn(
-                    "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                    "rounded px-2 py-1 text-xs transition-colors",
                     !showPreview
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-background shadow-sm"
+                      : "text-muted-foreground"
                   )}
                 >
                   Edit
@@ -303,10 +311,10 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
                   type="button"
                   onClick={() => setShowPreview(true)}
                   className={cn(
-                    "flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                    "flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors",
                     showPreview
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-background shadow-sm"
+                      : "text-muted-foreground"
                   )}
                 >
                   <Eye className="size-3" />
@@ -315,52 +323,37 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
               </div>
             </div>
 
-            {/* Variable hints — only show in edit mode */}
-            {!showPreview && (
-              <div className="flex flex-wrap gap-1.5">
-                {availableVariables.map((v) => (
-                  <Badge
-                    key={v.name}
-                    variant={
-                      usedVariables.includes(v.name) ? "default" : "outline"
-                    }
-                    className="text-[10px] px-1.5 py-0 cursor-help"
-                    title={v.description}
-                  >
-                    {v.pattern}
-                  </Badge>
-                ))}
-              </div>
-            )}
-
             {showPreview ? (
-              <div className="rounded-md border bg-muted/50 p-4 text-sm min-h-[12rem] max-h-[24rem] overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-3 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:mb-2 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:mb-2 [&_p]:mb-2 [&_p]:leading-relaxed [&_ul]:mb-2 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:mb-2 [&_ol]:ml-5 [&_ol]:list-decimal [&_li]:mb-1 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs [&_code]:font-mono [&_pre]:mb-2 [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3 [&_pre]:overflow-x-auto [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_a]:text-primary [&_a]:underline [&_strong]:font-semibold [&_hr]:my-3 [&_hr]:border-border [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-1.5">
-                {form.template.trim() ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {previewText}
-                  </ReactMarkdown>
-                ) : (
-                  <span className="text-muted-foreground italic">
-                    Enter a template to see a preview
-                  </span>
-                )}
+              <div className="max-h-64 overflow-y-auto rounded-md border bg-muted/30 p-4">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {previewText}
+                </ReactMarkdown>
               </div>
             ) : (
-              <>
-                <Textarea
-                  id="prompt-template"
-                  placeholder="Write your prompt template here. Use {{TICKER}}, {{STOCKS}}, or {{DATE}} for variable injection."
-                  value={form.template}
-                  onChange={(e) => updateField("template", e.target.value)}
-                  aria-invalid={!!errors.template}
-                  rows={8}
-                  className="font-mono text-sm"
-                />
-                {errors.template && (
-                  <p className="text-xs text-destructive">{errors.template}</p>
-                )}
-              </>
+              <Textarea
+                placeholder="Enter your prompt template with {{TICKER}}, {{STOCKS}}, or {{DATE}} variables..."
+                value={form.template}
+                onChange={(e) => updateField("template", e.target.value)}
+                rows={10}
+                aria-invalid={!!errors.template}
+                className="font-mono text-sm"
+              />
             )}
+            {errors.template && (
+              <p className="text-xs text-destructive">{errors.template}</p>
+            )}
+
+            <div className="flex flex-wrap gap-1.5">
+              {availableVariables.map((v) => (
+                <Badge
+                  key={v.name}
+                  variant={usedVariables.includes(v.name) ? "default" : "outline"}
+                  className="text-[10px]"
+                >
+                  {`{{${v.name}}}`}
+                </Badge>
+              ))}
+            </div>
           </div>
 
           {submitError && (
@@ -376,13 +369,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
               Cancel
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting
-                ? isEditing
-                  ? "Saving..."
-                  : "Creating..."
-                : isEditing
-                  ? "Save Changes"
-                  : "Create Prompt"}
+              {submitting ? "Saving..." : isEditing ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </form>
