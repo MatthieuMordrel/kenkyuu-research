@@ -717,10 +717,8 @@ export function MarkdownRenderer({
     [allKeys]
   );
 
-  /** Top-level sections open by default so readers see content without expanding everything. */
-  const [openSet, setOpenSet] = useState<Set<string>>(() =>
-    openKeysUpToDepth(allKeys, 0)
-  );
+  /** All sections collapsed by default; readers expand what they need. */
+  const [openSet, setOpenSet] = useState<Set<string>>(() => new Set());
 
   const maxOpenDepth = useMemo(() => {
     if (openSet.size === 0) return -1;
