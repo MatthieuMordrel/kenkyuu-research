@@ -1,19 +1,10 @@
 import { RESEARCH_PROVIDERS } from "./providers";
 
 /**
- * OpenAI Responses API `instructions` sent on every research job for that provider.
- * Anthropic research sends only the resolved prompt template as the user message.
+ * Shared first-pass research system prompt for all providers.
+ * OpenAI sends this as Responses API `instructions`; Anthropic as `system`.
  */
-export const OPENAI_RESEARCH_INSTRUCTIONS = `You are producing a publication-quality research report.
-
-Return valid GitHub-flavored Markdown only.
-
-Formatting rules:
-- Use clear ATX headings with blank lines between sections.
-- Use bullet lists for comparisons unless a table is clearly the best format.
-- Only emit tables when every row has the same columns.
-- Use fenced code blocks for code or command examples.
-- Keep citations inline and preserve them next to the claims they support.
+export const RESEARCH_SYSTEM_PROMPT = `Return valid GitHub-flavored Markdown.
 
 Research rules:
 - Prioritize primary sources, company filings, official statements, regulators, and reputable financial reporting.
@@ -74,24 +65,24 @@ Present findings in a structured report with:
  * How a research provider delivers the job prompt to the model.
  * @property providerId - Registry id
  * @property providerLabel - Display name
- * @property systemInstructions - Fixed instructions layer, if any
  * @property deliveryNote - Short explanation shown in settings
  */
 export interface ResearchProviderPromptView {
   providerId: keyof typeof RESEARCH_PROVIDERS;
   providerLabel: string;
-  systemInstructions: string | null;
   deliveryNote: string;
 }
 
 /**
  * Read-only snapshot of the first-pass research prompt layers for settings UI.
- * @property providers - Per-vendor system/instructions behavior
+ * @property systemPrompt - Fixed system/instructions layer sent on every research job
+ * @property providers - Per-vendor delivery of system prompt + user template
  * @property builtInDiscoveryName - Seeded built-in prompt title
  * @property builtInDiscoveryDescription - Seeded built-in prompt summary
  * @property builtInDiscoveryTemplate - Default template body (also user-editable in Prompts)
  */
 export interface ResearchPromptView {
+  systemPrompt: string;
   providers: ResearchProviderPromptView[];
   builtInDiscoveryName: string;
   builtInDiscoveryDescription: string;
@@ -103,20 +94,19 @@ export interface ResearchPromptView {
  */
 export function getResearchPromptView(): ResearchPromptView {
   return {
+    systemPrompt: RESEARCH_SYSTEM_PROMPT,
     providers: [
       {
         providerId: "openai",
         providerLabel: RESEARCH_PROVIDERS.openai.label,
-        systemInstructions: OPENAI_RESEARCH_INSTRUCTIONS,
         deliveryNote:
-          "OpenAI receives these instructions plus your selected prompt template as input.",
+          "OpenAI receives the system prompt as instructions plus your selected prompt template as input.",
       },
       {
         providerId: "anthropic",
         providerLabel: RESEARCH_PROVIDERS.anthropic.label,
-        systemInstructions: null,
         deliveryNote:
-          "Anthropic receives only the resolved prompt template as the user message (no separate system prompt).",
+          "Anthropic receives the system prompt plus your selected prompt template as the user message.",
       },
     ],
     builtInDiscoveryName: BUILT_IN_DISCOVERY_PROMPT.name,

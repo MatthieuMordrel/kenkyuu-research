@@ -9,6 +9,7 @@ import type { ResearchProviderAdapter } from "./types";
 import type { ResearchModelDefinition } from "@repo/research-models/types";
 import { estimateModelCost } from "@repo/research-models/pricing";
 import { RESEARCH_MODELS } from "@repo/research-models/models";
+import { RESEARCH_SYSTEM_PROMPT } from "@repo/research-models/research-prompt";
 import { resolveAnthropicMaxOutputTokens } from "./anthropicModelLimits";
 
 /** Map registry thinking type to Anthropic SDK thinking config. */
@@ -74,6 +75,7 @@ export const anthropicAdapter: ResearchProviderAdapter = {
                 max_uses: runtime.webSearchMaxUses,
               },
             ],
+            system: RESEARCH_SYSTEM_PROMPT,
             messages: [{ role: "user", content: prompt }],
           },
         },

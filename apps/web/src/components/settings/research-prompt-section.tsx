@@ -73,42 +73,39 @@ export function ResearchPromptSection() {
           <CardTitle className="text-base">Research (first pass)</CardTitle>
         </div>
         <CardDescription>
-          When you run research, the model receives a prompt template you choose
-          on the{" "}
+          When you run research, every provider receives the same system prompt
+          plus a prompt template you choose on the{" "}
           <Link to="/prompts" className="font-medium text-primary underline-offset-4 hover:underline">
             Prompts
           </Link>{" "}
-          page. Some providers also attach fixed instructions before that
-          template.
+          page.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">System prompt</p>
+          <PromptViewRow
+            title="Research system prompt"
+            description="Shared research rules and output format for OpenAI and Anthropic."
+            content={researchPromptView.systemPrompt}
+            modalDescription="Sent on every first-pass research job, before your selected prompt template."
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
           <p className="text-sm font-medium">By provider</p>
           <div className="flex flex-col gap-2">
-            {researchPromptView.providers.map((provider) =>
-              provider.systemInstructions ? (
-                <PromptViewRow
-                  key={provider.providerId}
-                  title={`${provider.providerLabel} — provider instructions`}
-                  description={provider.deliveryNote}
-                  content={provider.systemInstructions}
-                  modalDescription={`Fixed instructions sent on every ${provider.providerLabel} research job, before your prompt template.`}
-                />
-              ) : (
-                <div
-                  key={provider.providerId}
-                  className="rounded-lg border bg-muted/10 px-3 py-3"
-                >
-                  <p className="text-sm font-medium">
-                    {provider.providerLabel} — no system prompt
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {provider.deliveryNote}
-                  </p>
-                </div>
-              )
-            )}
+            {researchPromptView.providers.map((provider) => (
+              <div
+                key={provider.providerId}
+                className="rounded-lg border bg-muted/10 px-3 py-3"
+              >
+                <p className="text-sm font-medium">{provider.providerLabel}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {provider.deliveryNote}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 

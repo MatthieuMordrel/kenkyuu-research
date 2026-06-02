@@ -9,7 +9,7 @@ import type {
 import type { NormalizedUsage, ResearchProviderAdapter } from "./types";
 import { estimateModelCost } from "@repo/research-models/pricing";
 import { RESEARCH_MODELS } from "@repo/research-models/models";
-import { OPENAI_RESEARCH_INSTRUCTIONS } from "@repo/research-models/research-prompt";
+import { RESEARCH_SYSTEM_PROMPT } from "@repo/research-models/research-prompt";
 
 function normalizeUsage(
   usage: OpenAI.Responses.ResponseUsage | undefined
@@ -156,7 +156,7 @@ export function buildOpenAIResponseCreateParams(
 
   return {
     model: model.apiModel,
-    instructions: OPENAI_RESEARCH_INSTRUCTIONS,
+    instructions: RESEARCH_SYSTEM_PROMPT,
     input: prompt,
     reasoning: runtime
       ? { effort: runtime.reasoningEffort, summary: "auto" }
