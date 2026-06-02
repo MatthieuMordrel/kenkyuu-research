@@ -9,6 +9,7 @@ import type { ResearchProviderAdapter } from "./types";
 import type { ResearchModelDefinition } from "@repo/research-models/types";
 import { estimateModelCost } from "@repo/research-models/pricing";
 import { RESEARCH_MODELS } from "@repo/research-models/models";
+import { resolveAnthropicMaxOutputTokens } from "./anthropicModelLimits";
 
 /** Map registry thinking type to Anthropic SDK thinking config. */
 function buildThinkingConfig(
@@ -56,13 +57,14 @@ export const anthropicAdapter: ResearchProviderAdapter = {
     }
 
     const client = new Anthropic({ apiKey });
+    const maxTokens = await resolveAnthropicMaxOutputTokens(client, model.apiModel);
     const batch = await client.messages.batches.create({
       requests: [
         {
           custom_id: REQUEST_ID,
           params: {
             model: model.apiModel,
-            max_tokens: runtime.maxTokens,
+            max_tokens: maxTokens,
             thinking: buildThinkingConfig(runtime.thinkingType),
             output_config: { effort: runtime.effort },
             tools: [

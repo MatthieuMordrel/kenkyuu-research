@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   countMarkdownLinks,
+  maxOutputTokensForInput,
   passesFormattingGuards,
   prepassMarkdown,
 } from "../researchFormat";
@@ -22,6 +23,14 @@ describe("countMarkdownLinks", () => {
   it("counts inline markdown links", () => {
     const text = "See [A](https://a.com) and [B](https://b.com).";
     expect(countMarkdownLinks(text)).toBe(2);
+  });
+});
+
+describe("maxOutputTokensForInput", () => {
+  it("scales with input length and caps at the model maximum", () => {
+    const modelMax = 64_000;
+    expect(maxOutputTokensForInput(10_000, modelMax)).toBeGreaterThan(4_096);
+    expect(maxOutputTokensForInput(400_000, modelMax)).toBe(modelMax);
   });
 });
 

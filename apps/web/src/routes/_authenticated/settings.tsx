@@ -32,6 +32,7 @@ import {
   Send,
 } from "lucide-react";
 import { ResearchFormatPromptSection } from "@/components/settings/research-format-prompt-section";
+import { ResearchPromptSection } from "@/components/settings/research-prompt-section";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -46,6 +47,7 @@ function SettingsPage() {
       />
       <div className="flex flex-col gap-6 px-4 pb-4 md:px-6">
         <ApiKeysSection />
+        <ResearchPromptSection />
         <ResearchFormatPromptSection />
         <TelegramSection />
         <EmailSection />

@@ -13,15 +13,12 @@ import {
   resolveFormatModel,
   type FormatModelDefinition,
 } from "@repo/research-models/format-models";
-import {
-  buildFormatUserMessageForChunk,
-  getFormatSystemPrompt,
-} from "@repo/research-models/format-prompt";
+import { FORMAT_SYSTEM_PROMPT } from "@repo/research-models/format-prompt";
 import type { NormalizedUsage } from "@repo/research-models/types";
+import { resolveAnthropicMaxOutputTokens } from "./providers/anthropicModelLimits";
 import {
   postpassResearchMarkdown,
   prepassResearchMarkdown,
-  splitMarkdownForFormatting,
 } from "./researchFormatPrepass";
 
 const MIN_LENGTH_RATIO = 0.7;
@@ -72,8 +69,18 @@ function extractAssistantText(content: readonly unknown[]): string {
     .trim();
 }
 
-function maxOutputTokensForInput(inputLength: number): number {
-  return Math.min(16_384, Math.max(4_096, Math.ceil(inputLength * 0.55) + 2_048));
+/**
+ * Scales formatter max_tokens with input size, capped at the model maximum.
+ */
+export function maxOutputTokensForInput(
+  inputLength: number,
+  modelMaxOutputTokens: number
+): number {
+  const estimated = Math.ceil(inputLength * 0.55) + 2_048;
+  return Math.min(
+    modelMaxOutputTokens,
+    Math.max(4_096, estimated)
+  );
 }
 
 function mergeUsage(
@@ -87,32 +94,32 @@ function mergeUsage(
 }
 
 /**
- * Calls the formatter model on one markdown chunk; throws on API or empty response errors.
+ * Calls the formatter model on the full report; throws on API or empty response errors.
  */
 async function callFormatter(
   formatModel: FormatModelDefinition,
   apiKey: string,
-  rawMarkdown: string,
-  chunkIndex = 0,
-  chunkTotal = 1
+  rawMarkdown: string
 ): Promise<{ text: string; usage: NormalizedUsage }> {
   const client = new Anthropic({ apiKey });
   const preprocessed = prepassResearchMarkdown(rawMarkdown);
-  const system = getFormatSystemPrompt(chunkTotal);
+  const modelMaxOutputTokens = await resolveAnthropicMaxOutputTokens(
+    client,
+    formatModel.apiModel
+  );
 
   const stream = client.messages.stream({
     model: formatModel.apiModel,
-    max_tokens: maxOutputTokensForInput(preprocessed.length),
+    max_tokens: maxOutputTokensForInput(
+      preprocessed.length,
+      modelMaxOutputTokens
+    ),
     temperature: 0,
-    system,
+    system: FORMAT_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",
-        content: buildFormatUserMessageForChunk(
-          preprocessed,
-          chunkIndex,
-          chunkTotal
-        ),
+        content: preprocessed,
       },
     ],
   });
@@ -133,28 +140,7 @@ async function callFormatter(
 }
 
 /**
- * Formats one chunk (single API call, post-pass applied).
- */
-async function formatChunk(
-  formatModel: FormatModelDefinition,
-  apiKey: string,
-  chunk: string,
-  chunkIndex: number,
-  chunkTotal: number
-): Promise<{ text: string; usage: NormalizedUsage }> {
-  const { text, usage } = await callFormatter(
-    formatModel,
-    apiKey,
-    chunk,
-    chunkIndex,
-    chunkTotal
-  );
-  return { text, usage };
-}
-
-/**
  * Runs the formatter with guardrails; falls back to preprocessed raw on failure.
- * Long reports are split by section to stay within action time limits.
  */
 export async function formatResearchMarkdown(
   formatModel: FormatModelDefinition,
@@ -162,52 +148,23 @@ export async function formatResearchMarkdown(
   rawMarkdown: string
 ): Promise<{ text: string; usage: NormalizedUsage; usedFallback: boolean }> {
   const preprocessed = prepassResearchMarkdown(rawMarkdown);
-  const chunks = splitMarkdownForFormatting(rawMarkdown);
   let usage: NormalizedUsage = { inputTokens: 0, outputTokens: 0 };
 
   try {
-    if (chunks.length === 1) {
-      let lastText = preprocessed;
-      for (let attempt = 0; attempt < MAX_FORMAT_ATTEMPTS; attempt++) {
-        const formatted = await formatChunk(
-          formatModel,
-          apiKey,
-          chunks[0],
-          0,
-          1
-        );
-        usage = mergeUsage(usage, formatted.usage);
-        lastText = formatted.text;
-        if (passesFormattingGuards(preprocessed, lastText)) {
-          return { text: lastText, usage, usedFallback: false };
-        }
-      }
-      return {
-        text: postpassResearchMarkdown(lastText),
-        usage,
-        usedFallback: true,
-      };
-    }
-
-    const formattedParts: string[] = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const formatted = await formatChunk(
-        formatModel,
-        apiKey,
-        chunks[i],
-        i,
-        chunks.length
-      );
+    let lastText = preprocessed;
+    for (let attempt = 0; attempt < MAX_FORMAT_ATTEMPTS; attempt++) {
+      const formatted = await callFormatter(formatModel, apiKey, rawMarkdown);
       usage = mergeUsage(usage, formatted.usage);
-      formattedParts.push(formatted.text);
+      lastText = formatted.text;
+      if (passesFormattingGuards(preprocessed, lastText)) {
+        return { text: lastText, usage, usedFallback: false };
+      }
     }
-
-    const combined = postpassResearchMarkdown(formattedParts.join("\n\n"));
-    if (passesFormattingGuards(preprocessed, combined)) {
-      return { text: combined, usage, usedFallback: false };
-    }
-
-    return { text: combined, usage, usedFallback: true };
+    return {
+      text: postpassResearchMarkdown(lastText),
+      usage,
+      usedFallback: true,
+    };
   } catch (error) {
     console.error(
       "formatResearchMarkdown failed:",

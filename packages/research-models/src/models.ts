@@ -28,7 +28,6 @@ export const RESEARCH_MODELS = {
     },
     anthropic: {
       effort: "xhigh",
-      maxTokens: 64_000,
       webSearchMaxUses: 100,
       thinkingType: "adaptive",
     },
@@ -80,7 +79,6 @@ export const RESEARCH_MODELS = {
     openai: {
       reasoningEffort: "xhigh",
       maxToolCalls: 150,
-      maxOutputTokens: 128_000,
       webSearchTool: "web_search",
       webSearchContextSize: "high",
     },

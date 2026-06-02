@@ -27,7 +27,7 @@ export type OpenAIReasoningEffort =
  * Per-model OpenAI Responses API runtime settings.
  * @property reasoningEffort - Thinking depth (`xhigh` for deep research)
  * @property maxToolCalls - Cap on total built-in tool invocations per response
- * @property maxOutputTokens - Upper bound on generated tokens including reasoning
+ * @property maxOutputTokens - Optional cap; omit to use the provider model maximum
  * @property webSearchTool - Modern `web_search` vs legacy `web_search_preview`
  * @property webSearchContextSize - How much search context to retain
  */
@@ -45,13 +45,11 @@ export type AnthropicEffort = "low" | "medium" | "high" | "xhigh";
 /**
  * Per-model Anthropic Batch API runtime settings.
  * @property effort - Adaptive thinking depth
- * @property maxTokens - Max output tokens for the research turn
  * @property webSearchMaxUses - Cap on web search tool invocations
  * @property thinkingType - Thinking mode (adaptive for Opus 4.8)
  */
 export interface AnthropicModelRuntimeConfig {
   effort: AnthropicEffort;
-  maxTokens: number;
   webSearchMaxUses: number;
   thinkingType: "adaptive" | "enabled" | "disabled";
 }

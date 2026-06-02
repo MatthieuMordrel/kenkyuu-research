@@ -3,6 +3,7 @@ import { RESEARCH_MODELS } from "./models";
 import {
   ANTHROPIC_THINKING_OPTIONS,
   getResearchModelDetailRows,
+  MODEL_MAX_OUTPUT_TOKENS_LABEL,
 } from "./model-details";
 
 describe("getResearchModelDetailRows", () => {
@@ -16,10 +17,10 @@ describe("getResearchModelDetailRows", () => {
     expect(rows).toEqual(
       expect.arrayContaining([
         { label: "Max tool calls", value: "150" },
-        { label: "Max output tokens", value: "128,000" },
         { label: "Web search", value: "High context" },
       ])
     );
+    expect(rows.find((row) => row.label === "Max output tokens")).toBeUndefined();
   });
 
   it("includes Anthropic effort and thinking options for Opus", () => {
@@ -39,7 +40,10 @@ describe("getResearchModelDetailRows", () => {
           options: ANTHROPIC_THINKING_OPTIONS,
         },
         { label: "Max web searches", value: "100" },
-        { label: "Max output tokens", value: "64,000" },
+        {
+          label: "Max output tokens",
+          value: MODEL_MAX_OUTPUT_TOKENS_LABEL,
+        },
       ])
     );
   });

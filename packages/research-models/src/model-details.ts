@@ -41,6 +41,9 @@ export const OPENAI_REASONING_EFFORT_OPTIONS = [
   "xhigh",
 ] as const satisfies readonly OpenAIReasoningEffort[];
 
+/** Shown when output token limit is resolved from the provider at request time. */
+export const MODEL_MAX_OUTPUT_TOKENS_LABEL = "Maximum";
+
 /** Format large integers for UI (e.g. 128000 → "128,000"). */
 function formatCount(value: number): string {
   return value.toLocaleString("en-US");
@@ -120,7 +123,7 @@ export function getResearchModelDetailRows(
     });
     rows.push({
       label: "Max output tokens",
-      value: formatCount(model.anthropic.maxTokens),
+      value: MODEL_MAX_OUTPUT_TOKENS_LABEL,
     });
   }
 

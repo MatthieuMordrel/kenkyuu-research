@@ -90,7 +90,7 @@ describe("buildOpenAIResponseCreateParams", () => {
     expect(params.model).toBe("gpt-5.5");
     expect(params.reasoning).toEqual({ effort: "xhigh", summary: "auto" });
     expect(params.max_tool_calls).toBe(150);
-    expect(params.max_output_tokens).toBe(128_000);
+    expect(params.max_output_tokens).toBeUndefined();
     expect(params.tools).toEqual([
       { type: "web_search", search_context_size: "high" },
       { type: "code_interpreter", container: { type: "auto" } },

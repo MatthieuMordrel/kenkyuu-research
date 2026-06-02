@@ -35,6 +35,10 @@
     "./format-prompt": {
       "types": "./src/format-prompt.ts",
       "import": "./src/format-prompt.ts"
+    },
+    "./research-prompt": {
+      "types": "./src/research-prompt.ts",
+      "import": "./src/research-prompt.ts"
     }
   },
   "scripts": {

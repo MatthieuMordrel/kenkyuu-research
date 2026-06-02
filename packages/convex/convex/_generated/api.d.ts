@@ -27,6 +27,7 @@ import type * as lib_finnhub_types from "../lib/finnhub/types.js";
 import type * as notifications from "../notifications.js";
 import type * as prompts from "../prompts.js";
 import type * as providers_anthropic from "../providers/anthropic.js";
+import type * as providers_anthropicModelLimits from "../providers/anthropicModelLimits.js";
 import type * as providers_constants from "../providers/constants.js";
 import type * as providers_index from "../providers/index.js";
 import type * as providers_openai from "../providers/openai.js";
@@ -70,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   prompts: typeof prompts;
   "providers/anthropic": typeof providers_anthropic;
+  "providers/anthropicModelLimits": typeof providers_anthropicModelLimits;
   "providers/constants": typeof providers_constants;
   "providers/index": typeof providers_index;
   "providers/openai": typeof providers_openai;

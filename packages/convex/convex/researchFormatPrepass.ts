@@ -60,47 +60,13 @@ export function prepassResearchMarkdown(markdown: string): string {
   return text.trim();
 }
 
-/** Target max characters per LLM formatting chunk (avoids action timeouts). */
-export const FORMAT_CHUNK_TARGET_CHARS = 8_000;
-
 /**
- * Splits a long report at paragraph boundaries (not ##) so chunk formatters
- * do not each invent a full duplicate outline.
- */
-export function splitMarkdownForFormatting(markdown: string): string[] {
-  const preprocessed = prepassResearchMarkdown(markdown);
-  if (preprocessed.length <= FORMAT_CHUNK_TARGET_CHARS) {
-    return [preprocessed];
-  }
-
-  const chunks: string[] = [];
-  let start = 0;
-
-  while (start < preprocessed.length) {
-    let end = Math.min(start + FORMAT_CHUNK_TARGET_CHARS, preprocessed.length);
-    if (end < preprocessed.length) {
-      const breakAt = preprocessed.lastIndexOf("\n\n", end);
-      if (breakAt > start + 2_000) {
-        end = breakAt;
-      }
-    }
-    const slice = preprocessed.slice(start, end).trim();
-    if (slice.length > 0) {
-      chunks.push(slice);
-    }
-    start = end;
-  }
-
-  return chunks.length > 0 ? chunks : [preprocessed];
-}
-
-/**
- * Merges consecutive duplicate ## sections (can happen after chunked formatting).
+ * Merges consecutive duplicate ## sections (can happen when the formatter repeats headings).
  */
 /** Keeps the first # title; demotes any later # lines to ##. */
 export function keepSingleTopTitle(markdown: string): string {
   let seenH1 = false;
-  return markdown.replace(/^# (.+)$/gm, (line, title) => {
+  return markdown.replace(/^# (.+)$/gm, (_line, title) => {
     if (!seenH1) {
       seenH1 = true;
       return `# ${title}`;

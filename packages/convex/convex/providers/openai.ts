@@ -9,23 +9,7 @@ import type {
 import type { NormalizedUsage, ResearchProviderAdapter } from "./types";
 import { estimateModelCost } from "@repo/research-models/pricing";
 import { RESEARCH_MODELS } from "@repo/research-models/models";
-
-const RESEARCH_INSTRUCTIONS = `You are producing a publication-quality research report.
-
-Return valid GitHub-flavored Markdown only.
-
-Formatting rules:
-- Use clear ATX headings with blank lines between sections.
-- Use bullet lists for comparisons unless a table is clearly the best format.
-- Only emit tables when every row has the same number of columns.
-- Use fenced code blocks for code or command examples.
-- Keep citations inline and preserve them next to the claims they support.
-
-Research rules:
-- Prioritize primary sources, company filings, official statements, regulators, and reputable financial reporting.
-- Include specific figures, dates, and named evidence wherever available.
-- Surface the strongest bull case, bear case, catalysts, and the main unresolved uncertainties.
-- If evidence is mixed or incomplete, say so explicitly instead of smoothing over it.`;
+import { OPENAI_RESEARCH_INSTRUCTIONS } from "@repo/research-models/research-prompt";
 
 function normalizeUsage(
   usage: OpenAI.Responses.ResponseUsage | undefined
@@ -172,7 +156,7 @@ export function buildOpenAIResponseCreateParams(
 
   return {
     model: model.apiModel,
-    instructions: RESEARCH_INSTRUCTIONS,
+    instructions: OPENAI_RESEARCH_INSTRUCTIONS,
     input: prompt,
     reasoning: runtime
       ? { effort: runtime.reasoningEffort, summary: "auto" }

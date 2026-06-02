@@ -9,29 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Eye, Sparkles } from "lucide-react";
-import type { ReactNode } from "react";
 
 const formatPromptView = getResearchFormatPromptView();
-
-/**
- * Explains the runtime appendix appended to formatter user messages.
- */
-function UserMessageRuntimeAppendix() {
-  return (
-    <div className="mt-6 border-t border-dashed pt-4">
-      <p className="text-xs font-medium text-muted-foreground">
-        Appended at runtime
-      </p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        The preprocessed research markdown is inserted below a separator for
-        each formatting request.
-      </p>
-      <div className="mt-2 rounded-md border border-dashed bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground">
-        {"{preprocessed research markdown}"}
-      </div>
-    </div>
-  );
-}
 
 interface PromptViewRowProps {
   /** Row title shown in the settings list */
@@ -42,8 +21,6 @@ interface PromptViewRowProps {
   content: string;
   /** Optional modal description under the title */
   modalDescription?: string;
-  /** Optional content below the markdown in the modal */
-  modalFooter?: ReactNode;
 }
 
 /**
@@ -54,7 +31,6 @@ function PromptViewRow({
   description,
   content,
   modalDescription,
-  modalFooter,
 }: PromptViewRowProps) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-lg border bg-muted/10 px-3 py-3">
@@ -68,7 +44,6 @@ function PromptViewRow({
         content={content}
         label={title}
         description={modalDescription ?? description}
-        footer={modalFooter}
         trigger={(open) => (
           <Button
             variant="outline"
@@ -81,32 +56,6 @@ function PromptViewRow({
           </Button>
         )}
       />
-    </div>
-  );
-}
-
-interface PromptGroupProps {
-  /** Section heading */
-  title: string;
-  /** Optional helper text under the heading */
-  description?: string;
-  /** Prompt rows in this group */
-  children: ReactNode;
-}
-
-/**
- * Groups related prompt rows with a shared heading.
- */
-function PromptGroup({ title, description, children }: PromptGroupProps) {
-  return (
-    <div className="flex flex-col gap-2">
-      <div>
-        <p className="text-sm font-medium">{title}</p>
-        {description ? (
-          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
-      <div className="flex flex-col gap-2">{children}</div>
     </div>
   );
 }
@@ -131,8 +80,9 @@ export function ResearchFormatPromptSection() {
           <CardTitle className="text-base">Research formatting</CardTitle>
         </div>
         <CardDescription>
-          After research completes, this prompt and model polish the raw report
-          before it is saved.
+          Second pass only: one Haiku call polishes the full raw report after
+          research completes (system prompt + preprocessed report as the user
+          message).
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
@@ -150,42 +100,19 @@ export function ResearchFormatPromptSection() {
           </dl>
         </div>
 
-        <PromptGroup title="Standard reports">
+        <div className="flex flex-col gap-2">
           <PromptViewRow
             title="System prompt"
-            description="Outline, readability, and fidelity rules sent as the system message."
+            description="Light markdown polish; the user message is only the report body."
             content={formatPromptView.systemPrompt}
           />
-          <PromptViewRow
-            title="User message"
-            description="Instructions prepended before the research markdown in each request."
-            content={formatPromptView.userMessageInstructions}
-            modalFooter={<UserMessageRuntimeAppendix />}
-          />
-        </PromptGroup>
-
-        <PromptGroup
-          title="Long reports"
-          description="Very long reports are split into chunks so each pass stays within time limits."
-        >
-          <PromptViewRow
-            title="Fragment system prompt"
-            description="Extra system rules when formatting one chunk of a longer report."
-            content={formatPromptView.fragmentSystemPrompt}
-          />
-          <PromptViewRow
-            title="First chunk user message"
-            description="Used for the opening chunk of a multi-part report."
-            content={formatPromptView.fragmentFirstUserInstructions}
-            modalFooter={<UserMessageRuntimeAppendix />}
-          />
-          <PromptViewRow
-            title="Middle / last chunk user message"
-            description="Used for subsequent chunks so the formatter does not add new sections."
-            content={formatPromptView.fragmentMiddleUserInstructions}
-            modalFooter={<UserMessageRuntimeAppendix />}
-          />
-        </PromptGroup>
+          <div className="rounded-lg border bg-muted/10 px-3 py-3">
+            <p className="text-sm font-medium">User message</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {formatPromptView.userMessageDescription}
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
