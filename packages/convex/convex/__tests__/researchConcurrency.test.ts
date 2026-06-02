@@ -25,7 +25,6 @@ describe("researchConcurrency", () => {
       job("openai", "running"),
       job("openai", "running", "resp_1"),
       job("anthropic", "running", "batch_1"),
-      job("anthropic", "completed"),
     ];
 
     expect(countActiveJobs(jobs, "openai")).toBe(3);

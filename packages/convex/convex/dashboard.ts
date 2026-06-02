@@ -1,7 +1,11 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
-import { buildAllProviderConcurrencySnapshots, MAX_ACTIVE_JOBS_SCAN } from "./researchConcurrency";
+import {
+  asConcurrencyJobs,
+  buildAllProviderConcurrencySnapshots,
+  MAX_ACTIVE_JOBS_SCAN,
+} from "./researchConcurrency";
 
 /** Recent research: last 5 completed or failed jobs with prompt and stock info. */
 export const recentResearch = query({
@@ -145,7 +149,9 @@ export const activeJobsCount = query({
       .withIndex("by_status", (q) => q.eq("status", "running"))
       .take(MAX_ACTIVE_JOBS_SCAN);
     const activeJobs = [...pendingJobs, ...runningJobs];
-    const byProvider = buildAllProviderConcurrencySnapshots(activeJobs);
+    const byProvider = buildAllProviderConcurrencySnapshots(
+      asConcurrencyJobs(activeJobs)
+    );
 
     return {
       pending: pendingJobs.length,

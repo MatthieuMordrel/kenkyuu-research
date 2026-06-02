@@ -44,10 +44,13 @@ export default defineSchema({
     status: v.union(
       v.literal("pending"),
       v.literal("running"),
+      v.literal("formatting"),
       v.literal("completed"),
       v.literal("failed")
     ),
     externalJobId: v.optional(v.string()),
+    /** Provider output before the formatting pass (audit / re-format). */
+    rawResult: v.optional(v.string()),
     result: v.optional(v.string()),
     error: v.optional(v.string()),
     costUsd: v.optional(v.number()),

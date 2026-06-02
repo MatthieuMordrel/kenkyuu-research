@@ -33,6 +33,8 @@ import type * as providers_openai from "../providers/openai.js";
 import type * as providers_types from "../providers/types.js";
 import type * as researchActions from "../researchActions.js";
 import type * as researchConcurrency from "../researchConcurrency.js";
+import type * as researchFormat from "../researchFormat.js";
+import type * as researchFormatPrepass from "../researchFormatPrepass.js";
 import type * as researchJobs from "../researchJobs.js";
 import type * as scheduleActions from "../scheduleActions.js";
 import type * as schedules from "../schedules.js";
@@ -74,6 +76,8 @@ declare const fullApi: ApiFromModules<{
   "providers/types": typeof providers_types;
   researchActions: typeof researchActions;
   researchConcurrency: typeof researchConcurrency;
+  researchFormat: typeof researchFormat;
+  researchFormatPrepass: typeof researchFormatPrepass;
   researchJobs: typeof researchJobs;
   scheduleActions: typeof scheduleActions;
   schedules: typeof schedules;

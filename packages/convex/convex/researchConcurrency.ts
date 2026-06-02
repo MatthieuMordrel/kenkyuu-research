@@ -28,10 +28,32 @@ export const MAX_ACTIVE_JOBS_SCAN = 50;
 export interface ConcurrencyJob {
   /** Denormalized provider id on the research job. */
   provider: ProviderName;
-  /** Convex job lifecycle status. */
-  status: "pending" | "running" | "completed" | "failed";
+  /** Convex job lifecycle status (only pending/running are passed in). */
+  status: "pending" | "running";
   /** Set once the provider API call has been submitted. */
   externalJobId?: string;
+}
+
+/**
+ * Narrows full research job rows to the shape used by concurrency helpers.
+ */
+export function asConcurrencyJobs(
+  jobs: readonly {
+    provider: ProviderName;
+    status: string;
+    externalJobId?: string;
+  }[]
+): ConcurrencyJob[] {
+  return jobs
+    .filter(
+      (job): job is ConcurrencyJob =>
+        job.status === "pending" || job.status === "running"
+    )
+    .map((job) => ({
+      provider: job.provider,
+      status: job.status,
+      externalJobId: job.externalJobId,
+    }));
 }
 
 /** Per-provider concurrency snapshot exposed to queries and actions. */

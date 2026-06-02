@@ -55,7 +55,7 @@ export function AppShell() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 md:hidden">
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 md:hidden">
             <SidebarTrigger />
             <FlaskConical className="size-5 text-sidebar-primary" />
             <span className="font-semibold">KenkyuStock</span>

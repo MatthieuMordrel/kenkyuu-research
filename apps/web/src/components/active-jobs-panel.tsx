@@ -60,6 +60,7 @@ const STATUS_CONFIG: Record<
 > = {
   pending: { label: "Pending", variant: "outline", icon: Clock },
   running: { label: "Running", variant: "default", icon: Loader2 },
+  formatting: { label: "Formatting", variant: "outline", icon: Loader2 },
   completed: { label: "Completed", variant: "secondary", icon: Activity },
   failed: { label: "Failed", variant: "destructive", icon: XCircle },
 };
@@ -206,7 +207,10 @@ function JobCard({
 
   const config = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = config.icon;
-  const canCancel = job.status === "pending" || job.status === "running";
+  const canCancel =
+    job.status === "pending" ||
+    job.status === "running" ||
+    job.status === "formatting";
   const canRetry = job.status === "failed";
   const canCheck = job.status === "running" || job.status === "pending";
 

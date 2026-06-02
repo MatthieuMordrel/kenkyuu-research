@@ -18,6 +18,7 @@ import {
   type ProviderName,
 } from "./providers/constants";
 import {
+  asConcurrencyJobs,
   buildAllProviderConcurrencySnapshots,
   MAX_ACTIVE_JOBS_SCAN,
 } from "./researchConcurrency";
@@ -25,6 +26,7 @@ import {
 const jobStatus = v.union(
   v.literal("pending"),
   v.literal("running"),
+  v.literal("formatting"),
   v.literal("completed"),
   v.literal("failed")
 );
@@ -145,6 +147,7 @@ export const updateJobStatus = internalMutation({
     status: jobStatus,
     externalJobId: v.optional(v.string()),
     resolvedPrompt: v.optional(v.string()),
+    rawResult: v.optional(v.string()),
     result: v.optional(v.string()),
     error: v.optional(v.string()),
     costUsd: v.optional(v.number()),
@@ -164,6 +167,8 @@ export const updateJobStatus = internalMutation({
       patch.externalJobId = updates.externalJobId;
     if (updates.resolvedPrompt !== undefined)
       patch.resolvedPrompt = updates.resolvedPrompt;
+    if (updates.rawResult !== undefined)
+      patch.rawResult = truncateResult(updates.rawResult);
     if (updates.result !== undefined)
       patch.result = truncateResult(updates.result);
     if (updates.error !== undefined) patch.error = updates.error;
@@ -182,11 +187,90 @@ export const updateJobStatus = internalMutation({
 
     await ctx.db.patch(id, patch);
 
-    if (updates.status === "completed" || updates.status === "failed") {
+    if (
+      updates.status === "completed" ||
+      updates.status === "failed" ||
+      updates.status === "formatting"
+    ) {
       await scheduleProviderQueueDrain(ctx, job.provider);
     }
 
     return id;
+  },
+});
+
+/** Moves a job into the formatting phase after provider research finishes. */
+export const beginFormattingPhase = internalMutation({
+  args: {
+    id: v.id("researchJobs"),
+    rawResult: v.string(),
+    costUsd: v.number(),
+    durationMs: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    await ctx.db.patch(args.id, {
+      status: "formatting",
+      rawResult: truncateResult(args.rawResult),
+      costUsd: args.costUsd,
+      durationMs: args.durationMs,
+    });
+
+    await scheduleProviderQueueDrain(ctx, job.provider);
+    return args.id;
+  },
+});
+
+/** Writes the polished report and marks the job completed. */
+export const completeFormattedJob = internalMutation({
+  args: {
+    id: v.id("researchJobs"),
+    result: v.string(),
+    costUsd: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    await ctx.db.patch(args.id, {
+      status: "completed",
+      result: truncateResult(args.result),
+      costUsd: args.costUsd,
+      completedAt: Date.now(),
+    });
+
+    await scheduleProviderQueueDrain(ctx, job.provider);
+    return args.id;
+  },
+});
+
+/** Updates a completed job after a backfill formatting pass. */
+export const applyReformattedResult = internalMutation({
+  args: {
+    id: v.id("researchJobs"),
+    rawResult: v.string(),
+    result: v.string(),
+    additionalCostUsd: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.id);
+    if (!job) {
+      throw new Error("Research job not found");
+    }
+
+    await ctx.db.patch(args.id, {
+      rawResult: truncateResult(args.rawResult),
+      result: truncateResult(args.result),
+      costUsd: (job.costUsd ?? 0) + args.additionalCostUsd,
+    });
+
+    return args.id;
   },
 });
 
@@ -306,7 +390,11 @@ export const deleteJob = mutation({
       throw new Error("Research job not found");
     }
 
-    if (job.status === "pending" || job.status === "running") {
+    if (
+      job.status === "pending" ||
+      job.status === "running" ||
+      job.status === "formatting"
+    ) {
       throw new Error(`Cannot delete a ${job.status} job. Cancel it first.`);
     }
 
@@ -410,7 +498,9 @@ export const getActiveJobs = query({
     await requireAuth(ctx, args.token);
 
     const activeJobs = await loadActiveJobsForConcurrency(ctx);
-    const byProvider = buildAllProviderConcurrencySnapshots(activeJobs);
+    const byProvider = buildAllProviderConcurrencySnapshots(
+      asConcurrencyJobs(activeJobs)
+    );
 
     return {
       jobs: activeJobs,
@@ -431,6 +521,32 @@ export const getStockInternal = internalQuery({
   args: { id: v.id("stocks") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
+  },
+});
+
+/**
+ * Latest completed research job that includes the given stock ticker (for backfill).
+ */
+export const findLatestCompletedJobByTicker = internalQuery({
+  args: { ticker: v.string() },
+  handler: async (ctx, args) => {
+    const stock = await ctx.db
+      .query("stocks")
+      .withIndex("by_ticker", (q) => q.eq("ticker", args.ticker))
+      .first();
+
+    if (!stock) {
+      return null;
+    }
+
+    const completedJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "completed"))
+      .order("desc")
+      .take(100);
+
+    const match = completedJobs.find((job) => job.stockIds.includes(stock._id));
+    return match?._id ?? null;
   },
 });
 
@@ -580,7 +696,8 @@ export const getStaleRunningJobs = internalQuery({
 export const getConcurrencyJobsInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
-    return await loadActiveJobsForConcurrency(ctx);
+    const activeJobs = await loadActiveJobsForConcurrency(ctx);
+    return asConcurrencyJobs(activeJobs);
   },
 });
 
@@ -591,9 +708,9 @@ export const drainProviderQueue = internalMutation({
   args: { provider: providerValidator },
   handler: async (ctx, args) => {
     const activeJobs = await loadActiveJobsForConcurrency(ctx);
-    const snapshot = buildAllProviderConcurrencySnapshots(activeJobs)[
-      args.provider
-    ];
+    const snapshot = buildAllProviderConcurrencySnapshots(
+      asConcurrencyJobs(activeJobs)
+    )[args.provider];
 
     if (!snapshot.hasDispatchSlot) {
       return null;
@@ -644,6 +761,41 @@ export const debugListRecentJobs = internalQuery({
         ? new Date(j.completedAt).toISOString()
         : undefined,
     }));
+  },
+});
+
+/** Ops: compare raw vs formatted snippets for a job (e.g. verify backfill). */
+export const debugJobFormatting = internalQuery({
+  args: { jobId: v.id("researchJobs") },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.jobId);
+    if (!job) return null;
+
+    const needles = ["Model mechanics", "Pricing power", "sold out of capacity"];
+    const snippet = (text: string | undefined) => {
+      if (!text) return null;
+      for (const needle of needles) {
+        const idx = text.indexOf(needle);
+        if (idx >= 0) return text.slice(idx, idx + 1200);
+      }
+      return null;
+    };
+
+    const hasHeading = (text: string | undefined) =>
+      text?.includes("### Model mechanics") ?? false;
+    const hasBlockquote = (text: string | undefined) =>
+      text?.includes("> Demand again exceeded") ?? false;
+
+    return {
+      status: job.status,
+      rawLen: job.rawResult?.length ?? 0,
+      resultLen: job.result?.length ?? 0,
+      identical: job.rawResult === job.result,
+      resultHasSectionHeading: hasHeading(job.result),
+      resultHasQuoteBlock: hasBlockquote(job.result),
+      rawSnippet: snippet(job.rawResult),
+      resultSnippet: snippet(job.result),
+    };
   },
 });
 

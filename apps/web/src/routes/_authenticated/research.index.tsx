@@ -419,7 +419,10 @@ function ResultCard({
   onDelete: () => void;
 }) {
   const config = statusConfig[job.status] ?? statusConfig.pending;
-  const isActive = job.status === "running" || job.status === "pending";
+  const isActive =
+    job.status === "running" ||
+    job.status === "pending" ||
+    job.status === "formatting";
 
   const createdDate = new Date(job.createdAt).toLocaleDateString("en-US", {
     month: "short",

@@ -6,6 +6,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
 } from "react";
+import { useStickyActive } from "@/hooks/use-sticky-active";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
@@ -342,7 +343,8 @@ function parseSections(markdown: string): ParsedMarkdown {
       continue;
     }
 
-    const match = line.match(/^(#{1,4})\s+(.+)$/);
+    // Only h1–h2 become collapsible outline nodes; h3+ stay in section body.
+    const match = line.match(/^(#{1,2})\s+(.+)$/);
     if (match) {
       if (current) flat.push(current);
       const lvl = match[1].length;
@@ -399,7 +401,71 @@ function parseSections(markdown: string): ParsedMarkdown {
     return result;
   }
 
-  return { preamble: preamble.trim(), sections: buildTree(flat) };
+  return {
+    preamble: preamble.trim(),
+    sections: flattenThinSections(buildTree(flat)),
+  };
+}
+
+/** Minimum body length (chars) for a ## section to be collapsible on its own. */
+const MIN_COLLAPSIBLE_CHARS = 160;
+
+/**
+ * Returns true when a section has enough substance to be a collapsible group.
+ */
+function isSubstantialSection(section: Section): boolean {
+  if (section.children.length > 0) {
+    return (
+      section.content.trim().length >= MIN_COLLAPSIBLE_CHARS ||
+      section.children.some(isSubstantialSection)
+    );
+  }
+  const lines = section.content.split("\n").filter((line) => line.trim());
+  return (
+    section.content.trim().length >= MIN_COLLAPSIBLE_CHARS && lines.length >= 2
+  );
+}
+
+/**
+ * Merges thin ## sections into the previous sibling as in-body ### headings.
+ */
+function flattenThinSections(sections: Section[]): Section[] {
+  const result: Section[] = [];
+
+  for (const section of sections) {
+    const children = flattenThinSections(section.children);
+    const node: Section = { ...section, children };
+
+    if (!isSubstantialSection(node)) {
+      const body = [
+        node.content.trim(),
+        ...children.map(
+          (child) => `### ${child.title}\n\n${child.content.trim()}`
+        ),
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      if (result.length > 0) {
+        const prev = result[result.length - 1];
+        prev.content = [prev.content.trim(), `### ${node.title}`, body]
+          .filter(Boolean)
+          .join("\n\n");
+        continue;
+      }
+
+      result.push({
+        ...node,
+        content: body ? `### ${node.title}\n\n${body}` : `### ${node.title}`,
+        children: [],
+      });
+      continue;
+    }
+
+    result.push(node);
+  }
+
+  return result;
 }
 
 /** Depth of a collapsible section key (`"0"` → 0, `"0.2.1"` → 2). */
@@ -547,6 +613,7 @@ interface MarkdownRendererHeaderProps {
 
 /**
  * Sticky card-style header with a title on the left and optional outline controls on the right.
+ * Uses a sentinel + intersection observer to deepen shadow and border when stuck while scrolling.
  */
 function MarkdownRendererHeader({
   title,
@@ -555,21 +622,35 @@ function MarkdownRendererHeader({
   stickyTopClassName = "top-0",
   sticky = true,
 }: MarkdownRendererHeaderProps) {
+  const { sentinelRef, isStuck } = useStickyActive(sticky);
+
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-6 py-4 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/80 dark:bg-background/90",
-        sticky && cn("sticky z-20", stickyTopClassName)
-      )}
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        {Icon ? <Icon className="size-4 shrink-0" /> : null}
-        <span className="truncate text-base font-semibold leading-none">
-          {title}
-        </span>
+    <>
+      {sticky ? (
+        <div ref={sentinelRef} className="pointer-events-none h-px" aria-hidden />
+      ) : null}
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 rounded-t-xl border-b border-border/60 bg-background/95 px-6 py-3.5 transition-[box-shadow,border-color,background-color] duration-200 ease-out backdrop-blur-md supports-[backdrop-filter]:bg-background/80 dark:bg-background/90",
+          sticky && cn("sticky z-20", stickyTopClassName),
+          isStuck
+            ? "border-border bg-background/98 shadow-md dark:bg-background/95"
+            : "shadow-sm"
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2.5">
+          {Icon ? (
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Icon className="size-4" />
+            </div>
+          ) : null}
+          <span className="truncate text-base font-semibold leading-none tracking-tight">
+            {title}
+          </span>
+        </div>
+        {outlineControls}
       </div>
-      {outlineControls}
-    </div>
+    </>
   );
 }
 
@@ -587,10 +668,15 @@ interface MarkdownRendererProps {
   /** Optional icon shown before {@link MarkdownRendererProps.headerTitle}. */
   headerIcon?: ComponentType<{ className?: string }>;
   /**
-   * Tailwind `top-*` offset for sticky outline controls (e.g. `top-14 md:top-0`
+   * Tailwind `top-*` offset for the sticky header (e.g. `top-14 md:top-0`
    * when a fixed mobile header sits above the scroll area).
    */
   outlineControlsStickyTopClassName?: string;
+  /**
+   * When true (default), the title header sticks while scrolling. Set to false to
+   * keep the header in normal document flow.
+   */
+  headerSticky?: boolean;
 }
 
 export function MarkdownRenderer({
@@ -600,6 +686,7 @@ export function MarkdownRenderer({
   headerTitle,
   headerIcon,
   outlineControlsStickyTopClassName = "top-0",
+  headerSticky = true,
 }: MarkdownRendererProps) {
   const fixedContent = useMemo(() => fixMarkdownTables(content), [content]);
   const { preamble, sections } = useMemo(
@@ -630,7 +717,10 @@ export function MarkdownRenderer({
     [allKeys]
   );
 
-  const [openSet, setOpenSet] = useState<Set<string>>(() => new Set(allKeys));
+  /** Top-level sections open by default so readers see content without expanding everything. */
+  const [openSet, setOpenSet] = useState<Set<string>>(() =>
+    openKeysUpToDepth(allKeys, 0)
+  );
 
   const maxOpenDepth = useMemo(() => {
     if (openSet.size === 0) return -1;
@@ -675,13 +765,15 @@ export function MarkdownRenderer({
     />
   ) : undefined;
 
+  const shouldStickHeader = headerSticky && !!headerTitle;
+
   const header = headerTitle ? (
     <MarkdownRendererHeader
       title={headerTitle}
       icon={headerIcon}
       outlineControls={outlineControls}
       stickyTopClassName={outlineControlsStickyTopClassName}
-      sticky={hasCollapsibleSections}
+      sticky={shouldStickHeader}
     />
   ) : hasCollapsibleSections ? (
     <div

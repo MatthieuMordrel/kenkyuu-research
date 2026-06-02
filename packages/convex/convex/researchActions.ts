@@ -69,10 +69,9 @@ async function applyCompletedResult(
   const costUsd = estimateModelCost(model, result.usage);
   const durationMs = Date.now() - job.createdAt;
 
-  await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+  await ctx.runMutation(internal.researchJobs.beginFormattingPhase, {
     id: job._id,
-    status: "completed",
-    result: result.text,
+    rawResult: result.text,
     costUsd,
     durationMs,
   });
@@ -84,14 +83,8 @@ async function applyCompletedResult(
     costUsd,
   });
 
-  await ctx.scheduler.runAfter(
-    0,
-    internal.notifications.dispatchJobNotification,
-    { jobId: job._id }
-  );
-
-  await ctx.scheduler.runAfter(0, internal.budgetAlert.checkBudgetAlert, {
-    currentCostUsd: costUsd,
+  await ctx.scheduler.runAfter(0, internal.researchFormat.formatResearchResult, {
+    jobId: job._id,
   });
 }
 
@@ -316,7 +309,8 @@ export const pollJob = internalAction({
     });
     if (!job) return;
 
-    // Idempotency: once terminal, nothing more to do.
+    // Idempotency: once terminal or formatting, nothing more to do.
+    if (job.status === "formatting") return;
     if (isTerminal(job.status)) return;
     if (!job.externalJobId) return;
 

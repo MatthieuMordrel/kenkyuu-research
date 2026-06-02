@@ -27,6 +27,10 @@
     "./model-details": {
       "types": "./src/model-details.ts",
       "import": "./src/model-details.ts"
+    },
+    "./format-models": {
+      "types": "./src/format-models.ts",
+      "import": "./src/format-models.ts"
     }
   },
   "scripts": {
