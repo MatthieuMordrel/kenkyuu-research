@@ -74,7 +74,7 @@ function ResultDetailPage() {
 
   if (job === null) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex w-full min-w-0 flex-col gap-4">
         <div className="px-4 pt-4 md:px-6">
           <Button variant="ghost" size="sm" render={<Link to="/research" />}>
             <ArrowLeft className="size-4" />
@@ -133,7 +133,7 @@ function ResultDetailPage() {
     job.costUsd != null ? `$${job.costUsd.toFixed(2)}` : undefined;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-4">
       {/* Back link */}
       <div className="px-4 pt-4 md:px-6">
         <Button variant="ghost" size="sm" render={<Link to="/research" />}>
@@ -175,9 +175,9 @@ function ResultDetailPage() {
         }
       />
 
-      <div className="flex flex-col gap-4 px-4 pb-4 md:px-6">
+      <div className="flex w-full min-w-0 flex-col gap-4 px-4 pb-4 md:px-6">
         {/* Metadata cards */}
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+        <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-4">
           <MetadataCard
             icon={BarChart3}
             label="Status"
@@ -206,37 +206,27 @@ function ResultDetailPage() {
         </div>
 
         {/* Timing details */}
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Calendar className="size-4" />
               Details
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             <dl className="flex flex-col gap-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Started</dt>
-                <dd>
-                  {createdDate} at {createdTime}
-                </dd>
-              </div>
+              <DetailRow label="Started" value={`${createdDate} at ${createdTime}`} />
               {completedDate && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Completed</dt>
-                  <dd>
-                    {completedDate} at {completedTime}
-                  </dd>
-                </div>
+                <DetailRow
+                  label="Completed"
+                  value={`${completedDate} at ${completedTime}`}
+                />
               )}
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Stocks analyzed</dt>
-                <dd>{job.stockIds.length}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Attempts</dt>
-                <dd>{job.attempts}</dd>
-              </div>
+              <DetailRow
+                label="Stocks analyzed"
+                value={String(job.stockIds.length)}
+              />
+              <DetailRow label="Attempts" value={String(job.attempts)} />
             </dl>
           </CardContent>
         </Card>
@@ -251,15 +241,15 @@ function ResultDetailPage() {
 
         {/* Error message */}
         {job.error && (
-          <Card className="border-destructive/50">
+          <Card className="min-w-0 border-destructive/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base text-destructive">
                 <AlertCircle className="size-4" />
                 Error
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">
+            <CardContent className="min-w-0">
+              <p className="text-sm break-words whitespace-pre-wrap">
                 {job.error}
               </p>
             </CardContent>
@@ -268,14 +258,14 @@ function ResultDetailPage() {
 
         {/* Research result content */}
         {job.result && (
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <FlaskConical className="size-4" />
                 Research Output
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-w-0 max-w-full overflow-x-auto">
               <MarkdownRenderer content={job.result} collapsible={false} />
             </CardContent>
           </Card>
@@ -312,6 +302,18 @@ function ResultDetailPage() {
   );
 }
 
+/**
+ * Label/value row in the Details card; stacks on narrow screens so dates do not overflow.
+ */
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 break-words sm:text-right">{value}</dd>
+    </div>
+  );
+}
+
 function MetadataCard({
   icon: Icon,
   label,
@@ -322,12 +324,12 @@ function MetadataCard({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border p-3">
+    <div className="flex min-w-0 flex-col gap-1 rounded-lg border p-3">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="size-3.5" />
+        <Icon className="size-3.5 shrink-0" />
         {label}
       </div>
-      <div className="text-sm font-medium">{value}</div>
+      <div className="min-w-0 text-sm font-medium break-words">{value}</div>
     </div>
   );
 }

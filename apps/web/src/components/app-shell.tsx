@@ -54,8 +54,8 @@ export function AppShell() {
     <TooltipProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
-          <header className="flex h-14 items-center gap-2 border-b px-4 md:hidden">
+        <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 md:hidden">
             <SidebarTrigger />
             <FlaskConical className="size-5 text-sidebar-primary" />
             <span className="font-semibold">KenkyuStock</span>
