@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useNow } from "@/hooks/use-now";
 import { useMemo } from "react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Sidebar,
   SidebarContent,
@@ -50,21 +51,23 @@ export function AppShell() {
   useTheme();
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-14 items-center gap-2 border-b px-4 md:hidden">
-          <SidebarTrigger />
-          <FlaskConical className="size-5 text-sidebar-primary" />
-          <span className="font-semibold">KenkyuStock</span>
-        </header>
-        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
-          <ErrorBoundary key={location.pathname}>
-            <Outlet />
-          </ErrorBoundary>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <TooltipProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex h-14 items-center gap-2 border-b px-4 md:hidden">
+            <SidebarTrigger />
+            <FlaskConical className="size-5 text-sidebar-primary" />
+            <span className="font-semibold">KenkyuStock</span>
+          </header>
+          <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+            <ErrorBoundary key={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }
 
@@ -78,13 +81,11 @@ function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link to="/">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <FlaskConical className="size-4" />
-                </div>
-                <span className="font-semibold">KenkyuStock</span>
-              </Link>
+            <SidebarMenuButton size="lg" render={<Link to="/" />}>
+              <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <FlaskConical className="size-4" />
+              </div>
+              <span className="font-semibold">KenkyuStock</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -101,14 +102,12 @@ function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton
-                      asChild
+                      render={<Link to={item.to} />}
                       isActive={isActive}
                       tooltip={item.label}
                     >
-                      <Link to={item.to}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </Link>
+                      <item.icon />
+                      <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -180,39 +179,37 @@ function SidebarActiveJobs() {
             return (
               <SidebarMenuItem key={job._id}>
                 <SidebarMenuButton
-                  asChild
+                  render={<Link to="/research" />}
                   tooltip={promptMap.get(job.promptId) ?? "Research Job"}
                 >
-                  <Link to="/research">
-                    <div
-                      className={cn(
-                        "flex size-4 shrink-0 items-center justify-center rounded-full",
-                        isRunning ? "text-primary" : "text-muted-foreground"
-                      )}
-                    >
-                      {isRunning ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Clock className="size-3.5" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium">
-                        {promptMap.get(job.promptId) ?? "Research Job"}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {job.stockIds.length} stock
-                        {job.stockIds.length !== 1 ? "s" : ""} ·{" "}
-                        {formatRelativeTime(job.createdAt, now)}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        "size-1.5 shrink-0 rounded-full",
-                        isRunning ? "bg-primary" : "bg-muted-foreground/50"
-                      )}
-                    />
-                  </Link>
+                  <div
+                    className={cn(
+                      "flex size-4 shrink-0 items-center justify-center rounded-full",
+                      isRunning ? "text-primary" : "text-muted-foreground"
+                    )}
+                  >
+                    {isRunning ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Clock className="size-3.5" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium">
+                      {promptMap.get(job.promptId) ?? "Research Job"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {job.stockIds.length} stock
+                      {job.stockIds.length !== 1 ? "s" : ""} ·{" "}
+                      {formatRelativeTime(job.createdAt, now)}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "size-1.5 shrink-0 rounded-full",
+                      isRunning ? "bg-primary" : "bg-muted-foreground/50"
+                    )}
+                  />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );

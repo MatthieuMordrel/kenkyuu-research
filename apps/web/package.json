@@ -13,8 +13,6 @@
   "dependencies": {
     "@base-ui/react": "^1.4.0",
     "@convex-dev/react-query": "^0.1.0",
-    "@radix-ui/react-dialog": "^1.1.15",
-    "@radix-ui/react-slot": "^1.2.4",
     "@repo/convex": "workspace:*",
     "@repo/research-models": "workspace:*",
     "@tailwindcss/vite": "^4.2.2",
@@ -28,7 +26,6 @@
     "clsx": "^2.1.1",
     "convex": "^1.35.1",
     "lucide-react": "^0.563.0",
-    "radix-ui": "^1.4.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-markdown": "^10.1.0",

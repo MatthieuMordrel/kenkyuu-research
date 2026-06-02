@@ -76,11 +76,9 @@ function StockDetailPage() {
     return (
       <div className="flex flex-col gap-4">
         <div className="px-4 pt-4 md:px-6">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/stocks">
-              <ArrowLeft className="size-4" />
-              Back to Stocks
-            </Link>
+          <Button variant="ghost" size="sm" render={<Link to="/stocks" />}>
+            <ArrowLeft className="size-4" />
+            Back to Stocks
           </Button>
         </div>
         <EmptyState
@@ -88,8 +86,8 @@ function StockDetailPage() {
           title="Stock not found"
           description="This stock may have been deleted."
           action={
-            <Button size="sm" asChild>
-              <Link to="/stocks">Back to Stocks</Link>
+            <Button size="sm" render={<Link to="/stocks" />}>
+              Back to Stocks
             </Button>
           }
         />
@@ -113,11 +111,9 @@ function StockDetailPage() {
     <div className="flex flex-col gap-5 pb-8">
       {/* Back nav */}
       <div className="px-4 pt-4 md:px-6">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/stocks">
-            <ArrowLeft className="size-4" />
-            Back to Stocks
-          </Link>
+        <Button variant="ghost" size="sm" render={<Link to="/stocks" />}>
+          <ArrowLeft className="size-4" />
+          Back to Stocks
         </Button>
       </div>
 

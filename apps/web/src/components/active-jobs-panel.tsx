@@ -162,14 +162,16 @@ function HealthStatusIndicator({ result }: { result: HealthCheckResult }) {
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
-          <Icon className={cn("size-3", colorClass)} />
-          <span className="text-[10px] font-medium">
-            {PROVIDER_LABEL[result.provider]}:{" "}
-            {result.providerStatus ?? "unknown"}
-          </span>
-        </div>
+      <TooltipTrigger
+        render={
+          <div className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1" />
+        }
+      >
+        <Icon className={cn("size-3", colorClass)} />
+        <span className="text-[10px] font-medium">
+          {PROVIDER_LABEL[result.provider]}:{" "}
+          {result.providerStatus ?? "unknown"}
+        </span>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-xs">
         <p className="text-xs">{result.message}</p>
@@ -297,21 +299,22 @@ function JobCard({
           <div className="flex shrink-0 items-center gap-1">
             {canCheck && (
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={handleCheckHealth}
-                    disabled={checking}
-                    title="Check Health"
-                  >
-                    {checking ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <HeartPulse className="size-3.5" />
-                    )}
-                    <span className="sr-only">Check Health</span>
-                  </Button>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={handleCheckHealth}
+                      disabled={checking}
+                    />
+                  }
+                >
+                  {checking ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <HeartPulse className="size-3.5" />
+                  )}
+                  <span className="sr-only">Check Health</span>
                 </TooltipTrigger>
                 <TooltipContent>Check provider status</TooltipContent>
               </Tooltip>

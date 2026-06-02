@@ -76,11 +76,9 @@ function ResultDetailPage() {
     return (
       <div className="flex flex-col gap-4">
         <div className="px-4 pt-4 md:px-6">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/research">
-              <ArrowLeft className="size-4" />
-              Back to Research
-            </Link>
+          <Button variant="ghost" size="sm" render={<Link to="/research" />}>
+            <ArrowLeft className="size-4" />
+            Back to Research
           </Button>
         </div>
         <EmptyState
@@ -88,8 +86,8 @@ function ResultDetailPage() {
           title="Result not found"
           description="This research result may have been deleted."
           action={
-            <Button size="sm" asChild>
-              <Link to="/research">Back to Research</Link>
+            <Button size="sm" render={<Link to="/research" />}>
+              Back to Research
             </Button>
           }
         />
@@ -138,11 +136,9 @@ function ResultDetailPage() {
     <div className="flex flex-col gap-4">
       {/* Back link */}
       <div className="px-4 pt-4 md:px-6">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/research">
-            <ArrowLeft className="size-4" />
-            Back to Research
-          </Link>
+        <Button variant="ghost" size="sm" render={<Link to="/research" />}>
+          <ArrowLeft className="size-4" />
+          Back to Research
         </Button>
       </div>
 

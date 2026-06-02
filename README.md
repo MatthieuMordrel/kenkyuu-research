@@ -152,31 +152,22 @@ Use Zustand for all client-side state management (UI state, local preferences, e
 
 ## UI Components (shadcn + Base UI)
 
-The web app uses [shadcn/ui](https://ui.shadcn.com) with [Base UI](https://base-ui.com) primitives via the [@basecn](https://basecn.dev) registry.
+The web app uses [shadcn/ui](https://ui.shadcn.com) with [Base UI](https://base-ui.com) primitives. `apps/web/components.json` is configured with `"style": "base-vega"` so the CLI installs Base UI-backed components (not Radix).
 
 ### Add Components
 
 ```bash
 cd apps/web
 
-# Add from Base UI registry
-bunx shadcn@latest add @basecn/button
-bunx shadcn@latest add @basecn/dialog
-bunx shadcn@latest add @basecn/input
-
-# Or use the direct URL
-bunx shadcn@latest add https://basecn.dev/r/card.json
+# Add or update a component (Base UI primitives)
+bunx shadcn@latest add dialog
+bunx shadcn@latest add button --overwrite
 ```
 
 ### Pre-installed Components
 
-- `button` - Button with variants
-- `input` - Text input
-- `dialog` - Modal dialog
-- `card` - Card container
-- `badge` - Badge component
-- `label` - Form label
-- `textarea` - Textarea input
+- `button`, `input`, `label`, `textarea`, `card`, `badge`, `skeleton` — presentational
+- `dialog`, `sheet`, `select`, `tooltip`, `tabs`, `separator`, `sidebar` — Base UI primitives
 
 ## Development Scripts
 
