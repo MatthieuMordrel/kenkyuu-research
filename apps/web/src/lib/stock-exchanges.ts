@@ -3,13 +3,16 @@ export const STOCK_EXCHANGES = [
   "NASDAQ",
   "NYSE",
   "LSE",
-  "TSE",
-  "HKEX",
   "Euronext",
-  "SSE",
-  "SZSE",
   "TSX",
   "ASX",
+  "TSE",
+  "HKEX",
+  "SSE",
+  "SZSE",
+  "KRX",
+  "TWSE",
+  "SGX",
 ] as const;
 
 export type StockExchange = (typeof STOCK_EXCHANGES)[number];

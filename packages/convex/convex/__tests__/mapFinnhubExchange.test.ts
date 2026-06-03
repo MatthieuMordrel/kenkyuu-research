@@ -16,6 +16,16 @@ describe("mapFinnhubExchange", () => {
       "HKEX"
     );
     expect(mapFinnhubExchange("Euronext Paris")).toBe("Euronext");
+    expect(mapFinnhubExchange("Shanghai Stock Exchange")).toBe("SSE");
+    expect(mapFinnhubExchange("Shenzhen Stock Exchange")).toBe("SZSE");
+  });
+
+  it("maps Asia-Pacific exchanges including Korea and Taiwan", () => {
+    expect(mapFinnhubExchange("Korea Exchange")).toBe("KRX");
+    expect(mapFinnhubExchange("KOSDAQ")).toBe("KRX");
+    expect(mapFinnhubExchange("Taiwan Stock Exchange")).toBe("TWSE");
+    expect(mapFinnhubExchange("TWSE")).toBe("TWSE");
+    expect(mapFinnhubExchange("Singapore Exchange")).toBe("SGX");
   });
 
   it("returns null for unknown exchanges", () => {

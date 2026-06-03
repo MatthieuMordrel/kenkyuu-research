@@ -7,13 +7,16 @@ export const CANONICAL_EXCHANGES = [
   "NASDAQ",
   "NYSE",
   "LSE",
-  "TSE",
-  "HKEX",
   "Euronext",
-  "SSE",
-  "SZSE",
   "TSX",
   "ASX",
+  "TSE",
+  "HKEX",
+  "SSE",
+  "SZSE",
+  "KRX",
+  "TWSE",
+  "SGX",
 ] as const;
 
 export type CanonicalExchange = (typeof CANONICAL_EXCHANGES)[number];
@@ -29,24 +32,52 @@ const EXCHANGE_RULES: ReadonlyArray<{
     exchange: "NYSE",
   },
   { match: (u) => u.includes("LONDON") || u.includes("LSE"), exchange: "LSE" },
-  { match: (u) => u.includes("TOKYO") || u.includes("TSE"), exchange: "TSE" },
-  {
-    match: (u) => u.includes("HONG KONG") || u.includes("HKEX"),
-    exchange: "HKEX",
-  },
   { match: (u) => u.includes("EURONEXT"), exchange: "Euronext" },
-  {
-    match: (u) => u.includes("SHANGHAI") || u.includes("SSE"),
-    exchange: "SSE",
-  },
-  {
-    match: (u) => u.includes("SHENZHEN") || u.includes("SZSE"),
-    exchange: "SZSE",
-  },
   { match: (u) => u.includes("TORONTO") || u.includes("TSX"), exchange: "TSX" },
   {
     match: (u) => u.includes("AUSTRALIAN") || u.includes("ASX"),
     exchange: "ASX",
+  },
+  { match: (u) => u.includes("TOKYO") || u.includes("JPX"), exchange: "TSE" },
+  {
+    match: (u) =>
+      u.includes("TSE") && !u.includes("TWSE") && !u.includes("TAIWAN"),
+    exchange: "TSE",
+  },
+  {
+    match: (u) => u.includes("HONG KONG") || u.includes("HKEX"),
+    exchange: "HKEX",
+  },
+  {
+    match: (u) =>
+      u.includes("SHANGHAI") ||
+      u.includes("SSE") ||
+      u.includes("CHINA SHANGHAI"),
+    exchange: "SSE",
+  },
+  {
+    match: (u) =>
+      u.includes("SHENZHEN") ||
+      u.includes("SZSE") ||
+      u.includes("CHINA SHENZHEN"),
+    exchange: "SZSE",
+  },
+  {
+    match: (u) =>
+      u.includes("KOREA") ||
+      u.includes("KRX") ||
+      u.includes("KOSDAQ") ||
+      u.includes("SEOUL"),
+    exchange: "KRX",
+  },
+  {
+    match: (u) =>
+      u.includes("TAIWAN") || u.includes("TWSE") || u.includes("TAIPEI"),
+    exchange: "TWSE",
+  },
+  {
+    match: (u) => u.includes("SINGAPORE") || u.includes("SGX"),
+    exchange: "SGX",
   },
 ];
 
