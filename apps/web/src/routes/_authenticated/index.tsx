@@ -158,9 +158,12 @@ function OverviewCards() {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
-            {activeJobs.running} running, {activeJobs.pending} pending · OpenAI{" "}
-            {openai.active}/{openai.limit}, Anthropic {anthropic.active}/
-            {anthropic.limit}
+            {activeJobs.running} running
+            {activeJobs.formatting > 0
+              ? `, ${activeJobs.formatting} formatting`
+              : ""}
+            , {activeJobs.pending} queued · OpenAI {openai.active}/{openai.limit},
+            Anthropic {anthropic.active}/{anthropic.limit}
           </p>
         </CardContent>
       </Card>

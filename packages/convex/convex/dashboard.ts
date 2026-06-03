@@ -148,15 +148,20 @@ export const activeJobsCount = query({
       .query("researchJobs")
       .withIndex("by_status", (q) => q.eq("status", "running"))
       .take(MAX_ACTIVE_JOBS_SCAN);
-    const activeJobs = [...pendingJobs, ...runningJobs];
+    const formattingJobs = await ctx.db
+      .query("researchJobs")
+      .withIndex("by_status", (q) => q.eq("status", "formatting"))
+      .take(MAX_ACTIVE_JOBS_SCAN);
+    const queueJobs = [...pendingJobs, ...runningJobs];
     const byProvider = buildAllProviderConcurrencySnapshots(
-      asConcurrencyJobs(activeJobs)
+      asConcurrencyJobs(queueJobs)
     );
 
     return {
       pending: pendingJobs.length,
       running: runningJobs.length,
-      total: activeJobs.length,
+      formatting: formattingJobs.length,
+      total: queueJobs.length + formattingJobs.length,
       byProvider,
     };
   },

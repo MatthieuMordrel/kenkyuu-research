@@ -35,7 +35,7 @@ export function useMonthlySpend() {
   return data;
 }
 
-/** Count of active (pending + running) jobs and the concurrency limit. */
+/** Count of active (queued, running, formatting) jobs and the concurrency limit. */
 export function useActiveJobsCount() {
   const token = useAuthToken();
   const { data } = useQuery(

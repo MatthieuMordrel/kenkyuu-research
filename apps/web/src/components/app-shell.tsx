@@ -176,6 +176,8 @@ function SidebarActiveJobs() {
         <SidebarMenu>
           {activeJobs.jobs.map((job) => {
             const isRunning = job.status === "running";
+            const isFormatting = job.status === "formatting";
+            const isInProgress = isRunning || isFormatting;
             return (
               <SidebarMenuItem key={job._id}>
                 <SidebarMenuButton
@@ -185,10 +187,14 @@ function SidebarActiveJobs() {
                   <div
                     className={cn(
                       "flex size-4 shrink-0 items-center justify-center rounded-full",
-                      isRunning ? "text-primary" : "text-muted-foreground"
+                      isInProgress
+                        ? isFormatting
+                          ? "text-violet-600 dark:text-violet-400"
+                          : "text-primary"
+                        : "text-muted-foreground"
                     )}
                   >
-                    {isRunning ? (
+                    {isInProgress ? (
                       <Loader2 className="size-3.5 animate-spin" />
                     ) : (
                       <Clock className="size-3.5" />
@@ -207,7 +213,11 @@ function SidebarActiveJobs() {
                   <span
                     className={cn(
                       "size-1.5 shrink-0 rounded-full",
-                      isRunning ? "bg-primary" : "bg-muted-foreground/50"
+                      isFormatting
+                        ? "bg-violet-500"
+                        : isRunning
+                          ? "bg-primary"
+                          : "bg-muted-foreground/50"
                     )}
                   />
                 </SidebarMenuButton>

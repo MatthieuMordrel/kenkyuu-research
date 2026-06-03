@@ -11,7 +11,12 @@ import { useCallback } from "react";
 
 // --- Query Hooks ---
 
-type JobStatus = "pending" | "running" | "completed" | "failed";
+type JobStatus =
+  | "pending"
+  | "running"
+  | "formatting"
+  | "completed"
+  | "failed";
 
 interface UseResearchJobsOptions {
   status?: JobStatus;

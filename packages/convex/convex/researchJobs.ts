@@ -45,6 +45,26 @@ async function loadActiveJobsForConcurrency(ctx: QueryCtx) {
   return [...pendingJobs, ...runningJobs];
 }
 
+/** Loads jobs in the post-research formatting pass (not counted toward provider concurrency). */
+async function loadFormattingJobs(ctx: QueryCtx) {
+  return await ctx.db
+    .query("researchJobs")
+    .withIndex("by_status", (q) => q.eq("status", "formatting"))
+    .take(MAX_ACTIVE_JOBS_SCAN);
+}
+
+/**
+ * Pending, running, and formatting jobs for UI "active" surfaces.
+ * Concurrency snapshots still use {@link loadActiveJobsForConcurrency} only.
+ */
+async function loadDisplayActiveJobs(ctx: QueryCtx) {
+  const [concurrencyJobs, formattingJobs] = await Promise.all([
+    loadActiveJobsForConcurrency(ctx),
+    loadFormattingJobs(ctx),
+  ]);
+  return [...concurrencyJobs, ...formattingJobs];
+}
+
 /**
  * Schedules dispatch for the oldest pending job when a provider slot opens.
  */
@@ -397,7 +417,11 @@ export const cancelJob = mutation({
       throw new Error("Research job not found");
     }
 
-    if (job.status !== "pending" && job.status !== "running") {
+    if (
+      job.status !== "pending" &&
+      job.status !== "running" &&
+      job.status !== "formatting"
+    ) {
       throw new Error(`Cannot cancel job with status "${job.status}"`);
     }
 
@@ -405,6 +429,10 @@ export const cancelJob = mutation({
       status: "failed",
       error: "Cancelled by user",
       completedAt: Date.now(),
+      externalJobId: undefined,
+      formatExternalId: undefined,
+      formatStartedAt: undefined,
+      formatAttempts: undefined,
     });
     await scheduleProviderQueueDrain(ctx, job.provider);
     await logAuditEvent(ctx, {
@@ -574,15 +602,16 @@ export const getActiveJobs = query({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
 
-    const activeJobs = await loadActiveJobsForConcurrency(ctx);
+    const concurrencyJobs = await loadActiveJobsForConcurrency(ctx);
+    const jobs = await loadDisplayActiveJobs(ctx);
     const byProvider = buildAllProviderConcurrencySnapshots(
-      asConcurrencyJobs(activeJobs)
+      asConcurrencyJobs(concurrencyJobs)
     );
 
     return {
-      jobs: activeJobs,
+      jobs,
       byProvider,
-      count: activeJobs.length,
+      count: jobs.length,
     };
   },
 });

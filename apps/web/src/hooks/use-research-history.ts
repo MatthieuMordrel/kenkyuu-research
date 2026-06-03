@@ -7,7 +7,12 @@ import { useAuthToken } from "@/lib/auth";
 
 // --- Types ---
 
-type JobStatus = "pending" | "running" | "completed" | "failed";
+type JobStatus =
+  | "pending"
+  | "running"
+  | "formatting"
+  | "completed"
+  | "failed";
 
 interface UseResearchHistoryOptions {
   status?: JobStatus;

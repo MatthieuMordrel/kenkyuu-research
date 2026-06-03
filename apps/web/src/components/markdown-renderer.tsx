@@ -603,6 +603,8 @@ interface MarkdownRendererHeaderProps {
   title: string;
   /** Optional icon rendered before the title */
   icon?: ComponentType<{ className?: string }>;
+  /** Extra controls rendered before outline controls on the right (e.g. view toggles). */
+  headerTrailing?: ReactNode;
   /** Outline controls rendered on the right; omitted when sections are not collapsible */
   outlineControls?: ReactNode;
   /** Tailwind `top-*` offset when the header is sticky */
@@ -618,6 +620,7 @@ interface MarkdownRendererHeaderProps {
 function MarkdownRendererHeader({
   title,
   icon: Icon,
+  headerTrailing,
   outlineControls,
   stickyTopClassName = "top-0",
   sticky = true,
@@ -648,7 +651,12 @@ function MarkdownRendererHeader({
             {title}
           </span>
         </div>
-        {outlineControls}
+        {headerTrailing || outlineControls ? (
+          <div className="flex shrink-0 items-center gap-2">
+            {headerTrailing}
+            {outlineControls}
+          </div>
+        ) : null}
       </div>
     </>
   );
@@ -677,6 +685,8 @@ interface MarkdownRendererProps {
    * keep the header in normal document flow.
    */
   headerSticky?: boolean;
+  /** Optional controls in the header row before outline expand/collapse buttons. */
+  headerTrailing?: ReactNode;
 }
 
 export function MarkdownRenderer({
@@ -687,6 +697,7 @@ export function MarkdownRenderer({
   headerIcon,
   outlineControlsStickyTopClassName = "top-0",
   headerSticky = true,
+  headerTrailing,
 }: MarkdownRendererProps) {
   const fixedContent = useMemo(() => fixMarkdownTables(content), [content]);
   const { preamble, sections } = useMemo(
@@ -769,6 +780,7 @@ export function MarkdownRenderer({
     <MarkdownRendererHeader
       title={headerTitle}
       icon={headerIcon}
+      headerTrailing={headerTrailing}
       outlineControls={outlineControls}
       stickyTopClassName={outlineControlsStickyTopClassName}
       sticky={shouldStickHeader}

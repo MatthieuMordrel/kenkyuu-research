@@ -43,12 +43,18 @@ export const Route = createFileRoute("/_authenticated/research/")({
   component: ResearchPage,
 });
 
-type JobStatus = "pending" | "running" | "completed" | "failed";
+type JobStatus =
+  | "pending"
+  | "running"
+  | "formatting"
+  | "completed"
+  | "failed";
 
 const STATUS_OPTIONS: { value: JobStatus | undefined; label: string }[] = [
   { value: undefined, label: "All" },
   { value: "running", label: "Running" },
-  { value: "pending", label: "Pending" },
+  { value: "formatting", label: "Formatting" },
+  { value: "pending", label: "Queued" },
   { value: "completed", label: "Completed" },
   { value: "failed", label: "Failed" },
 ];
@@ -396,9 +402,14 @@ const statusConfig: Record<
     label: "Running",
     dotClass: "bg-blue-500 animate-pulse",
   },
+  formatting: {
+    variant: "outline",
+    label: "Formatting",
+    dotClass: "bg-violet-500 animate-pulse",
+  },
   pending: {
     variant: "outline",
-    label: "Pending",
+    label: "Queued",
     dotClass: "bg-yellow-500 animate-pulse",
   },
 };

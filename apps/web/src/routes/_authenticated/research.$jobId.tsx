@@ -2,10 +2,9 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useResearchJob, useDeleteJob } from "@/hooks/use-research";
 import { useToggleFavorite } from "@/hooks/use-research-history";
-import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { PageSkeleton } from "@/components/loading-skeleton";
-import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { ResearchOutputSection } from "@/components/research-output-section";
 import { PromptPreviewDialog } from "@/components/prompt-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,12 +18,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  ArrowLeft,
   Star,
   Clock,
   DollarSign,
   Cpu,
-  Calendar,
   AlertCircle,
   FlaskConical,
   BarChart3,
@@ -46,9 +43,10 @@ const statusConfig: Record<
   }
 > = {
   completed: { variant: "secondary", label: "Completed" },
+  formatting: { variant: "outline", label: "Formatting" },
   failed: { variant: "destructive", label: "Failed" },
   running: { variant: "outline", label: "Running" },
-  pending: { variant: "outline", label: "Pending" },
+  pending: { variant: "outline", label: "Queued" },
 };
 
 function ResultDetailPage() {
@@ -74,24 +72,16 @@ function ResultDetailPage() {
 
   if (job === null) {
     return (
-      <div className="flex w-full min-w-0 flex-col gap-4">
-        <div className="px-4 pt-4 md:px-6">
-          <Button variant="ghost" size="sm" render={<Link to="/research" />}>
-            <ArrowLeft className="size-4" />
+      <EmptyState
+        icon={FlaskConical}
+        title="Result not found"
+        description="This research result may have been deleted."
+        action={
+          <Button size="sm" render={<Link to="/research" />}>
             Back to Research
           </Button>
-        </div>
-        <EmptyState
-          icon={FlaskConical}
-          title="Result not found"
-          description="This research result may have been deleted."
-          action={
-            <Button size="sm" render={<Link to="/research" />}>
-              Back to Research
-            </Button>
-          }
-        />
-      </div>
+        }
+      />
     );
   }
 
@@ -108,21 +98,6 @@ function ResultDetailPage() {
     minute: "2-digit",
   });
 
-  const completedDate = job.completedAt
-    ? new Date(job.completedAt).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : undefined;
-
-  const completedTime = job.completedAt
-    ? new Date(job.completedAt).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : undefined;
-
   const durationStr = job.durationMs
     ? job.durationMs >= 60000
       ? `${Math.floor(job.durationMs / 60000)}m ${Math.round((job.durationMs % 60000) / 1000)}s`
@@ -132,22 +107,40 @@ function ResultDetailPage() {
   const costStr =
     job.costUsd != null ? `$${job.costUsd.toFixed(2)}` : undefined;
 
+  const modelLabel = getResearchModelLabel(
+    resolvePromptModelId({
+      defaultModelId: job.modelId,
+      defaultProvider: job.provider,
+    })
+  );
+
+  const stockCount = job.stockIds.length;
+
+  const canDelete =
+    job.status !== "pending" &&
+    job.status !== "running" &&
+    job.status !== "formatting";
+
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      {/* Back link */}
-      <div className="px-4 pt-4 md:px-6">
-        <Button variant="ghost" size="sm" render={<Link to="/research" />}>
-          <ArrowLeft className="size-4" />
-          Back to Research
-        </Button>
-      </div>
+      {/* Compact header: title + status, actions, and inline metadata strip */}
+      <div className="flex w-full min-w-0 flex-col gap-3 border-b px-4 pt-4 pb-3 md:px-6 md:pt-5">
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <h1 className="truncate text-xl font-semibold tracking-tight">
+                Research Result
+              </h1>
+              <Badge variant={config.variant} className="shrink-0 text-xs">
+                {config.label}
+              </Badge>
+            </div>
+            <p className="truncate text-sm text-muted-foreground">
+              {createdDate} at {createdTime}
+            </p>
+          </div>
 
-      {/* Header */}
-      <PageHeader
-        title="Research Result"
-        description={`${createdDate} at ${createdTime}`}
-        actions={
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -161,7 +154,13 @@ function ResultDetailPage() {
               />
               {job.isFavorited ? "Favorited" : "Favorite"}
             </Button>
-            {job.status !== "pending" && job.status !== "running" && (
+            {(job.resolvedPrompt || job.promptSnapshot) && (
+              <PromptPreviewDialog
+                content={job.resolvedPrompt ?? job.promptSnapshot ?? ""}
+                label="Prompt"
+              />
+            )}
+            {canDelete && (
               <Button
                 variant="outline"
                 size="sm"
@@ -172,73 +171,21 @@ function ResultDetailPage() {
               </Button>
             )}
           </div>
-        }
-      />
-
-      <div className="flex w-full min-w-0 flex-col gap-4 px-4 pb-4 md:px-6">
-        {/* Metadata cards */}
-        <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-4">
-          <MetadataCard
-            icon={BarChart3}
-            label="Status"
-            value={
-              <Badge variant={config.variant} className="text-xs">
-                {config.label}
-              </Badge>
-            }
-          />
-          <MetadataCard
-            icon={Clock}
-            label="Duration"
-            value={durationStr ?? "—"}
-          />
-          <MetadataCard icon={DollarSign} label="Cost" value={costStr ?? "—"} />
-          <MetadataCard
-            icon={Cpu}
-            label="Model"
-            value={getResearchModelLabel(
-              resolvePromptModelId({
-                defaultModelId: job.modelId,
-                defaultProvider: job.provider,
-              })
-            )}
-          />
         </div>
 
-        {/* Timing details */}
-        <Card className="min-w-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Calendar className="size-4" />
-              Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="min-w-0">
-            <dl className="flex flex-col gap-2 text-sm">
-              <DetailRow label="Started" value={`${createdDate} at ${createdTime}`} />
-              {completedDate && (
-                <DetailRow
-                  label="Completed"
-                  value={`${completedDate} at ${completedTime}`}
-                />
-              )}
-              <DetailRow
-                label="Stocks analyzed"
-                value={String(job.stockIds.length)}
-              />
-              <DetailRow label="Attempts" value={String(job.attempts)} />
-            </dl>
-          </CardContent>
-        </Card>
-
-        {/* Prompt Used — prefer resolvedPrompt (exact), fall back to promptSnapshot (template) */}
-        {(job.resolvedPrompt || job.promptSnapshot) && (
-          <PromptPreviewDialog
-            content={job.resolvedPrompt ?? job.promptSnapshot ?? ""}
-            label="Prompt Used"
+        {/* Inline metadata strip — replaces the metadata cards + Details card */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+          <Stat icon={Cpu} value={modelLabel} />
+          <Stat icon={Clock} value={durationStr ?? "—"} />
+          <Stat icon={DollarSign} value={costStr ?? "—"} />
+          <Stat
+            icon={BarChart3}
+            value={`${stockCount} ${stockCount === 1 ? "stock" : "stocks"}`}
           />
-        )}
+        </div>
+      </div>
 
+      <div className="flex w-full min-w-0 flex-col gap-4 px-4 pb-4 md:px-6">
         {/* Error message */}
         {job.error && (
           <Card className="min-w-0 border-destructive/50">
@@ -256,18 +203,8 @@ function ResultDetailPage() {
           </Card>
         )}
 
-        {/* Research result content */}
-        {job.result ? (
-          <Card className="min-w-0 gap-0 py-0">
-            <MarkdownRenderer
-              content={job.result}
-              headerTitle="Research Output"
-              headerIcon={FlaskConical}
-              outlineControlsStickyTopClassName="top-14 md:top-0"
-              className="overflow-x-auto"
-            />
-          </Card>
-        ) : null}
+        {/* Research result content (raw and/or formatted) */}
+        <ResearchOutputSection job={job} />
       </div>
 
       {/* Delete confirmation dialog */}
@@ -301,33 +238,22 @@ function ResultDetailPage() {
 }
 
 /**
- * Label/value row in the Details card; stacks on narrow screens so dates do not overflow.
+ * Compact inline metadata item used in the header strip: a small icon followed by
+ * its value. Keeps the key job facts on a single dense row instead of bulky cards.
  */
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-      <dt className="shrink-0 text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words sm:text-right">{value}</dd>
-    </div>
-  );
-}
-
-function MetadataCard({
+function Stat({
   icon: Icon,
-  label,
   value,
 }: {
   icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: React.ReactNode;
+  value: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-lg border p-3">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="size-3.5 shrink-0" />
-        {label}
-      </div>
-      <div className="min-w-0 text-sm font-medium break-words">{value}</div>
+    <div className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+      <Icon className="size-4 shrink-0" />
+      <span className="min-w-0 truncate font-medium text-foreground">
+        {value}
+      </span>
     </div>
   );
 }

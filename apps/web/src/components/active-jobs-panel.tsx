@@ -58,7 +58,7 @@ const STATUS_CONFIG: Record<
     icon: typeof Clock;
   }
 > = {
-  pending: { label: "Pending", variant: "outline", icon: Clock },
+  pending: { label: "Queued", variant: "outline", icon: Clock },
   running: { label: "Running", variant: "default", icon: Loader2 },
   formatting: { label: "Formatting", variant: "outline", icon: Loader2 },
   completed: { label: "Completed", variant: "secondary", icon: Activity },
@@ -207,6 +207,8 @@ function JobCard({
 
   const config = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = config.icon;
+  const isInProgress =
+    job.status === "running" || job.status === "formatting";
   const canCancel =
     job.status === "pending" ||
     job.status === "running" ||
@@ -258,14 +260,20 @@ function JobCard({
           <div
             className={cn(
               "flex size-8 shrink-0 items-center justify-center rounded-md",
-              job.status === "running" ? "bg-primary/10" : "bg-muted"
+              isInProgress ? "bg-primary/10" : "bg-muted",
+              job.status === "formatting" && "bg-violet-500/10"
             )}
           >
             <StatusIcon
               className={cn(
                 "size-4",
-                job.status === "running"
-                  ? "animate-spin text-primary"
+                isInProgress
+                  ? cn(
+                      "animate-spin",
+                      job.status === "formatting"
+                        ? "text-violet-600 dark:text-violet-400"
+                        : "text-primary"
+                    )
                   : "text-muted-foreground"
               )}
             />
