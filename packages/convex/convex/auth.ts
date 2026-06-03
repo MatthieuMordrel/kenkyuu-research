@@ -67,10 +67,21 @@ export const login = action({
 
 export const changePassword = action({
   args: {
+    token: v.string(),
     currentPassword: v.string(),
     newPassword: v.string(),
   },
   handler: async (ctx, args): Promise<void> => {
+    // Require an authenticated session. Without this, the action is a public
+    // password-guessing oracle that bypasses the login rate limiter.
+    const session = await ctx.runQuery(
+      internal.authHelpers.validateSessionInternal,
+      { token: args.token }
+    );
+    if (!session.valid) {
+      throw new Error("Unauthorized");
+    }
+
     const storedHash = (await ctx.runQuery(
       internal.authHelpers.getSettingValue,
       {

@@ -1,6 +1,88 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
 import { requireAuth } from "./authHelpers";
+
+/** User-facing error thrown when the monthly budget blocks a new research run. */
+export const BUDGET_REACHED_MESSAGE =
+  "Monthly budget reached — new research is paused. Raise or clear the budget threshold in Settings to continue.";
+
+// --- Shared helpers (callable from any query/mutation/action ctx) ---
+
+/** Computes the calendar-month cost totals directly from the database. */
+export async function computeMonthlyCost(
+  ctx: QueryCtx | MutationCtx,
+  monthTimestamp?: number
+) {
+  const target = new Date(monthTimestamp ?? Date.now());
+  const startOfMonth = new Date(
+    target.getFullYear(),
+    target.getMonth(),
+    1
+  ).getTime();
+  const startOfNextMonth = new Date(
+    target.getFullYear(),
+    target.getMonth() + 1,
+    1
+  ).getTime();
+
+  const logs = await ctx.db
+    .query("costLogs")
+    .withIndex("by_timestamp", (q) =>
+      q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth)
+    )
+    .collect();
+
+  const totalCost = logs.reduce((sum, log) => sum + log.costUsd, 0);
+
+  return {
+    totalCost: Math.round(totalCost * 100) / 100,
+    jobCount: logs.length,
+    monthStart: startOfMonth,
+    monthEnd: startOfNextMonth,
+  };
+}
+
+/**
+ * Reads the configured monthly budget threshold (USD).
+ * Returns null when unset, non-numeric, or non-positive (i.e. enforcement off).
+ */
+export async function getBudgetThreshold(
+  ctx: QueryCtx | MutationCtx
+): Promise<number | null> {
+  const setting = await ctx.db
+    .query("settings")
+    .withIndex("by_key", (q) => q.eq("key", "budget_threshold"))
+    .unique();
+  if (!setting) return null;
+  const threshold = parseFloat(setting.value);
+  return Number.isFinite(threshold) && threshold > 0 ? threshold : null;
+}
+
+/**
+ * Determines whether this calendar month's spend has reached the budget.
+ * When no threshold is configured, the budget is never considered reached.
+ */
+export async function isMonthlyBudgetReached(
+  ctx: QueryCtx | MutationCtx
+): Promise<{ reached: boolean; totalCost: number; threshold: number | null }> {
+  const threshold = await getBudgetThreshold(ctx);
+  if (threshold === null) {
+    return { reached: false, totalCost: 0, threshold: null };
+  }
+  const { totalCost } = await computeMonthlyCost(ctx);
+  return { reached: totalCost >= threshold, totalCost, threshold };
+}
+
+/** Throws {@link BUDGET_REACHED_MESSAGE} when the monthly budget is reached. */
+export async function assertWithinBudget(
+  ctx: QueryCtx | MutationCtx
+): Promise<void> {
+  const { reached } = await isMonthlyBudgetReached(ctx);
+  if (reached) {
+    throw new Error(BUDGET_REACHED_MESSAGE);
+  }
+}
 
 // --- Mutations ---
 
@@ -32,35 +114,7 @@ export const getMonthlyCost = query({
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
-
-    const target = new Date(args.monthTimestamp ?? Date.now());
-    const startOfMonth = new Date(
-      target.getFullYear(),
-      target.getMonth(),
-      1
-    ).getTime();
-    const startOfNextMonth = new Date(
-      target.getFullYear(),
-      target.getMonth() + 1,
-      1
-    ).getTime();
-
-    const logs = await ctx.db
-      .query("costLogs")
-      .withIndex("by_timestamp", (q) =>
-        q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth)
-      )
-      .collect();
-
-    const totalCost = logs.reduce((sum, log) => sum + log.costUsd, 0);
-    const jobCount = logs.length;
-
-    return {
-      totalCost: Math.round(totalCost * 100) / 100,
-      jobCount,
-      monthStart: startOfMonth,
-      monthEnd: startOfNextMonth,
-    };
+    return await computeMonthlyCost(ctx, args.monthTimestamp);
   },
 });
 
@@ -70,34 +124,18 @@ export const getMonthlyCostInternal = internalQuery({
     monthTimestamp: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const target = new Date(args.monthTimestamp ?? Date.now());
-    const startOfMonth = new Date(
-      target.getFullYear(),
-      target.getMonth(),
-      1
-    ).getTime();
-    const startOfNextMonth = new Date(
-      target.getFullYear(),
-      target.getMonth() + 1,
-      1
-    ).getTime();
+    return await computeMonthlyCost(ctx, args.monthTimestamp);
+  },
+});
 
-    const logs = await ctx.db
-      .query("costLogs")
-      .withIndex("by_timestamp", (q) =>
-        q.gte("timestamp", startOfMonth).lt("timestamp", startOfNextMonth)
-      )
-      .collect();
-
-    const totalCost = logs.reduce((sum, log) => sum + log.costUsd, 0);
-    const jobCount = logs.length;
-
-    return {
-      totalCost: Math.round(totalCost * 100) / 100,
-      jobCount,
-      monthStart: startOfMonth,
-      monthEnd: startOfNextMonth,
-    };
+/**
+ * Internal budget gate for the research dispatch action.
+ * Returns whether this month's spend has reached the configured threshold.
+ */
+export const checkBudgetReachedInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await isMonthlyBudgetReached(ctx);
   },
 });
 

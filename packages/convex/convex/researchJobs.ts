@@ -8,6 +8,7 @@ import {
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAuth } from "./authHelpers";
+import { assertWithinBudget } from "./costTracking";
 import { validateSearchTerm, truncateResult } from "./validation";
 import { logAuditEvent } from "./auditLog";
 import {
@@ -133,6 +134,7 @@ export const createAndStartResearch = mutation({
   },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
+    await assertWithinBudget(ctx);
 
     const prompt = await ctx.db.get(args.promptId);
     if (!prompt) {
@@ -490,6 +492,8 @@ export const retryJob = mutation({
     if (job.status !== "failed") {
       throw new Error("Can only retry failed jobs");
     }
+
+    await assertWithinBudget(ctx);
 
     if (job.attempts >= 3) {
       // Reset attempts to allow manual retry

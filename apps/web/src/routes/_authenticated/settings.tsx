@@ -533,6 +533,7 @@ function BudgetSection() {
 
 function PasswordSection() {
   const changePassword = useAction(api.auth.changePassword);
+  const token = useAuthToken();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -552,7 +553,8 @@ function PasswordSection() {
     setSuccess(false);
     setSaving(true);
     try {
-      await changePassword({ currentPassword, newPassword });
+      if (!token) throw new Error("Not authenticated");
+      await changePassword({ token, currentPassword, newPassword });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");

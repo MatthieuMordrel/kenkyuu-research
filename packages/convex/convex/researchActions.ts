@@ -15,6 +15,7 @@ import {
   type ProviderName,
 } from "./providers";
 import type { ResearchModelDefinition } from "@repo/research-models/types";
+import { BUDGET_REACHED_MESSAGE } from "./costTracking";
 import {
   countSubmittedJobs,
   DISPATCH_RETRY_DELAY_MS,
@@ -139,6 +140,22 @@ export const startResearch = internalAction({
 
     if (job.status !== "pending" && job.status !== "failed") {
       throw new Error(`Job is not in a startable state: ${job.status}`);
+    }
+
+    // Budget gate: stop new spend once the monthly budget is reached. This is the
+    // single chokepoint every job passes through (manual starts, retries, queue
+    // drains, and schedule-triggered jobs), so enforcing here covers them all.
+    const budget = await ctx.runQuery(
+      internal.costTracking.checkBudgetReachedInternal,
+      {}
+    );
+    if (budget.reached) {
+      await ctx.runMutation(internal.researchJobs.updateJobStatus, {
+        id: args.jobId,
+        status: "failed",
+        error: BUDGET_REACHED_MESSAGE,
+      });
+      return;
     }
 
     const model = resolveJobModel(job);
