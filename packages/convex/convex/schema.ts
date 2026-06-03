@@ -66,6 +66,10 @@ export default defineSchema({
     createdAt: v.number(),
     completedAt: v.optional(v.number()),
     isFavorited: v.optional(v.boolean()),
+    /** Report title extracted from the formatted markdown H1. */
+    title: v.optional(v.string()),
+    /** Denormalized metadata for full-text search (stocks, prompt name, title). */
+    searchText: v.string(),
   })
     .index("by_status", ["status"])
     .index("by_promptId", ["promptId"])
@@ -73,7 +77,10 @@ export default defineSchema({
     .index("by_externalJobId", ["externalJobId"])
     .index("by_formatExternalId", ["formatExternalId"])
     .index("by_createdAt", ["createdAt"])
-    .index("by_isFavorited", ["isFavorited"]),
+    .index("by_isFavorited", ["isFavorited"])
+    .searchIndex("search_metadata", {
+      searchField: "searchText",
+    }),
 
   schedules: defineTable({
     name: v.string(),

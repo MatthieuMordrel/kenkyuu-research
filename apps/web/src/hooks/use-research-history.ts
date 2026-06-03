@@ -74,12 +74,15 @@ export function useResearchHistory(options: UseResearchHistoryOptions = {}) {
   };
 }
 
-export function useSearchResults(searchTerm: string, limit?: number) {
+export function useSearchResults(searchTerm: string, limit = 100) {
   const token = useAuthToken();
+  const trimmedSearchTerm = searchTerm.trim();
   const { data } = useQuery(
     convexQuery(
       api.researchJobs.searchResults,
-      token && searchTerm.length > 0 ? { searchTerm, limit, token } : "skip"
+      token && trimmedSearchTerm.length > 0
+        ? { searchTerm: trimmedSearchTerm, limit, token }
+        : "skip"
     )
   );
   return data;

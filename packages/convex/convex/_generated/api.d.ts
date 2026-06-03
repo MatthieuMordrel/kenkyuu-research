@@ -41,6 +41,7 @@ import type * as researchFormat from "../researchFormat.js";
 import type * as researchFormatActions from "../researchFormatActions.js";
 import type * as researchFormatCore from "../researchFormatCore.js";
 import type * as researchFormatPrepass from "../researchFormatPrepass.js";
+import type * as researchJobSearchMetadata from "../researchJobSearchMetadata.js";
 import type * as researchJobs from "../researchJobs.js";
 import type * as scheduleActions from "../scheduleActions.js";
 import type * as schedules from "../schedules.js";
@@ -90,6 +91,7 @@ declare const fullApi: ApiFromModules<{
   researchFormatActions: typeof researchFormatActions;
   researchFormatCore: typeof researchFormatCore;
   researchFormatPrepass: typeof researchFormatPrepass;
+  researchJobSearchMetadata: typeof researchJobSearchMetadata;
   researchJobs: typeof researchJobs;
   scheduleActions: typeof scheduleActions;
   schedules: typeof schedules;

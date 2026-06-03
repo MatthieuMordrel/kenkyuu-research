@@ -16,6 +16,7 @@ import {
   providerValidator,
   resolveMutationModelId,
 } from "./providers/constants";
+import { buildSearchTextForJob } from "./researchJobSearchMetadata";
 
 const stockSelectionValidator = v.object({
   type: v.union(
@@ -687,6 +688,10 @@ export const createScheduledJob = internalMutation({
       provider: args.provider,
     });
     const { modelId, provider } = jobFieldsForModel(resolvedModelId);
+    const { searchText } = await buildSearchTextForJob(ctx, {
+      promptId: args.promptId,
+      stockIds: args.stockIds,
+    });
     const jobId = await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
@@ -697,6 +702,7 @@ export const createScheduledJob = internalMutation({
       attempts: 0,
       scheduleId: args.scheduleId,
       createdAt: now,
+      searchText,
     });
 
     await ctx.scheduler.runAfter(

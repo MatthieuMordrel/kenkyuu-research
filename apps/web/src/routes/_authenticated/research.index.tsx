@@ -120,7 +120,7 @@ function ResearchPage() {
     }
   }
 
-  const isSearchMode = search.length > 0;
+  const isSearchMode = search.trim().length > 0;
   const displayResults = isSearchMode ? searchResults : results;
   const isDisplayLoading = isSearchMode
     ? searchResults === undefined
@@ -160,7 +160,7 @@ function ResearchPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search research..."
+              placeholder="Search by stock, prompt, or title..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -171,6 +171,7 @@ function ResearchPage() {
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
             className="shrink-0"
+            disabled={isSearchMode}
           >
             <Filter className="size-4" />
             <span className="hidden sm:inline">Filters</span>
@@ -182,8 +183,14 @@ function ResearchPage() {
           </Button>
         </div>
 
+        {isSearchMode && (
+          <p className="text-xs text-muted-foreground">
+            Searching all research jobs in the database.
+          </p>
+        )}
+
         {/* Filter panel */}
-        {showFilters && (
+        {showFilters && !isSearchMode && (
           <div className="flex flex-col gap-3 rounded-lg border p-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Filters</span>

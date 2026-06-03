@@ -22,6 +22,7 @@ import {
   buildAllProviderConcurrencySnapshots,
   MAX_ACTIVE_JOBS_SCAN,
 } from "./researchConcurrency";
+import { buildSearchTextForJob } from "./researchJobSearchMetadata";
 
 const jobStatus = v.union(
   v.literal("pending"),
@@ -102,6 +103,10 @@ export const createResearchJob = mutation({
     });
     const { modelId, provider } = jobFieldsForModel(resolvedModelId);
     const now = Date.now();
+    const { searchText } = await buildSearchTextForJob(ctx, {
+      promptId: args.promptId,
+      stockIds: args.stockIds,
+    });
     return await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
@@ -112,6 +117,7 @@ export const createResearchJob = mutation({
       attempts: 0,
       scheduleId: args.scheduleId,
       createdAt: now,
+      searchText,
     });
   },
 });
@@ -139,6 +145,10 @@ export const createAndStartResearch = mutation({
     });
     const { modelId, provider } = jobFieldsForModel(resolvedModelId);
     const now = Date.now();
+    const { searchText } = await buildSearchTextForJob(ctx, {
+      promptId: args.promptId,
+      stockIds: args.stockIds,
+    });
     const jobId = await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
@@ -149,6 +159,7 @@ export const createAndStartResearch = mutation({
       attempts: 0,
       scheduleId: args.scheduleId,
       createdAt: now,
+      searchText,
     });
 
     await ctx.scheduler.runAfter(
@@ -333,9 +344,18 @@ export const completeFormattedJob = internalMutation({
       throw new Error("Research job not found");
     }
 
+    const result = truncateResult(args.result);
+    const { searchText, title } = await buildSearchTextForJob(ctx, {
+      promptId: job.promptId,
+      stockIds: job.stockIds,
+      resultMarkdown: result,
+    });
+
     await ctx.db.patch(args.id, {
       status: "completed",
-      result: truncateResult(args.result),
+      result,
+      title,
+      searchText,
       costUsd: args.costUsd,
       completedAt: Date.now(),
       ...clearFormatTrackingFields,
@@ -360,9 +380,18 @@ export const applyReformattedResult = internalMutation({
       throw new Error("Research job not found");
     }
 
+    const result = truncateResult(args.result);
+    const { searchText, title } = await buildSearchTextForJob(ctx, {
+      promptId: job.promptId,
+      stockIds: job.stockIds,
+      resultMarkdown: result,
+    });
+
     await ctx.db.patch(args.id, {
       rawResult: truncateResult(args.rawResult),
-      result: truncateResult(args.result),
+      result,
+      title,
+      searchText,
       costUsd: (job.costUsd ?? 0) + args.additionalCostUsd,
       ...clearFormatTrackingFields,
     });
@@ -737,31 +766,18 @@ export const searchResults = query({
 
     validateSearchTerm(args.searchTerm);
     const maxResults = Math.min(args.limit ?? 50, 100);
-    const term = args.searchTerm.toLowerCase();
+    const term = args.searchTerm.trim();
 
     if (term.length === 0) {
       return [];
     }
 
-    const scanLimit = maxResults * 10;
-    const completedJobs = await ctx.db
+    const matches = await ctx.db
       .query("researchJobs")
-      .withIndex("by_status", (q) => q.eq("status", "completed"))
-      .order("desc")
-      .take(scanLimit);
+      .withSearchIndex("search_metadata", (q) => q.search("searchText", term))
+      .take(maxResults);
 
-    const matches = [];
-    for (const job of completedJobs) {
-      if (matches.length >= maxResults) break;
-
-      if (job.result && job.result.toLowerCase().includes(term)) {
-        matches.push(job);
-      } else if (job.promptSnapshot.toLowerCase().includes(term)) {
-        matches.push(job);
-      }
-    }
-
-    return matches;
+    return matches.sort((a, b) => b.createdAt - a.createdAt);
   },
 });
 
