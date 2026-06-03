@@ -63,12 +63,18 @@ export function prepassResearchMarkdown(markdown: string): string {
 /**
  * Merges consecutive duplicate ## sections (can happen when the formatter repeats headings).
  */
-/** Keeps the first # title; demotes any later # lines to ##. */
+/**
+ * Keeps the first document # title; demotes duplicate document titles to ##.
+ * Preserves `# Section N` main parts used by the research outline UI.
+ */
 export function keepSingleTopTitle(markdown: string): string {
-  let seenH1 = false;
-  return markdown.replace(/^# (.+)$/gm, (_line, title) => {
-    if (!seenH1) {
-      seenH1 = true;
+  let seenDocumentTitle = false;
+  return markdown.replace(/^# (.+)$/gm, (_line, title: string) => {
+    if (/^Section \d+/.test(title)) {
+      return `# ${title}`;
+    }
+    if (!seenDocumentTitle) {
+      seenDocumentTitle = true;
       return `# ${title}`;
     }
     return `## ${title}`;

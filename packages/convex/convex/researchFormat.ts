@@ -9,10 +9,13 @@ import { internal } from "./_generated/api";
 export { prepassResearchMarkdown as prepassMarkdown } from "./researchFormatPrepass";
 
 export {
+  countH1Headings,
   countMarkdownLinks,
+  countTopLevelMainSections,
   evaluateFormattedOutput,
   maxOutputTokensForInput,
   passesFormattingGuards,
+  passesHeadingStructureGuard,
   MAX_FORMAT_ATTEMPTS,
 } from "./researchFormatCore";
 

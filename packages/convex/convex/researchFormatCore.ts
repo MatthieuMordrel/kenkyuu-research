@@ -16,6 +16,43 @@ export function countMarkdownLinks(markdown: string): number {
   return matches?.length ?? 0;
 }
 
+/** Counts ATX H1 lines (`# title`, not `##`). */
+export function countH1Headings(markdown: string): number {
+  return (markdown.match(/^# [^\n]+$/gm) ?? []).length;
+}
+
+/**
+ * Counts main report parts titled `Section N` at H1 (`# Section 1 — …`).
+ * Deep-research templates use these for top-level collapsible outline nodes in the UI.
+ */
+export function countTopLevelMainSections(markdown: string): number {
+  return (markdown.match(/^# Section \d+/gm) ?? []).length;
+}
+
+/**
+ * Returns true when formatted output keeps the same top-level section heading ladder as raw.
+ */
+export function passesHeadingStructureGuard(
+  preprocessed: string,
+  formatted: string
+): boolean {
+  const rawTopSections = countTopLevelMainSections(preprocessed);
+  const formattedTopSections = countTopLevelMainSections(formatted);
+
+  if (rawTopSections > 0 && formattedTopSections < rawTopSections) {
+    return false;
+  }
+
+  const rawH1 = countH1Headings(preprocessed);
+  const formattedH1 = countH1Headings(formatted);
+
+  if (rawH1 >= 3 && formattedH1 < rawH1 - 1) {
+    return false;
+  }
+
+  return true;
+}
+
 /**
  * Returns true when formatted output is plausibly the same report as raw.
  */
@@ -37,6 +74,10 @@ export function passesFormattingGuards(raw: string, formatted: string): boolean 
     }
   }
 
+  if (!passesHeadingStructureGuard(raw, formatted)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -52,6 +93,17 @@ export function maxOutputTokensForInput(
 }
 
 export type FormatOutputDecision = "accept" | "retry" | "fallback";
+
+/**
+ * Picks safe markdown when the formatter exhausted retries: prefer preprocessed raw
+ * when the model flattened main `# Section` headings.
+ */
+function fallbackFormattedText(preprocessed: string, formatted: string): string {
+  if (!passesHeadingStructureGuard(preprocessed, formatted)) {
+    return postpassResearchMarkdown(preprocessed);
+  }
+  return postpassResearchMarkdown(formatted);
+}
 
 /**
  * Decides how to proceed after a successful Anthropic batch returns formatted text.
@@ -74,6 +126,6 @@ export function evaluateFormattedOutput(args: {
 
   return {
     decision: "fallback",
-    text: postpassResearchMarkdown(formatted),
+    text: fallbackFormattedText(preprocessed, formatted),
   };
 }

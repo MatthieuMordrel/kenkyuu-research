@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   fixInlineSectionTitles,
+  keepSingleTopTitle,
   mergeDuplicateH2Sections,
   prepassResearchMarkdown,
 } from "../researchFormatPrepass";
@@ -23,6 +24,16 @@ describe("mergeDuplicateH2Sections", () => {
     expect(out).toContain("Part A.");
     expect(out).toContain("Part B.");
     expect(out.match(/^## Executive Summary/gm)?.length).toBe(1);
+  });
+});
+
+describe("keepSingleTopTitle", () => {
+  it("demotes duplicate document titles but keeps # Section N headings", () => {
+    const input =
+      "# Report Title\n\n# Duplicate Title\n\n# Section 1 — Business\n\n## Sub";
+    expect(keepSingleTopTitle(input)).toBe(
+      "# Report Title\n\n## Duplicate Title\n\n# Section 1 — Business\n\n## Sub"
+    );
   });
 });
 

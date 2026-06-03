@@ -9,7 +9,15 @@ import { RESEARCH_PROVIDERS } from "./providers";
  * System prompt sent to the formatter model after research completes.
  * Light touch: polish markdown without reworking the report structure or content.
  */
-export const FORMAT_SYSTEM_PROMPT = `Format the research report in the user message as clean GitHub-flavored markdown. Improve readability (headings, spacing, paragraphs, lists). Keep all facts, numbers, dates, tickers, and citations unchanged. Return only the markdown document—no preamble or code fences.`;
+export const FORMAT_SYSTEM_PROMPT = `Format the research report in the user message as clean GitHub-flavored markdown. Improve readability (spacing, paragraphs, lists, tables) without changing meaning.
+
+Heading rules (critical — do not flatten the outline):
+- Preserve every existing ATX heading level exactly (# vs ## vs ###). Never demote a # heading to ## or promote body text to a heading.
+- Reports with "# Section N — …" main parts must keep those as # (single hash). Subsections stay ##; sub-subsections stay ###.
+- The document title stays one # line at the top. Do not add extra # or ## headings for content that is already a bold lead-in paragraph (e.g. "**Bottom line:** …" must remain inline, not "## Bottom line").
+- Do not merge, split, rename, or reorder sections.
+
+Keep all facts, numbers, dates, tickers, links, and citations unchanged. Return only the markdown document—no preamble or code fences.`;
 
 /**
  * Read-only snapshot of the post-research formatting pipeline for UI display.

@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  countH1Headings,
   countMarkdownLinks,
+  countTopLevelMainSections,
   evaluateFormattedOutput,
   maxOutputTokensForInput,
   passesFormattingGuards,
+  passesHeadingStructureGuard,
   MAX_FORMAT_ATTEMPTS,
 } from "../researchFormatCore";
 import { prepassResearchMarkdown } from "../researchFormatPrepass";
@@ -33,6 +36,38 @@ describe("maxOutputTokensForInput", () => {
     const modelMax = 64_000;
     expect(maxOutputTokensForInput(10_000, modelMax)).toBeGreaterThan(4_096);
     expect(maxOutputTokensForInput(400_000, modelMax)).toBe(modelMax);
+  });
+});
+
+describe("heading structure helpers", () => {
+  const deepResearchSkeleton =
+    "# ACMR Deep Research\n\n## Bottom line first\n\n" +
+    "# Section 0 — Data\n\n## 0.1 Identity\n\n" +
+    "# Section 1 — Business\n\n## What it sells\n\n";
+
+  it("counts top-level main sections and H1 headings", () => {
+    expect(countTopLevelMainSections(deepResearchSkeleton)).toBe(2);
+    expect(countH1Headings(deepResearchSkeleton)).toBe(3);
+  });
+
+  it("rejects when formatter flattens # Section headings to ##", () => {
+    const flattened =
+      "# ACMR Deep Research\n\n## Bottom line first\n\n" +
+      "## Section 0 — Data\n\n## Section 1 — Business\n\n## What it sells\n\n";
+    expect(passesHeadingStructureGuard(deepResearchSkeleton, flattened)).toBe(
+      false
+    );
+    expect(passesFormattingGuards(deepResearchSkeleton, flattened)).toBe(false);
+  });
+
+  it("accepts polish that preserves the section ladder", () => {
+    const polished = deepResearchSkeleton.replace(
+      "## What it sells",
+      "## What it sells\n\n"
+    );
+    expect(passesHeadingStructureGuard(deepResearchSkeleton, polished)).toBe(
+      true
+    );
   });
 });
 
@@ -86,5 +121,26 @@ describe("evaluateFormattedOutput", () => {
     });
     expect(result.decision).toBe("fallback");
     expect(result.text.length).toBeGreaterThan(0);
+  });
+
+  it("falls back to preprocessed outline when formatter flattens main sections", () => {
+    const preprocessed =
+      "# ZETA Deep Research\n\n**Bottom line:** Hold.\n\n" +
+      "# Section 1 — Business\n\n## Model mechanics\n\n" +
+      "Revenue is usage-based.\n\n".repeat(80);
+    const flattened =
+      "# ZETA Deep Research\n\n## Bottom line\n\n## Section 1 — Business\n\n" +
+      "## Model mechanics\n\nRevenue is usage-based.\n\n".repeat(80);
+
+    const result = evaluateFormattedOutput({
+      preprocessed,
+      formatted: flattened,
+      formatAttempts: MAX_FORMAT_ATTEMPTS - 1,
+    });
+
+    expect(result.decision).toBe("fallback");
+    expect(countTopLevelMainSections(result.text)).toBe(1);
+    expect(result.text).toContain("# Section 1 — Business");
+    expect(result.text).not.toContain("## Section 1 — Business");
   });
 });
