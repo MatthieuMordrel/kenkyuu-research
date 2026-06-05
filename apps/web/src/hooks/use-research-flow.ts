@@ -38,14 +38,22 @@ export function useResearchFlow() {
 
     actions.confirmModel();
 
-    const jobId = await startResearch({
-      promptId,
-      stockIds,
-      modelId,
-    });
+    // Single-stock prompts run one independent research per selected stock,
+    // so selecting N stocks fans out into N jobs. Multi-stock (and discovery)
+    // prompts bundle all selected stocks into a single job.
+    let result: string | string[];
+    if (promptType === "single-stock") {
+      result = await Promise.all(
+        stockIds.map((stockId) =>
+          startResearch({ promptId, stockIds: [stockId], modelId })
+        )
+      );
+    } else {
+      result = await startResearch({ promptId, stockIds, modelId });
+    }
 
     actions.markExecuting();
-    return jobId;
+    return result;
   }, [promptId, promptType, stockIds, modelId, actions, startResearch]);
 
   return {

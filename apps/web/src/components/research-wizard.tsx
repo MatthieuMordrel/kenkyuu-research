@@ -193,10 +193,6 @@ function StockSelectionStep() {
       if (next.has(id)) {
         next.delete(id);
       } else {
-        if (flow.promptType === "single-stock") {
-          // Single-stock: only allow one
-          next.clear();
-        }
         next.add(id);
       }
       return next;
@@ -259,9 +255,11 @@ function StockSelectionStep() {
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
           {selected.size} stock{selected.size !== 1 ? "s" : ""} selected
-          {flow.promptType === "single-stock" && " (max 1)"}
+          {flow.promptType === "single-stock" &&
+            selected.size > 1 &&
+            ` (${selected.size} separate researches)`}
         </span>
-        {flow.promptType !== "single-stock" && stocks && stocks.length > 0 && (
+        {stocks && stocks.length > 0 && (
           <button
             type="button"
             onClick={() => {
@@ -486,6 +484,9 @@ function ProviderConfirmStep() {
               <span className="text-muted-foreground">Stocks</span>
               <span className="font-medium">
                 {flow.stockIds.length} selected
+                {flow.promptType === "single-stock" &&
+                  flow.stockIds.length > 1 &&
+                  ` · ${flow.stockIds.length} researches`}
               </span>
             </div>
           )}
@@ -558,16 +559,23 @@ function ProviderConfirmStep() {
 function ExecutingStep() {
   const flow = useResearchFlow();
 
+  const jobCount =
+    flow.promptType === "single-stock" ? flow.stockIds.length : 1;
+  const isMulti = jobCount > 1;
+
   return (
     <div className="flex flex-col items-center gap-4 py-6">
       <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10">
         <Loader2 className="size-6 animate-spin text-primary" />
       </div>
       <div className="text-center">
-        <p className="text-sm font-medium">Research started</p>
+        <p className="text-sm font-medium">
+          {isMulti ? `${jobCount} researches started` : "Research started"}
+        </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Your research job has been queued. You can track its progress in the
-          active jobs panel.
+          {isMulti
+            ? "Your research jobs have been queued. You can track their progress in the active jobs panel."
+            : "Your research job has been queued. You can track its progress in the active jobs panel."}
         </p>
       </div>
       <Button type="button" variant="outline" size="sm" onClick={flow.close}>
