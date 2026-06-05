@@ -1,0 +1,11 @@
+# mise toolchain for kenkyuu-research
+# Declares the runtimes needed to run this repo (not the npm packages, which
+# live in package.json). Run `mise install` to provision everything.
+#
+# Docs: https://mise.jdx.dev
+
+[tools]
+# Package manager + runtime for the whole monorepo (see package.json scripts).
+bun = "1.3.14"
+# Required by the Convex CLI (`bunx convex ...`) used in scripts/setup.sh.
+node = "24.16.0"
