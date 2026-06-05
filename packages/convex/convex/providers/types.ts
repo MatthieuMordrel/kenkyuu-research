@@ -10,6 +10,12 @@ export interface NormalizedUsage {
   outputTokens: number;
   /** Number of server-side web searches performed. Only some providers bill this. */
   webSearchRequests?: number;
+  /**
+   * Total tool/web-search invocations the provider performed, for usage display
+   * against the model's configured allocation. May exceed webSearchRequests when
+   * a provider counts non-search tools (e.g. OpenAI's combined tool-call cap).
+   */
+  toolCalls?: number;
 }
 
 /** Result of polling a provider for the status of a job. */

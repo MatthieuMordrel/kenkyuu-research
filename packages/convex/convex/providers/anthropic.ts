@@ -99,6 +99,8 @@ export const anthropicAdapter: ResearchProviderAdapter = {
             outputTokens: message.usage.output_tokens,
             webSearchRequests:
               message.usage.server_tool_use?.web_search_requests ?? 0,
+            toolCalls:
+              message.usage.server_tool_use?.web_search_requests ?? 0,
           },
         };
       }

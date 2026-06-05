@@ -17,6 +17,21 @@ export function normalizeOpenAIUsage(
 }
 
 /**
+ * Counts the tool invocations in a Responses payload (web search, code
+ * interpreter, function calls, …). Output items for tool use end in `_call`,
+ * which maps to OpenAI's combined `max_tool_calls` allocation.
+ */
+export function countOpenAIToolCalls(response: Response): number {
+  let count = 0;
+  for (const outputItem of response.output) {
+    if (outputItem.type.endsWith("_call")) {
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
  * Extracts plain text from a completed Responses payload (no citation rewriting).
  */
 export function extractPlainResponseText(response: Response): string {
@@ -56,7 +71,10 @@ export function mapOpenAIResponseToPollResult(
       return {
         status: "completed",
         text,
-        usage: normalizeOpenAIUsage(response.usage),
+        usage: {
+          ...normalizeOpenAIUsage(response.usage),
+          toolCalls: countOpenAIToolCalls(response),
+        },
       };
     }
     case "failed":

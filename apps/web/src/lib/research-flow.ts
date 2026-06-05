@@ -183,5 +183,21 @@ export function getModelCostEstimate(modelId: ResearchModelId): string {
   return getResearchModel(modelId).estimatedCostLabel;
 }
 
+/**
+ * Usage label like "12 / 100 searches" for a completed job's tool/web-search
+ * count against the model's configured allocation. Returns null when no count
+ * was recorded (older jobs, or providers that don't report it).
+ */
+export function getResearchToolUsageLabel(
+  modelId: ResearchModelId,
+  count: number | null | undefined
+): string | null {
+  if (count == null) return null;
+  const model = getResearchModel(modelId);
+  const noun = model.providerId === "anthropic" ? "searches" : "tool calls";
+  const limit = model.anthropic?.webSearchMaxUses ?? model.openai?.maxToolCalls;
+  return limit != null ? `${count} / ${limit} ${noun}` : `${count} ${noun}`;
+}
+
 /** Registry lookup re-exported for UI components. */
 export { RESEARCH_MODELS, getResearchModel, getResearchModelLabel };

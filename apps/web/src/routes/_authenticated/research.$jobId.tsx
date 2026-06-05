@@ -25,10 +25,15 @@ import {
   AlertCircle,
   FlaskConical,
   BarChart3,
+  Search,
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getResearchModelLabel, resolvePromptModelId } from "@/lib/research-flow";
+import {
+  getResearchModelLabel,
+  getResearchToolUsageLabel,
+  resolvePromptModelId,
+} from "@/lib/research-flow";
 import type { GenericId } from "convex/values";
 
 export const Route = createFileRoute("/_authenticated/research/$jobId")({
@@ -107,11 +112,16 @@ function ResultDetailPage() {
   const costStr =
     job.costUsd != null ? `$${job.costUsd.toFixed(2)}` : undefined;
 
-  const modelLabel = getResearchModelLabel(
-    resolvePromptModelId({
-      defaultModelId: job.modelId,
-      defaultProvider: job.provider,
-    })
+  const resolvedModelId = resolvePromptModelId({
+    defaultModelId: job.modelId,
+    defaultProvider: job.provider,
+  });
+
+  const modelLabel = getResearchModelLabel(resolvedModelId);
+
+  const toolUsageStr = getResearchToolUsageLabel(
+    resolvedModelId,
+    job.toolCallCount
   );
 
   const stockCount = job.stockIds.length;
@@ -182,6 +192,7 @@ function ResultDetailPage() {
             icon={BarChart3}
             value={`${stockCount} ${stockCount === 1 ? "stock" : "stocks"}`}
           />
+          {toolUsageStr && <Stat icon={Search} value={toolUsageStr} />}
         </div>
       </div>
 

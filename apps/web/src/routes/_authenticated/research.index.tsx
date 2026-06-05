@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useResearchFlow } from "@/hooks/use-research-flow";
+import {
+  getResearchToolUsageLabel,
+  resolvePromptModelId,
+} from "@/lib/research-flow";
 import { useDeleteJob } from "@/hooks/use-research";
 import {
   useResearchHistory,
@@ -459,6 +463,14 @@ function ResultCard({
 
   const costStr = job.costUsd ? `$${job.costUsd.toFixed(2)}` : undefined;
 
+  const toolUsageStr = getResearchToolUsageLabel(
+    resolvePromptModelId({
+      defaultModelId: job.modelId,
+      defaultProvider: job.provider,
+    }),
+    job.toolCallCount
+  );
+
   // Resolve prompt name
   const promptName = promptMap.get(job.promptId as string)?.name;
 
@@ -542,6 +554,12 @@ function ResultCard({
               <>
                 <span className="shrink-0">·</span>
                 <span className="shrink-0">{costStr}</span>
+              </>
+            )}
+            {toolUsageStr && (
+              <>
+                <span className="shrink-0">·</span>
+                <span className="shrink-0">{toolUsageStr}</span>
               </>
             )}
           </div>

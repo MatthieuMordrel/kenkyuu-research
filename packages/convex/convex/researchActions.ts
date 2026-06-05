@@ -69,12 +69,14 @@ async function applyCompletedResult(
 ) {
   const costUsd = estimateModelCost(model, result.usage);
   const durationMs = Date.now() - job.createdAt;
+  const toolCallCount = result.usage.toolCalls ?? result.usage.webSearchRequests;
 
   await ctx.runMutation(internal.researchJobs.beginFormattingPhase, {
     id: job._id,
     rawResult: result.text,
     costUsd,
     durationMs,
+    toolCallCount,
   });
 
   await ctx.runMutation(internal.researchJobs.logCost, {

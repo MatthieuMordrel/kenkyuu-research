@@ -61,6 +61,8 @@ export default defineSchema({
     error: v.optional(v.string()),
     costUsd: v.optional(v.number()),
     durationMs: v.optional(v.number()),
+    /** Web searches / tool calls the provider performed for this research. */
+    toolCallCount: v.optional(v.number()),
     attempts: v.number(),
     scheduleId: v.optional(v.id("schedules")),
     createdAt: v.number(),

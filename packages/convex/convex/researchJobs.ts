@@ -239,6 +239,7 @@ export const beginFormattingPhase = internalMutation({
     rawResult: v.string(),
     costUsd: v.number(),
     durationMs: v.number(),
+    toolCallCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const job = await ctx.db.get(args.id);
@@ -251,6 +252,7 @@ export const beginFormattingPhase = internalMutation({
       rawResult: truncateResult(args.rawResult),
       costUsd: args.costUsd,
       durationMs: args.durationMs,
+      toolCallCount: args.toolCallCount,
       externalJobId: undefined,
       formatExternalId: undefined,
       formatStartedAt: Date.now(),
