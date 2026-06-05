@@ -143,7 +143,11 @@ const markdownComponents: Components = {
   ),
   table: ({ children, ...props }) => (
     <div className="mb-3 max-w-full overflow-x-auto">
-      <table className="w-max min-w-full border-collapse text-sm" {...props}>
+      {/* Freeze the first column (usually a ticker/date) so it stays visible while scrolling wide tables sideways. */}
+      <table
+        className="w-max min-w-full border-collapse text-sm [&_tbody_td:first-child]:sticky [&_tbody_td:first-child]:left-0 [&_tbody_td:first-child]:z-10 [&_tbody_td:first-child]:bg-card [&_tbody_td:first-child]:shadow-[1px_0_0_0_var(--color-border)] [&_thead_th:first-child]:sticky [&_thead_th:first-child]:left-0 [&_thead_th:first-child]:z-20 [&_thead_th:first-child]:bg-muted [&_thead_th:first-child]:shadow-[1px_0_0_0_var(--color-border)]"
+        {...props}
+      >
         {children}
       </table>
     </div>
