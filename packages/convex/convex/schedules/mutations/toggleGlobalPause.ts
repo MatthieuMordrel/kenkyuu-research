@@ -63,7 +63,8 @@ export const toggleGlobalPause = mutation({
           .map((schedule) =>
             ctx.scheduler.runAfter(
               0,
-              internal.schedules.actions.scheduleNextRun.scheduleNextRun,
+              internal.schedules.actions.internalScheduleNextRun
+                .internalScheduleNextRun,
               {
                 scheduleId: schedule._id,
               }

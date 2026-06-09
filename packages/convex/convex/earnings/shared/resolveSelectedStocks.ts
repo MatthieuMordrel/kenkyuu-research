@@ -9,7 +9,7 @@ export async function resolveSelectedStocks(
 ): Promise<Doc<"stocks">[]> {
   if (schedule.stockSelection.type === "all") {
     return await ctx.runQuery(
-      internal.schedules.queries.listStocksInternal.listStocksInternal,
+      internal.schedules.queries.internalListStocks.internalListStocks,
       {}
     );
   }
@@ -17,7 +17,7 @@ export async function resolveSelectedStocks(
     const ids = schedule.stockSelection.stockIds ?? [];
     if (ids.length === 0) return [];
     return await ctx.runQuery(
-      internal.earnings.queries.getStocksByIds.getStocksByIds,
+      internal.earnings.queries.internalGetStocksByIds.internalGetStocksByIds,
       {
         stockIds: ids,
       }
@@ -25,7 +25,7 @@ export async function resolveSelectedStocks(
   }
   if (schedule.stockSelection.type === "tagged") {
     const allStocks: Doc<"stocks">[] = await ctx.runQuery(
-      internal.schedules.queries.listStocksInternal.listStocksInternal,
+      internal.schedules.queries.internalListStocks.internalListStocks,
       {}
     );
     const tagSet = new Set(schedule.stockSelection.tags ?? []);

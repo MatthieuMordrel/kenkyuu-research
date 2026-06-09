@@ -10,7 +10,7 @@ export async function resolvePrompt(
   const stocks = await Promise.all(
     job.stockIds.map((id) =>
       ctx.runQuery(
-        internal.research.queries.getStockInternal.getStockInternal,
+        internal.research.queries.internalGetStock.internalGetStock,
         {
           id,
         }

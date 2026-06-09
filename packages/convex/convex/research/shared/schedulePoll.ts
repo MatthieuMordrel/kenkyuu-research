@@ -11,7 +11,7 @@ export async function schedulePoll(
 ) {
   await ctx.scheduler.runAfter(
     nextDelayMs,
-    internal.research.actions.pollFormat.pollFormat,
+    internal.research.actions.internalPollFormat.internalPollFormat,
     {
       jobId,
       mode,

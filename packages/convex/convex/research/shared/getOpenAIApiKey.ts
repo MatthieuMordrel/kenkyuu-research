@@ -5,7 +5,7 @@ import { getSettingsKeyForProvider } from "../../providers/constants";
 /** Reads the configured OpenAI API key from settings. */
 export async function getOpenAIApiKey(ctx: ActionCtx): Promise<string | null> {
   return await ctx.runQuery(
-    internal.auth.queries.getSettingValue.getSettingValue,
+    internal.auth.queries.internalGetSettingValue.internalGetSettingValue,
     {
       key: getSettingsKeyForProvider("openai"),
     }

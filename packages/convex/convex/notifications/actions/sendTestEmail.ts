@@ -10,7 +10,7 @@ export const sendTestEmail = action({
   handler: async (ctx, args): Promise<{ sent: boolean; reason?: string }> => {
     // Validate session
     const session = await ctx.runQuery(
-      internal.auth.queries.validateSessionInternal.validateSessionInternal,
+      internal.auth.queries.internalValidateSession.internalValidateSession,
       { token: args.token }
     );
     if (!session.valid) {
@@ -18,7 +18,7 @@ export const sendTestEmail = action({
     }
 
     return await ctx.runAction(
-      internal.notifications.actions.sendEmail.sendEmail,
+      internal.notifications.actions.internalSendEmail.internalSendEmail,
       {
         subject: "Kenkyuu - Test Email",
         html: `

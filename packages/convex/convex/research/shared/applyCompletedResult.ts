@@ -23,7 +23,8 @@ export async function applyCompletedResult(
     result.usage.toolCalls ?? result.usage.webSearchRequests;
 
   await ctx.runMutation(
-    internal.research.mutations.beginFormattingPhase.beginFormattingPhase,
+    internal.research.mutations.internalBeginFormattingPhase
+      .internalBeginFormattingPhase,
     {
       id: job._id,
       rawResult: result.text,
@@ -33,16 +34,19 @@ export async function applyCompletedResult(
     }
   );
 
-  await ctx.runMutation(internal.research.mutations.logCost.logCost, {
-    jobId: job._id,
-    provider: model.providerId,
-    modelId: model.id,
-    costUsd,
-  });
+  await ctx.runMutation(
+    internal.research.mutations.internalLogCost.internalLogCost,
+    {
+      jobId: job._id,
+      provider: model.providerId,
+      modelId: model.id,
+      costUsd,
+    }
+  );
 
   await ctx.scheduler.runAfter(
     0,
-    internal.research.actions.startFormat.startFormat,
+    internal.research.actions.internalStartFormat.internalStartFormat,
     {
       jobId: job._id,
       mode: "pipeline",

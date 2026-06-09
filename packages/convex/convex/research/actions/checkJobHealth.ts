@@ -33,13 +33,13 @@ export const checkJobHealth = action({
   handler: async (ctx, args): Promise<HealthCheckResult> => {
     if (!args.token) throw new Error("Unauthorized");
     const session = await ctx.runQuery(
-      internal.auth.queries.validateSessionInternal.validateSessionInternal,
+      internal.auth.queries.internalValidateSession.internalValidateSession,
       { token: args.token }
     );
     if (!session.valid) throw new Error("Unauthorized");
 
     const job = await ctx.runQuery(
-      internal.research.queries.getJobInternal.getJobInternal,
+      internal.research.queries.internalGetJob.internalGetJob,
       { id: args.jobId }
     );
     if (!job) throw new Error("Research job not found");

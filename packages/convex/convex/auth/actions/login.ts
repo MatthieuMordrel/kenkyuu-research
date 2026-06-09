@@ -15,7 +15,8 @@ export const login = action({
   handler: async (ctx, args): Promise<{ token: string; expiresAt: number }> => {
     // Check rate limit before attempting login
     const rateLimit = await ctx.runQuery(
-      internal.auth.queries.checkLoginRateLimit.checkLoginRateLimit,
+      internal.auth.queries.internalCheckLoginRateLimit
+        .internalCheckLoginRateLimit,
       { identifier: LOGIN_IDENTIFIER }
     );
 
@@ -27,7 +28,7 @@ export const login = action({
     }
 
     const storedHash = (await ctx.runQuery(
-      internal.auth.queries.getSettingValue.getSettingValue,
+      internal.auth.queries.internalGetSettingValue.internalGetSettingValue,
       {
         key: "auth_password_hash",
       }
@@ -43,7 +44,8 @@ export const login = action({
     if (!valid) {
       // Record failed attempt
       await ctx.runMutation(
-        internal.auth.mutations.recordLoginAttempt.recordLoginAttempt,
+        internal.auth.mutations.internalRecordLoginAttempt
+          .internalRecordLoginAttempt,
         {
           identifier: LOGIN_IDENTIFIER,
           success: false,
@@ -54,7 +56,8 @@ export const login = action({
 
     // Record successful attempt (resets effective rate limit)
     await ctx.runMutation(
-      internal.auth.mutations.recordLoginAttempt.recordLoginAttempt,
+      internal.auth.mutations.internalRecordLoginAttempt
+        .internalRecordLoginAttempt,
       {
         identifier: LOGIN_IDENTIFIER,
         success: true,
@@ -62,7 +65,7 @@ export const login = action({
     );
 
     const result: { token: string; expiresAt: number } = await ctx.runMutation(
-      internal.auth.mutations.createSession.createSession,
+      internal.auth.mutations.internalCreateSession.internalCreateSession,
       {
         rememberMe: args.rememberMe,
       }

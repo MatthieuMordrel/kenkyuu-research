@@ -10,7 +10,7 @@ export async function getProviderApiKey(
   providerId: ProviderName
 ): Promise<string | null> {
   return await ctx.runQuery(
-    internal.auth.queries.getSettingValue.getSettingValue,
+    internal.auth.queries.internalGetSettingValue.internalGetSettingValue,
     {
       key: getSettingsKeyForProvider(providerId),
     }

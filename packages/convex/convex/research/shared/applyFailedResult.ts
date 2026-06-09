@@ -15,7 +15,7 @@ export async function applyFailedResult(
   { retryable }: { retryable: boolean }
 ) {
   await ctx.runMutation(
-    internal.research.mutations.updateJobStatus.updateJobStatus,
+    internal.research.mutations.internalUpdateJobStatus.internalUpdateJobStatus,
     {
       id: job._id,
       status: "failed",
@@ -26,14 +26,14 @@ export async function applyFailedResult(
   if (retryable && job.attempts < MAX_RETRIES) {
     await ctx.scheduler.runAfter(
       Math.pow(2, job.attempts) * 5000,
-      internal.research.actions.startResearch.startResearch,
+      internal.research.actions.internalStartResearch.internalStartResearch,
       { jobId: job._id }
     );
   } else {
     await ctx.scheduler.runAfter(
       0,
-      internal.notifications.actions.dispatchJobNotification
-        .dispatchJobNotification,
+      internal.notifications.actions.internalDispatchJobNotification
+        .internalDispatchJobNotification,
       { jobId: job._id }
     );
   }

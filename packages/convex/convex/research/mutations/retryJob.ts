@@ -39,7 +39,7 @@ export const retryJob = mutation({
 
     await ctx.scheduler.runAfter(
       0,
-      internal.research.actions.startResearch.startResearch,
+      internal.research.actions.internalStartResearch.internalStartResearch,
       {
         jobId: args.id,
       }

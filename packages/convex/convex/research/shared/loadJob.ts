@@ -8,7 +8,7 @@ export async function loadJob(
   jobId: Id<"researchJobs">
 ): Promise<Doc<"researchJobs"> | null> {
   return await ctx.runQuery(
-    internal.research.queries.getJobInternal.getJobInternal,
+    internal.research.queries.internalGetJob.internalGetJob,
     { id: jobId }
   );
 }

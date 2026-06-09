@@ -26,17 +26,21 @@ export async function completeFormatJob(
   const researchCostUsd = args.job.costUsd ?? 0;
 
   if (!args.usedFallback && args.formattingCostUsd > 0) {
-    await ctx.runMutation(internal.research.mutations.logCost.logCost, {
-      jobId: args.job._id,
-      provider: formatModel.providerId,
-      modelId: formatModel.id,
-      costUsd: args.formattingCostUsd,
-    });
+    await ctx.runMutation(
+      internal.research.mutations.internalLogCost.internalLogCost,
+      {
+        jobId: args.job._id,
+        provider: formatModel.providerId,
+        modelId: formatModel.id,
+        costUsd: args.formattingCostUsd,
+      }
+    );
   }
 
   if (args.mode === "pipeline") {
     await ctx.runMutation(
-      internal.research.mutations.completeFormattedJob.completeFormattedJob,
+      internal.research.mutations.internalCompleteFormattedJob
+        .internalCompleteFormattedJob,
       {
         id: args.job._id,
         result: args.resultText,
@@ -53,7 +57,8 @@ export async function completeFormatJob(
 
   const source = args.job.rawResult ?? args.job.result ?? args.resultText;
   await ctx.runMutation(
-    internal.research.mutations.applyReformattedResult.applyReformattedResult,
+    internal.research.mutations.internalApplyReformattedResult
+      .internalApplyReformattedResult,
     {
       id: args.job._id,
       rawResult: source,

@@ -10,13 +10,18 @@ export async function dispatchPostCompleteSideEffects(
 ) {
   await ctx.scheduler.runAfter(
     0,
-    internal.notifications.actions.dispatchJobNotification
-      .dispatchJobNotification,
+    internal.notifications.actions.internalDispatchJobNotification
+      .internalDispatchJobNotification,
     {
       jobId,
     }
   );
-  await ctx.scheduler.runAfter(0, internal.budgetAlert.checkBudgetAlert, {
-    currentCostUsd: totalCostUsd,
-  });
+  await ctx.scheduler.runAfter(
+    0,
+    internal.costTracking.actions.internalCheckBudgetAlert
+      .internalCheckBudgetAlert,
+    {
+      currentCostUsd: totalCostUsd,
+    }
+  );
 }

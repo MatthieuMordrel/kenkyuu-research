@@ -40,7 +40,7 @@ export async function maybeTimeoutOrReschedule(
   );
   await ctx.scheduler.runAfter(
     nextDelayMs,
-    internal.research.actions.pollJob.pollJob,
+    internal.research.actions.internalPollJob.internalPollJob,
     {
       jobId: job._id,
       nextDelayMs,

@@ -156,7 +156,8 @@ export const updateSchedule = mutation({
         }
         await ctx.scheduler.runAfter(
           0,
-          internal.schedules.actions.scheduleNextRun.scheduleNextRun,
+          internal.schedules.actions.internalScheduleNextRun
+            .internalScheduleNextRun,
           {
             scheduleId: id,
           }

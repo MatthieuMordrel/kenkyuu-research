@@ -33,7 +33,7 @@ export async function handleAggregateMode(
 
   // Check prompt type for single-stock handling
   const prompt = await ctx.runQuery(
-    internal.prompts.queries.getPromptInternal.getPromptInternal,
+    internal.prompts.queries.internalGetPrompt.internalGetPrompt,
     {
       id: schedule.promptId,
     }
@@ -42,7 +42,8 @@ export async function handleAggregateMode(
 
   // Get all earnings for selected stocks
   const allEarnings: Doc<"earnings">[] = await ctx.runQuery(
-    internal.earnings.queries.getEarningsForStocks.getEarningsForStocks,
+    internal.earnings.queries.internalGetEarningsForStocks
+      .internalGetEarningsForStocks,
     { stockIds: selectedStockIds }
   );
 
@@ -63,8 +64,8 @@ export async function handleAggregateMode(
 
   // Check dedup: already triggered for this quarter?
   const alreadyTriggered = await ctx.runQuery(
-    internal.earnings.queries.checkAlreadyTriggeredForQuarter
-      .checkAlreadyTriggeredForQuarter,
+    internal.earnings.queries.internalCheckAlreadyTriggeredForQuarter
+      .internalCheckAlreadyTriggeredForQuarter,
     { scheduleId: schedule._id, quarterKey: qKey }
   );
   if (alreadyTriggered) return;
@@ -123,8 +124,8 @@ export async function handleAggregateMode(
           selectedStockIds.map(async (stockId) => {
             try {
               await ctx.runMutation(
-                internal.schedules.mutations.createScheduledJob
-                  .createScheduledJob,
+                internal.schedules.mutations.internalCreateScheduledJob
+                  .internalCreateScheduledJob,
                 {
                   promptId: schedule.promptId,
                   stockIds: [stockId],
@@ -144,7 +145,8 @@ export async function handleAggregateMode(
         );
       } else {
         await ctx.runMutation(
-          internal.schedules.mutations.createScheduledJob.createScheduledJob,
+          internal.schedules.mutations.internalCreateScheduledJob
+            .internalCreateScheduledJob,
           {
             promptId: schedule.promptId,
             stockIds: selectedStockIds,
@@ -155,7 +157,8 @@ export async function handleAggregateMode(
         );
       }
       await ctx.runMutation(
-        internal.earnings.mutations.recordTriggeredRun.recordTriggeredRun,
+        internal.earnings.mutations.internalRecordTriggeredRun
+          .internalRecordTriggeredRun,
         {
           scheduleId: schedule._id,
           earningsId: anchorEarnings._id,
@@ -169,8 +172,8 @@ export async function handleAggregateMode(
         `Earnings trigger [after_last]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, tz=${anchorTz}, schedule "${schedule.name}")`
       );
       await ctx.runMutation(
-        internal.earnings.mutations.updateScheduleLastRunAt
-          .updateScheduleLastRunAt,
+        internal.earnings.mutations.internalUpdateScheduleLastRunAt
+          .internalUpdateScheduleLastRunAt,
         {
           id: schedule._id,
         }
@@ -203,8 +206,8 @@ export async function handleAggregateMode(
           selectedStockIds.map(async (stockId) => {
             try {
               await ctx.runMutation(
-                internal.schedules.mutations.createScheduledJob
-                  .createScheduledJob,
+                internal.schedules.mutations.internalCreateScheduledJob
+                  .internalCreateScheduledJob,
                 {
                   promptId: schedule.promptId,
                   stockIds: [stockId],
@@ -224,7 +227,8 @@ export async function handleAggregateMode(
         );
       } else {
         await ctx.runMutation(
-          internal.schedules.mutations.createScheduledJob.createScheduledJob,
+          internal.schedules.mutations.internalCreateScheduledJob
+            .internalCreateScheduledJob,
           {
             promptId: schedule.promptId,
             stockIds: selectedStockIds,
@@ -235,7 +239,8 @@ export async function handleAggregateMode(
         );
       }
       await ctx.runMutation(
-        internal.earnings.mutations.recordTriggeredRun.recordTriggeredRun,
+        internal.earnings.mutations.internalRecordTriggeredRun
+          .internalRecordTriggeredRun,
         {
           scheduleId: schedule._id,
           earningsId: anchorEarnings._id,
@@ -249,8 +254,8 @@ export async function handleAggregateMode(
         `Earnings trigger [before_first]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, tz=${anchorTz}, schedule "${schedule.name}")`
       );
       await ctx.runMutation(
-        internal.earnings.mutations.updateScheduleLastRunAt
-          .updateScheduleLastRunAt,
+        internal.earnings.mutations.internalUpdateScheduleLastRunAt
+          .internalUpdateScheduleLastRunAt,
         {
           id: schedule._id,
         }

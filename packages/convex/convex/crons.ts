@@ -6,7 +6,7 @@ const crons = cronJobs();
 crons.daily(
   "fetch-earnings",
   { hourUTC: 6, minuteUTC: 0 },
-  internal.earnings.actions.fetchAllEarnings.fetchAllEarnings
+  internal.earnings.actions.internalFetchAllEarnings.internalFetchAllEarnings
 );
 
 // Recover research jobs whose webhooks were missed.
@@ -15,14 +15,15 @@ crons.daily(
 crons.interval(
   "recover-stale-jobs",
   { minutes: 15 },
-  internal.research.actions.recoverStaleJobs.recoverStaleJobs
+  internal.research.actions.internalRecoverStaleJobs.internalRecoverStaleJobs
 );
 
 // Recover research jobs stuck in formatting (action timeout, missed scheduler, etc.).
 crons.interval(
   "recover-stale-formatting",
   { minutes: 15 },
-  internal.research.actions.recoverStaleFormatting.recoverStaleFormatting
+  internal.research.actions.internalRecoverStaleFormatting
+    .internalRecoverStaleFormatting
 );
 
 // Check earnings-based schedule triggers every hour.
@@ -31,7 +32,8 @@ crons.interval(
 crons.interval(
   "check-earnings-triggers",
   { hours: 1 },
-  internal.earnings.actions.checkEarningsTriggers.checkEarningsTriggers
+  internal.earnings.actions.internalCheckEarningsTriggers
+    .internalCheckEarningsTriggers
 );
 
 export default crons;

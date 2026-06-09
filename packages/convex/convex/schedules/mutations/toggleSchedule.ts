@@ -34,7 +34,8 @@ export const toggleSchedule = mutation({
       if (newEnabled && !isGloballyPaused) {
         await ctx.scheduler.runAfter(
           0,
-          internal.schedules.actions.scheduleNextRun.scheduleNextRun,
+          internal.schedules.actions.internalScheduleNextRun
+            .internalScheduleNextRun,
           {
             scheduleId: args.id,
           }

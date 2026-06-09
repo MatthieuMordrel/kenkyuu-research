@@ -32,7 +32,7 @@ export async function resolveEligibleStocks(
     );
   } else if (schedule.stockSelection.type === "tagged") {
     const allStocks = await ctx.runQuery(
-      internal.schedules.queries.listStocksInternal.listStocksInternal,
+      internal.schedules.queries.internalListStocks.internalListStocks,
       {}
     );
     const tagSet = new Set(schedule.stockSelection.tags ?? []);

@@ -12,7 +12,7 @@ export const detectTelegramChatId = action({
     args
   ): Promise<{ found: boolean; chatId?: string; reason?: string }> => {
     const session = await ctx.runQuery(
-      internal.auth.queries.validateSessionInternal.validateSessionInternal,
+      internal.auth.queries.internalValidateSession.internalValidateSession,
       { token: args.token }
     );
     if (!session.valid) {
@@ -20,7 +20,7 @@ export const detectTelegramChatId = action({
     }
 
     const botToken: string | null = await ctx.runQuery(
-      internal.auth.queries.getSettingValue.getSettingValue,
+      internal.auth.queries.internalGetSettingValue.internalGetSettingValue,
       { key: "telegram_bot_token" }
     );
 

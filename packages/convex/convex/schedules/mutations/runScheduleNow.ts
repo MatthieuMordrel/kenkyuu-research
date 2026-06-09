@@ -19,7 +19,7 @@ export const runScheduleNow = mutation({
 
     await ctx.scheduler.runAfter(
       0,
-      internal.schedules.actions.executeRunNow.executeRunNow,
+      internal.schedules.actions.internalExecuteRunNow.internalExecuteRunNow,
       {
         scheduleId: args.id,
       }

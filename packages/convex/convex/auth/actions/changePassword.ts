@@ -15,7 +15,7 @@ export const changePassword = action({
     // Require an authenticated session. Without this, the action is a public
     // password-guessing oracle that bypasses the login rate limiter.
     const session = await ctx.runQuery(
-      internal.auth.queries.validateSessionInternal.validateSessionInternal,
+      internal.auth.queries.internalValidateSession.internalValidateSession,
       { token: args.token }
     );
     if (!session.valid) {
@@ -23,7 +23,7 @@ export const changePassword = action({
     }
 
     const storedHash = (await ctx.runQuery(
-      internal.auth.queries.getSettingValue.getSettingValue,
+      internal.auth.queries.internalGetSettingValue.internalGetSettingValue,
       {
         key: "auth_password_hash",
       }
@@ -47,7 +47,7 @@ export const changePassword = action({
     const newHash = await bcrypt.hash(args.newPassword, 10);
 
     await ctx.runMutation(
-      internal.auth.mutations.upsertSettingInternal.upsertSettingInternal,
+      internal.auth.mutations.internalUpsertSetting.internalUpsertSetting,
       {
         key: "auth_password_hash",
         value: newHash,

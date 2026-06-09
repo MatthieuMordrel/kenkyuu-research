@@ -11,7 +11,8 @@ export async function scheduleProviderQueueDrain(
 ) {
   await ctx.scheduler.runAfter(
     0,
-    internal.research.mutations.drainProviderQueue.drainProviderQueue,
+    internal.research.mutations.internalDrainProviderQueue
+      .internalDrainProviderQueue,
     {
       provider,
     }

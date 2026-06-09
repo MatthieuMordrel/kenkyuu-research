@@ -9,7 +9,7 @@ export const sendTestTelegram = action({
   args: { token: v.string() },
   handler: async (ctx, args): Promise<{ sent: boolean; reason?: string }> => {
     const session = await ctx.runQuery(
-      internal.auth.queries.validateSessionInternal.validateSessionInternal,
+      internal.auth.queries.internalValidateSession.internalValidateSession,
       { token: args.token }
     );
     if (!session.valid) {
@@ -17,7 +17,8 @@ export const sendTestTelegram = action({
     }
 
     return await ctx.runAction(
-      internal.notifications.actions.sendTelegramMessage.sendTelegramMessage,
+      internal.notifications.actions.internalSendTelegramMessage
+        .internalSendTelegramMessage,
       {
         text: "✅ Kenkyuu Test Message\n\nIf you're reading this, your Telegram notifications are working correctly.",
       }

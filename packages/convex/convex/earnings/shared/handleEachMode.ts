@@ -37,7 +37,8 @@ export async function handleEachMode(
 
       // Query earnings on this target date
       const earningsRecords: Doc<"earnings">[] = await ctx.runQuery(
-        internal.earnings.queries.getEarningsByDate.getEarningsByDate,
+        internal.earnings.queries.internalGetEarningsByDate
+          .internalGetEarningsByDate,
         { date: targetEarningsDate }
       );
       if (earningsRecords.length === 0) return false;
@@ -58,16 +59,16 @@ export async function handleEachMode(
             return false;
 
           const alreadyTriggered = await ctx.runQuery(
-            internal.earnings.queries.checkAlreadyTriggered
-              .checkAlreadyTriggered,
+            internal.earnings.queries.internalCheckAlreadyTriggered
+              .internalCheckAlreadyTriggered,
             { scheduleId: schedule._id, earningsId: earnings._id }
           );
           if (alreadyTriggered) return false;
 
           try {
             const jobId = await ctx.runMutation(
-              internal.schedules.mutations.createScheduledJob
-                .createScheduledJob,
+              internal.schedules.mutations.internalCreateScheduledJob
+                .internalCreateScheduledJob,
               {
                 promptId: schedule.promptId,
                 stockIds: [earnings.stockId],
@@ -77,7 +78,8 @@ export async function handleEachMode(
               }
             );
             await ctx.runMutation(
-              internal.earnings.mutations.recordTriggeredRun.recordTriggeredRun,
+              internal.earnings.mutations.internalRecordTriggeredRun
+                .internalRecordTriggeredRun,
               {
                 scheduleId: schedule._id,
                 earningsId: earnings._id,
@@ -106,8 +108,8 @@ export async function handleEachMode(
 
   if (groupTriggered.some(Boolean)) {
     await ctx.runMutation(
-      internal.earnings.mutations.updateScheduleLastRunAt
-        .updateScheduleLastRunAt,
+      internal.earnings.mutations.internalUpdateScheduleLastRunAt
+        .internalUpdateScheduleLastRunAt,
       {
         id: schedule._id,
       }

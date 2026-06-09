@@ -14,7 +14,7 @@ export async function handleStartError(
   const message = error instanceof Error ? error.message : "Unknown error";
 
   await ctx.runMutation(
-    internal.research.mutations.updateJobStatus.updateJobStatus,
+    internal.research.mutations.internalUpdateJobStatus.internalUpdateJobStatus,
     {
       id: jobId,
       status: "failed",
@@ -27,7 +27,7 @@ export async function handleStartError(
   const delayMs = parseRetryDelayMs(message, attempts);
   await ctx.scheduler.runAfter(
     delayMs,
-    internal.research.actions.startResearch.startResearch,
+    internal.research.actions.internalStartResearch.internalStartResearch,
     { jobId }
   );
 }

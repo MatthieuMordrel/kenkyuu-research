@@ -136,7 +136,8 @@ export const createSchedule = mutation({
     if (args.enabled && effectiveTriggerType === "cron") {
       await ctx.scheduler.runAfter(
         0,
-        internal.schedules.actions.scheduleNextRun.scheduleNextRun,
+        internal.schedules.actions.internalScheduleNextRun
+          .internalScheduleNextRun,
         {
           scheduleId,
         }

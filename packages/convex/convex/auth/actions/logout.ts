@@ -10,8 +10,11 @@ export const logout = action({
     token: v.string(),
   },
   handler: async (ctx, args): Promise<void> => {
-    await ctx.runMutation(internal.auth.mutations.deleteSession.deleteSession, {
-      token: args.token,
-    });
+    await ctx.runMutation(
+      internal.auth.mutations.internalDeleteSession.internalDeleteSession,
+      {
+        token: args.token,
+      }
+    );
   },
 });

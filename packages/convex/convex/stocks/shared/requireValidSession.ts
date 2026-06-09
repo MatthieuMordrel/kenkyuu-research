@@ -7,7 +7,7 @@ export async function requireValidSession(
   token: string
 ): Promise<void> {
   const session = await ctx.runQuery(
-    internal.auth.queries.validateSessionInternal.validateSessionInternal,
+    internal.auth.queries.internalValidateSession.internalValidateSession,
     { token }
   );
   if (!session.valid) {

@@ -47,12 +47,13 @@ export async function handlePollCompleted(
 
   if (evaluation.decision === "retry") {
     await ctx.runMutation(
-      internal.research.mutations.incrementFormatAttempts
-        .incrementFormatAttempts,
+      internal.research.mutations.internalIncrementFormatAttempts
+        .internalIncrementFormatAttempts,
       { id: job._id }
     );
     await ctx.runMutation(
-      internal.research.mutations.clearFormatExternalId.clearFormatExternalId,
+      internal.research.mutations.internalClearFormatExternalId
+        .internalClearFormatExternalId,
       { id: job._id }
     );
     await scheduleStart(ctx, job._id, mode);

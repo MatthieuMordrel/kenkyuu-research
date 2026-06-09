@@ -10,7 +10,7 @@ export async function scheduleStart(
 ) {
   await ctx.scheduler.runAfter(
     0,
-    internal.research.actions.startFormat.startFormat,
+    internal.research.actions.internalStartFormat.internalStartFormat,
     {
       jobId,
       mode,

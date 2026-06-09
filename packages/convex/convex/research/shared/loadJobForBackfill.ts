@@ -8,7 +8,7 @@ export async function loadJobForBackfill(
   jobId: Id<"researchJobs">
 ): Promise<{ _id: Id<"researchJobs">; status: string; result?: string }> {
   const job = await ctx.runQuery(
-    internal.research.queries.getJobInternal.getJobInternal,
+    internal.research.queries.internalGetJob.internalGetJob,
     { id: jobId }
   );
   if (!job) {
