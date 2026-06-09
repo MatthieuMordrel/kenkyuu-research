@@ -11,6 +11,27 @@ import type { ResearchModelDefinition } from "./types";
  * Set active: true to expose the model in UI pickers.
  */
 export const RESEARCH_MODELS = {
+  "anthropic/claude-fable-5": {
+    id: "anthropic/claude-fable-5",
+    providerId: "anthropic",
+    label: "Claude Fable 5",
+    description:
+      "Anthropic's most powerful model, a tier above Opus — batch API with adaptive thinking and web search.",
+    apiModel: "claude-fable-5",
+    active: true,
+    completionMode: "polling",
+    estimatedCostLabel: "~$2–4",
+    pricing: {
+      inputPerM: 5,
+      outputPerM: 25,
+      webSearchPerCall: 0.01,
+    },
+    anthropic: {
+      effort: "xhigh",
+      webSearchMaxUses: 100,
+      thinkingType: "adaptive",
+    },
+  },
   "anthropic/claude-opus-4-8": {
     id: "anthropic/claude-opus-4-8",
     providerId: "anthropic",

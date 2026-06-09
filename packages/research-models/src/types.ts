@@ -10,6 +10,7 @@ export type ProviderId = "openai" | "anthropic";
  * Stored on prompts, jobs, schedules, and cost logs.
  */
 export type ResearchModelId =
+  | "anthropic/claude-fable-5"
   | "anthropic/claude-opus-4-8"
   | "openai/o3-deep-research"
   | "openai/o4-mini-deep-research"
@@ -46,7 +47,7 @@ export type AnthropicEffort = "low" | "medium" | "high" | "xhigh";
  * Per-model Anthropic Batch API runtime settings.
  * @property effort - Adaptive thinking depth
  * @property webSearchMaxUses - Cap on web search tool invocations
- * @property thinkingType - Thinking mode (adaptive for Opus 4.8)
+ * @property thinkingType - Thinking mode (adaptive for Fable 5 / Opus 4.8; "disabled" is rejected by Fable 5)
  */
 export interface AnthropicModelRuntimeConfig {
   effort: AnthropicEffort;
