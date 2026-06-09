@@ -2,7 +2,11 @@ import {
   formatModelDetailOption,
   getResearchModelDetailRows,
 } from "@repo/research-models/model-details";
-import type { ResearchModelDefinition } from "@repo/research-models/types";
+import { RESEARCH_HARNESSES } from "@repo/research-models/harnesses";
+import type {
+  ResearchHarnessId,
+  ResearchModelDefinition,
+} from "@repo/research-models/types";
 import { getResearchModel } from "@repo/research-models/resolve";
 import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -63,7 +67,12 @@ export function ResearchModelPicker({
                 )}
               />
               <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-sm font-medium">{model.label}</span>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate text-sm font-medium">
+                    {model.label}
+                  </span>
+                  <HarnessBadge harnessId={model.harnessId} />
+                </div>
                 <span className="text-xs text-muted-foreground line-clamp-2">
                   {model.description}
                 </span>
@@ -73,8 +82,36 @@ export function ResearchModelPicker({
         })}
       </div>
 
-      <ResearchModelDetailsPanel rows={detailRows} modelLabel={selectedModel.label} />
+      <ResearchModelDetailsPanel
+        rows={detailRows}
+        modelLabel={selectedModel.label}
+      />
     </div>
+  );
+}
+
+interface HarnessBadgeProps {
+  /** Harness id of the model card being rendered */
+  harnessId: ResearchHarnessId;
+}
+
+/**
+ * Chip distinguishing execution harnesses (direct API vs hosted agent) on
+ * model cards. Rendered on every card so dimensions stay identical.
+ */
+function HarnessBadge({ harnessId }: HarnessBadgeProps) {
+  const harness = RESEARCH_HARNESSES[harnessId];
+  return (
+    <span
+      className={cn(
+        "shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-medium leading-none",
+        harness.kind === "agent"
+          ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+          : "bg-muted text-muted-foreground ring-1 ring-border/60"
+      )}
+    >
+      {harness.label}
+    </span>
   );
 }
 
@@ -131,7 +168,10 @@ interface ModelDetailOptionChipsProps {
 /**
  * Renders enum-like model settings as chips, highlighting the active value.
  */
-function ModelDetailOptionChips({ options, active }: ModelDetailOptionChipsProps) {
+function ModelDetailOptionChips({
+  options,
+  active,
+}: ModelDetailOptionChipsProps) {
   return (
     <div className="flex flex-wrap gap-1">
       {options.map((option) => {

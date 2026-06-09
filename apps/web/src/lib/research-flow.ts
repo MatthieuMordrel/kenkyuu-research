@@ -194,6 +194,10 @@ export function getResearchToolUsageLabel(
 ): string | null {
   if (count == null) return null;
   const model = getResearchModel(modelId);
+  // Managed-agent sessions count all tool invocations with no fixed allocation.
+  if (model.harnessId === "anthropic-managed-agents") {
+    return `${count} tool calls`;
+  }
   const noun = model.providerId === "anthropic" ? "searches" : "tool calls";
   const limit = model.anthropic?.webSearchMaxUses ?? model.openai?.maxToolCalls;
   return limit != null ? `${count} / ${limit} ${noun}` : `${count} ${noun}`;

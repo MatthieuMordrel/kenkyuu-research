@@ -16,6 +16,10 @@
       "types": "./src/providers.ts",
       "import": "./src/providers.ts"
     },
+    "./harnesses": {
+      "types": "./src/harnesses.ts",
+      "import": "./src/harnesses.ts"
+    },
     "./pricing": {
       "types": "./src/pricing.ts",
       "import": "./src/pricing.ts"
@@ -39,6 +43,10 @@
     "./research-prompt": {
       "types": "./src/research-prompt.ts",
       "import": "./src/research-prompt.ts"
+    },
+    "./managed-agent-prompt": {
+      "types": "./src/managed-agent-prompt.ts",
+      "import": "./src/managed-agent-prompt.ts"
     }
   },
   "scripts": {

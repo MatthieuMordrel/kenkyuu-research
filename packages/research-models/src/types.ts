@@ -11,10 +11,44 @@ export type ProviderId = "openai" | "anthropic";
  */
 export type ResearchModelId =
   | "anthropic/claude-fable-5"
+  | "anthropic/claude-fable-5-agent"
   | "anthropic/claude-opus-4-8"
   | "openai/o3-deep-research"
   | "openai/o4-mini-deep-research"
   | "openai/gpt-5.5";
+
+/**
+ * Execution engine that runs a research job. Each harness has its own SDK
+ * call shape and adapter; multiple models can share one harness.
+ * @property anthropic-batch - Single autonomous loop via the Anthropic Batch API
+ * @property openai-responses - Single autonomous loop via the OpenAI Responses API
+ * @property anthropic-managed-agents - Anthropic-hosted agent harness (sessions, subagents, outcomes)
+ */
+export type ResearchHarnessId =
+  | "anthropic-batch"
+  | "openai-responses"
+  | "anthropic-managed-agents";
+
+/**
+ * Broad harness category used for UI grouping and badge styling.
+ * @property api - One model request; the provider runs a single autonomous loop
+ * @property agent - Hosted agentic harness with tools, subagents, and iteration
+ */
+export type ResearchHarnessKind = "api" | "agent";
+
+/**
+ * Metadata for one execution harness.
+ * @property id - Harness id referenced by models
+ * @property kind - Category for UI grouping/badges
+ * @property label - Short badge text (e.g. "Batch API", "Managed Agent")
+ * @property description - One-line explanation shown in pickers
+ */
+export interface ResearchHarnessDefinition {
+  id: ResearchHarnessId;
+  kind: ResearchHarnessKind;
+  label: string;
+  description: string;
+}
 
 /** OpenAI reasoning effort levels for Responses API models. */
 export type OpenAIReasoningEffort =
@@ -55,6 +89,28 @@ export interface AnthropicModelRuntimeConfig {
   thinkingType: "adaptive" | "enabled" | "disabled";
 }
 
+/**
+ * Per-model Managed Agents (Anthropic-hosted agent harness) runtime settings.
+ * Thinking and context management are handled by the harness itself and are
+ * not configurable here.
+ * @property coordinatorModel - API model string for the coordinator agent
+ * @property researcherModel - API model string for parallel researcher subagents
+ * @property maxSubagents - Researcher copies the coordinator may run in parallel (≤20)
+ * @property outcomeMaxIterations - Grade-and-revise loop cap (1–20); main quality/cost dial
+ * @property webSearch - Enable the built-in web_search tool
+ * @property webFetch - Enable the built-in web_fetch tool
+ * @property networking - Container egress policy for the session sandbox
+ */
+export interface ManagedAgentRuntimeConfig {
+  coordinatorModel: string;
+  researcherModel: string;
+  maxSubagents: number;
+  outcomeMaxIterations: number;
+  webSearch: boolean;
+  webFetch: boolean;
+  networking: "unrestricted" | "limited";
+}
+
 /** How job completion is detected for a model integration. */
 export type CompletionMode = "webhook" | "polling";
 
@@ -63,17 +119,20 @@ export type CompletionMode = "webhook" | "polling";
  * @property inputPerM - Cost per million input tokens
  * @property outputPerM - Cost per million output tokens
  * @property webSearchPerCall - Optional per-search surcharge
+ * @property sessionPerHour - Optional hosted-session surcharge (Managed Agents)
  */
 export interface ModelPricing {
   inputPerM: number;
   outputPerM: number;
   webSearchPerCall?: number;
+  sessionPerHour?: number;
 }
 
 /**
  * Metadata for one selectable research model.
  * @property id - Registry id persisted in Convex
- * @property providerId - Vendor that executes this model
+ * @property providerId - Vendor that executes this model (API key scope)
+ * @property harnessId - Execution engine that runs the job (adapter dispatch)
  * @property label - Human-readable name for UI
  * @property description - Short capability summary for pickers
  * @property apiModel - Provider API model string passed to the SDK
@@ -81,12 +140,14 @@ export interface ModelPricing {
  * @property completionMode - Webhook vs polling completion strategy
  * @property estimatedCostLabel - Rough cost range shown in the wizard
  * @property pricing - Rates used by estimateModelCost
- * @property openai - OpenAI-specific runtime parameters (when providerId is openai)
- * @property anthropic - Anthropic-specific runtime parameters (when providerId is anthropic)
+ * @property openai - OpenAI-specific runtime parameters (when harnessId is openai-responses)
+ * @property anthropic - Anthropic-specific runtime parameters (when harnessId is anthropic-batch)
+ * @property managedAgent - Managed Agents runtime parameters (when harnessId is anthropic-managed-agents)
  */
 export interface ResearchModelDefinition {
   id: ResearchModelId;
   providerId: ProviderId;
+  harnessId: ResearchHarnessId;
   label: string;
   description: string;
   apiModel: string;
@@ -96,6 +157,7 @@ export interface ResearchModelDefinition {
   pricing: ModelPricing;
   openai?: OpenAIModelRuntimeConfig;
   anthropic?: AnthropicModelRuntimeConfig;
+  managedAgent?: ManagedAgentRuntimeConfig;
 }
 
 /**
@@ -115,4 +177,6 @@ export interface NormalizedUsage {
   inputTokens: number;
   outputTokens: number;
   webSearchRequests?: number;
+  /** Wall-clock duration; only used when pricing has a session-hour surcharge. */
+  durationMs?: number;
 }

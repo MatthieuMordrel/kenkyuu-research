@@ -30,7 +30,10 @@ export {
   resolveStoredModelId,
 } from "@repo/research-models/resolve";
 
-export { RESEARCH_MODELS, RESEARCH_MODEL_IDS } from "@repo/research-models/models";
+export {
+  RESEARCH_MODELS,
+  RESEARCH_MODEL_IDS,
+} from "@repo/research-models/models";
 export { RESEARCH_PROVIDERS } from "@repo/research-models/providers";
 export { estimateModelCost } from "@repo/research-models/pricing";
 
@@ -50,8 +53,8 @@ export const SETTING_KEY_BY_PROVIDER: Record<ProviderName, string> = {
 };
 
 /** Providers that currently have at least one active model. */
-export const ACTIVE_PROVIDER_NAMES = RESEARCH_PROVIDER_IDS.filter(
-  (id) => isProviderActive(id)
+export const ACTIVE_PROVIDER_NAMES = RESEARCH_PROVIDER_IDS.filter((id) =>
+  isProviderActive(id)
 ) as ProviderName[];
 
 export type ActiveProviderName = (typeof ACTIVE_PROVIDER_NAMES)[number];

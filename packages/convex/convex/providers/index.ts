@@ -1,25 +1,32 @@
 "use node";
 
-import { getResearchModel, resolveStoredModelId } from "@repo/research-models/resolve";
-import type { ResearchModelDefinition } from "@repo/research-models/types";
-import type { ProviderId } from "@repo/research-models/types";
+import {
+  getResearchModel,
+  resolveStoredModelId,
+} from "@repo/research-models/resolve";
+import type {
+  ResearchHarnessId,
+  ResearchModelDefinition,
+} from "@repo/research-models/types";
 import { anthropicAdapter } from "./anthropic";
+import { anthropicManagedAgentsAdapter } from "./anthropicManagedAgents";
 import { openaiAdapter } from "./openai";
 import type { ResearchProviderAdapter } from "./types";
 import type { ProviderName } from "./constants";
 
-const ADAPTERS: Record<ProviderId, ResearchProviderAdapter> = {
-  openai: openaiAdapter,
-  anthropic: anthropicAdapter,
+const ADAPTERS: Record<ResearchHarnessId, ResearchProviderAdapter> = {
+  "openai-responses": openaiAdapter,
+  "anthropic-batch": anthropicAdapter,
+  "anthropic-managed-agents": anthropicManagedAgentsAdapter,
 };
 
 /**
- * Returns the SDK adapter for a vendor.
+ * Returns the execution adapter for a model's harness.
  */
-export function getProviderAdapter(
-  providerId: ProviderId
+export function getHarnessAdapter(
+  model: Pick<ResearchModelDefinition, "harnessId">
 ): ResearchProviderAdapter {
-  return ADAPTERS[providerId];
+  return ADAPTERS[model.harnessId];
 }
 
 /**
@@ -33,13 +40,11 @@ export function resolveJobModel(args: {
   return getResearchModel(modelId);
 }
 
-/** @deprecated Use getProviderAdapter */
-export function getProvider(name: ProviderName): ResearchProviderAdapter {
-  return getProviderAdapter(name);
-}
-
-export type { ResearchProviderAdapter, PollResult, NormalizedUsage } from "./types";
-export type { ResearchProvider } from "./types";
+export type {
+  ResearchProviderAdapter,
+  PollResult,
+  NormalizedUsage,
+} from "./types";
 export {
   ACTIVE_PROVIDER_NAMES,
   assertModelActive,
@@ -62,4 +67,8 @@ export {
   RESEARCH_PROVIDERS,
   SETTING_KEY_BY_PROVIDER,
 } from "./constants";
-export type { ActiveProviderName, ProviderName, ResearchModelId } from "./constants";
+export type {
+  ActiveProviderName,
+  ProviderName,
+  ResearchModelId,
+} from "./constants";

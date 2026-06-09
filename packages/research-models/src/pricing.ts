@@ -27,5 +27,7 @@ export function estimateCostFromPricing(
     1_000_000;
   const searchCost =
     (usage.webSearchRequests ?? 0) * (pricing.webSearchPerCall ?? 0);
-  return tokenCost + searchCost;
+  const sessionCost =
+    ((usage.durationMs ?? 0) / 3_600_000) * (pricing.sessionPerHour ?? 0);
+  return tokenCost + searchCost + sessionCost;
 }

@@ -7,13 +7,14 @@ import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import {
   estimateModelCost,
-  getProviderAdapter,
+  getHarnessAdapter,
   getSettingsKeyForProvider,
   resolveJobModel,
   RESEARCH_PROVIDERS,
   type PollResult,
   type ProviderName,
 } from "./providers";
+import { RESEARCH_HARNESSES } from "@repo/research-models/harnesses";
 import type { ResearchModelDefinition } from "@repo/research-models/types";
 import { BUDGET_REACHED_MESSAGE } from "./costTracking";
 import {
@@ -35,8 +36,16 @@ function sleep(ms: number): Promise<void> {
 const POLL_INITIAL_DELAY_MS = 30_000;
 const POLL_MAX_DELAY_MS = 5 * 60_000;
 const POLL_BACKOFF = 1.5;
-// Hard timeout after which a still-running job is marked failed.
+// Hard timeout after which a still-running job is marked failed. Agentic
+// harnesses iterate produce → grade → revise, so they get more headroom.
 const JOB_HARD_TIMEOUT_MS = 90 * 60_000;
+const AGENT_JOB_HARD_TIMEOUT_MS = 150 * 60_000;
+
+function jobHardTimeoutMs(model: ResearchModelDefinition): number {
+  return RESEARCH_HARNESSES[model.harnessId].kind === "agent"
+    ? AGENT_JOB_HARD_TIMEOUT_MS
+    : JOB_HARD_TIMEOUT_MS;
+}
 // Stale threshold for the recovery cron (runs every 15 min).
 const STALE_JOB_THRESHOLD_MS = 30 * 60_000;
 
@@ -69,7 +78,8 @@ async function applyCompletedResult(
 ) {
   const costUsd = estimateModelCost(model, result.usage);
   const durationMs = Date.now() - job.createdAt;
-  const toolCallCount = result.usage.toolCalls ?? result.usage.webSearchRequests;
+  const toolCallCount =
+    result.usage.toolCalls ?? result.usage.webSearchRequests;
 
   await ctx.runMutation(internal.researchJobs.beginFormattingPhase, {
     id: job._id,
@@ -202,7 +212,7 @@ export const startResearch = internalAction({
       }
     }
 
-    const adapter = getProviderAdapter(model.providerId);
+    const adapter = getHarnessAdapter(model);
     const apiKey = await getProviderApiKey(ctx, model.providerId);
     if (!apiKey) {
       await ctx.runMutation(internal.researchJobs.updateJobStatus, {
@@ -259,7 +269,9 @@ async function resolvePrompt(
   return job.promptSnapshot
     .replaceAll(
       "{{STOCKS}}",
-      valid.map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`).join(", ")
+      valid
+        .map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`)
+        .join(", ")
     )
     .replaceAll(
       "{{TICKER}}",
@@ -335,7 +347,7 @@ export const pollJob = internalAction({
     if (!job.externalJobId) return;
 
     const model = resolveJobModel(job);
-    const adapter = getProviderAdapter(model.providerId);
+    const adapter = getHarnessAdapter(model);
     const apiKey = await getProviderApiKey(ctx, model.providerId);
     if (!apiKey) {
       await ctx.runMutation(internal.researchJobs.updateJobStatus, {
@@ -384,11 +396,12 @@ async function maybeTimeoutOrReschedule(
   job: Doc<"researchJobs">,
   currentDelayMs: number | undefined
 ) {
-  if (Date.now() - job.createdAt > JOB_HARD_TIMEOUT_MS) {
+  const timeoutMs = jobHardTimeoutMs(resolveJobModel(job));
+  if (Date.now() - job.createdAt > timeoutMs) {
     await applyFailedResult(
       ctx,
       job,
-      `Job timed out after ${Math.round(JOB_HARD_TIMEOUT_MS / 60_000)} minutes`,
+      `Job timed out after ${Math.round(timeoutMs / 60_000)} minutes`,
       { retryable: false }
     );
     return;
@@ -403,11 +416,10 @@ async function maybeTimeoutOrReschedule(
     Math.round(currentDelayMs * POLL_BACKOFF),
     POLL_MAX_DELAY_MS
   );
-  await ctx.scheduler.runAfter(
+  await ctx.scheduler.runAfter(nextDelayMs, internal.researchActions.pollJob, {
+    jobId: job._id,
     nextDelayMs,
-    internal.researchActions.pollJob,
-    { jobId: job._id, nextDelayMs }
-  );
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -516,7 +528,7 @@ export const checkJobHealth = action({
     }
 
     const model = resolveJobModel(job);
-    const adapter = getProviderAdapter(model.providerId);
+    const adapter = getHarnessAdapter(model);
     const apiKey = await getProviderApiKey(ctx, model.providerId);
     if (!apiKey) {
       return {

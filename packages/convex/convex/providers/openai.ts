@@ -21,9 +21,7 @@ function renderOutputTextWithCitations(
 ): string {
   const citations = part.annotations
     .filter(
-      (
-        annotation
-      ): annotation is ResponseOutputText.URLCitation =>
+      (annotation): annotation is ResponseOutputText.URLCitation =>
         annotation.type === "url_citation"
     )
     .filter(
@@ -50,10 +48,14 @@ function renderOutputTextWithCitations(
 
   const ranges = Array.from(grouped.entries())
     .map(([key, group]) => {
-      const [start, end] = key.split(":").map((value) => Number.parseInt(value, 10));
+      const [start, end] = key
+        .split(":")
+        .map((value) => Number.parseInt(value, 10));
       return { start, end, citations: group };
     })
-    .toSorted((left, right) => left.start - right.start || left.end - right.end);
+    .toSorted(
+      (left, right) => left.start - right.start || left.end - right.end
+    );
 
   let cursor = 0;
   const rendered: string[] = [];
@@ -162,6 +164,7 @@ export function buildOpenAIResponseCreateParams(
 
 export const openaiAdapter: ResearchProviderAdapter = {
   providerId: "openai",
+  harnessId: "openai-responses",
 
   async start(model, prompt, apiKey) {
     const client = new OpenAI({ apiKey });
@@ -180,9 +183,6 @@ export const openaiAdapter: ResearchProviderAdapter = {
     return mapOpenAIResponseToPollResult(response, renderResearchMarkdown);
   },
 };
-
-/** @deprecated Use openaiAdapter */
-export const openaiProvider = openaiAdapter;
 
 /** @internal Exported for testing — uses o3-deep-research registry pricing */
 export function estimateOpenAICost(

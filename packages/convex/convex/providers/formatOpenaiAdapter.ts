@@ -10,7 +10,8 @@ import {
 import type { PollResult } from "./types";
 
 /** Responses create body for background format jobs (no tools). */
-type FormatResponseCreateBody = OpenAI.Responses.ResponseCreateParamsNonStreaming;
+type FormatResponseCreateBody =
+  OpenAI.Responses.ResponseCreateParamsNonStreaming;
 
 /**
  * Builds OpenAI Responses API params for the post-research formatting pass.

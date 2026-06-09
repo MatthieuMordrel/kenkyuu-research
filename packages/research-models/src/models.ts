@@ -3,10 +3,12 @@ import type { ResearchModelDefinition } from "./types";
 /**
  * Research model registry — single source of truth for selectable models.
  *
+ * Each entry is one (model × harness) combination shown as a card in pickers.
  * To add a model:
  * 1. Add a ResearchModelId in types.ts
- * 2. Add an entry below with pricing, apiModel, and completionMode
- * 3. If the vendor SDK call shape differs, extend the matching provider adapter
+ * 2. Add an entry below with harnessId, pricing, apiModel, and completionMode
+ * 3. If the execution shape differs, add a harness in harnesses.ts and a
+ *    matching adapter in the convex providers folder
  *
  * Set active: true to expose the model in UI pickers.
  */
@@ -14,6 +16,7 @@ export const RESEARCH_MODELS = {
   "anthropic/claude-fable-5": {
     id: "anthropic/claude-fable-5",
     providerId: "anthropic",
+    harnessId: "anthropic-batch",
     label: "Claude Fable 5",
     description:
       "Anthropic's most powerful model, a tier above Opus — batch API with adaptive thinking and web search.",
@@ -32,9 +35,39 @@ export const RESEARCH_MODELS = {
       thinkingType: "adaptive",
     },
   },
+  "anthropic/claude-fable-5-agent": {
+    id: "anthropic/claude-fable-5-agent",
+    providerId: "anthropic",
+    harnessId: "anthropic-managed-agents",
+    label: "Fable 5 · Deep Agent",
+    description:
+      "Fable 5 coordinating parallel researcher subagents in Anthropic's hosted agent harness, with a rubric-graded revise loop.",
+    apiModel: "claude-fable-5",
+    active: true,
+    completionMode: "polling",
+    estimatedCostLabel: "~$5–15",
+    pricing: {
+      inputPerM: 10,
+      outputPerM: 50,
+      webSearchPerCall: 0.01,
+      sessionPerHour: 0.08,
+    },
+    managedAgent: {
+      coordinatorModel: "claude-fable-5",
+      researcherModel: "claude-sonnet-4-6",
+      maxSubagents: 5,
+      outcomeMaxIterations: 3,
+      webSearch: true,
+      webFetch: true,
+      // web_fetch pulls arbitrary research sources from inside the container,
+      // so the session sandbox needs open egress.
+      networking: "unrestricted",
+    },
+  },
   "anthropic/claude-opus-4-8": {
     id: "anthropic/claude-opus-4-8",
     providerId: "anthropic",
+    harnessId: "anthropic-batch",
     label: "Claude Opus 4.8",
     description:
       "Anthropic's most capable model — batch API with adaptive thinking and web search.",
@@ -56,6 +89,7 @@ export const RESEARCH_MODELS = {
   "openai/o3-deep-research": {
     id: "openai/o3-deep-research",
     providerId: "openai",
+    harnessId: "openai-responses",
     label: "OpenAI Deep Research (o3)",
     description:
       "OpenAI o3 deep-research via the Responses API with web search and code interpreter.",
@@ -71,6 +105,7 @@ export const RESEARCH_MODELS = {
   "openai/o4-mini-deep-research": {
     id: "openai/o4-mini-deep-research",
     providerId: "openai",
+    harnessId: "openai-responses",
     label: "OpenAI Deep Research (o4-mini)",
     description:
       "Placeholder for a future OpenAI deep-research model — enable when available.",
@@ -86,6 +121,7 @@ export const RESEARCH_MODELS = {
   "openai/gpt-5.5": {
     id: "openai/gpt-5.5",
     providerId: "openai",
+    harnessId: "openai-responses",
     label: "GPT-5.5",
     description:
       "OpenAI's latest frontier model — xhigh reasoning with deep web search for long-form research.",

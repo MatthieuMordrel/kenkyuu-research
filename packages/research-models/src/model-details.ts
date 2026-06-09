@@ -1,3 +1,4 @@
+import { RESEARCH_HARNESSES } from "./harnesses";
 import { RESEARCH_PROVIDERS } from "./providers";
 import type {
   AnthropicEffort,
@@ -55,11 +56,6 @@ export function formatModelDetailOption(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-/** Capitalize the first letter of a slug-like value. */
-function titleCase(value: string): string {
-  return formatModelDetailOption(value);
-}
-
 /**
  * Build human-readable configuration rows for a research model.
  * Used by the research wizard and prompt modal when a model is selected.
@@ -71,6 +67,10 @@ export function getResearchModelDetailRows(
     {
       label: "Provider",
       value: RESEARCH_PROVIDERS[model.providerId].label,
+    },
+    {
+      label: "Harness",
+      value: RESEARCH_HARNESSES[model.harnessId].label,
     },
     {
       label: "Est. cost",
@@ -100,8 +100,10 @@ export function getResearchModelDetailRows(
           ? "Web search"
           : "Web search (preview)";
       const searchValue = model.openai.webSearchContextSize
-        ? `${titleCase(model.openai.webSearchContextSize)} context`
-        : titleCase(model.openai.webSearchTool.replace(/_/g, " "));
+        ? `${formatModelDetailOption(model.openai.webSearchContextSize)} context`
+        : formatModelDetailOption(
+            model.openai.webSearchTool.replace(/_/g, " ")
+          );
       rows.push({ label: searchLabel, value: searchValue });
     }
   }
@@ -124,6 +126,39 @@ export function getResearchModelDetailRows(
     rows.push({
       label: "Max output tokens",
       value: MODEL_MAX_OUTPUT_TOKENS_LABEL,
+    });
+  }
+
+  if (model.managedAgent) {
+    rows.push({
+      label: "Coordinator model",
+      value: model.managedAgent.coordinatorModel,
+    });
+    rows.push({
+      label: "Researcher model",
+      value: model.managedAgent.researcherModel,
+    });
+    rows.push({
+      label: "Parallel researchers",
+      value: formatCount(model.managedAgent.maxSubagents),
+    });
+    rows.push({
+      label: "Review iterations",
+      value: formatCount(model.managedAgent.outcomeMaxIterations),
+    });
+    rows.push({
+      label: "Tools",
+      value: [
+        model.managedAgent.webSearch ? "Web search" : null,
+        model.managedAgent.webFetch ? "Web fetch" : null,
+        "Bash + files",
+      ]
+        .filter(Boolean)
+        .join(", "),
+    });
+    rows.push({
+      label: "Thinking",
+      value: "Managed by harness",
     });
   }
 

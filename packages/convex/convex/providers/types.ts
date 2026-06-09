@@ -1,15 +1,15 @@
-import type { ResearchModelDefinition } from "@repo/research-models/types";
-import type { ProviderId } from "@repo/research-models/types";
+import type {
+  NormalizedUsage as RegistryNormalizedUsage,
+  ProviderId,
+  ResearchHarnessId,
+  ResearchModelDefinition,
+} from "@repo/research-models/types";
 
 /**
- * Minimal usage shape normalized across providers for cost estimation.
- * Providers extract these fields from their native response payloads.
+ * Usage shape normalized across providers. Extends the registry's cost
+ * estimation fields (tokens, searches, duration) with display-only stats.
  */
-export interface NormalizedUsage {
-  inputTokens: number;
-  outputTokens: number;
-  /** Number of server-side web searches performed. Only some providers bill this. */
-  webSearchRequests?: number;
+export interface NormalizedUsage extends RegistryNormalizedUsage {
   /**
    * Total tool/web-search invocations the provider performed, for usage display
    * against the model's configured allocation. May exceed webSearchRequests when
@@ -30,12 +30,13 @@ export type PollResult =
   | { status: "cancelled" };
 
 /**
- * Vendor adapter — one implementation per external AI SDK.
+ * Harness adapter — one implementation per execution engine (SDK call shape).
  * Model-specific API parameters live in the registry; adapters receive the
- * resolved model definition at runtime.
+ * resolved model definition at runtime. The providerId scopes API key lookup.
  */
 export interface ResearchProviderAdapter {
   readonly providerId: ProviderId;
+  readonly harnessId: ResearchHarnessId;
 
   /**
    * Submit a research prompt for the given model.
@@ -55,15 +56,3 @@ export interface ResearchProviderAdapter {
     apiKey: string
   ): Promise<PollResult>;
 }
-
-/** @deprecated Use ResearchProviderAdapter */
-export type ResearchProvider = ResearchProviderAdapter & {
-  readonly name: ProviderId;
-  readonly completionMode: ResearchModelDefinition["completionMode"];
-  start(prompt: string, apiKey: string): Promise<{
-    externalId: string;
-    submittedPrompt?: string;
-  }>;
-  poll(externalId: string, apiKey: string): Promise<PollResult>;
-  estimateCost(usage: NormalizedUsage): number;
-};

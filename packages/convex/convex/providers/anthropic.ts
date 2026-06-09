@@ -14,7 +14,9 @@ import { resolveAnthropicMaxOutputTokens } from "./anthropicModelLimits";
 
 /** Map registry thinking type to Anthropic SDK thinking config. */
 function buildThinkingConfig(
-  thinkingType: NonNullable<ResearchModelDefinition["anthropic"]>["thinkingType"]
+  thinkingType: NonNullable<
+    ResearchModelDefinition["anthropic"]
+  >["thinkingType"]
 ): Anthropic.Messages.MessageCreateParams["thinking"] {
   switch (thinkingType) {
     case "adaptive":
@@ -32,6 +34,7 @@ const RESEARCH_BATCH_REQUEST_ID = "research";
 
 export const anthropicAdapter: ResearchProviderAdapter = {
   providerId: "anthropic",
+  harnessId: "anthropic-batch",
 
   async start(model, prompt, apiKey) {
     const runtime = model.anthropic;
@@ -40,7 +43,10 @@ export const anthropicAdapter: ResearchProviderAdapter = {
     }
 
     const client = new Anthropic({ apiKey });
-    const maxTokens = await resolveAnthropicMaxOutputTokens(client, model.apiModel);
+    const maxTokens = await resolveAnthropicMaxOutputTokens(
+      client,
+      model.apiModel
+    );
     const batch = await client.messages.batches.create({
       requests: [
         {
@@ -99,8 +105,7 @@ export const anthropicAdapter: ResearchProviderAdapter = {
             outputTokens: message.usage.output_tokens,
             webSearchRequests:
               message.usage.server_tool_use?.web_search_requests ?? 0,
-            toolCalls:
-              message.usage.server_tool_use?.web_search_requests ?? 0,
+            toolCalls: message.usage.server_tool_use?.web_search_requests ?? 0,
           },
         };
       }
@@ -120,10 +125,9 @@ export const anthropicAdapter: ResearchProviderAdapter = {
   },
 };
 
-/** @deprecated Use anthropicAdapter */
-export const anthropicProvider = anthropicAdapter;
-
 /** @internal Exported for testing — uses opus registry pricing */
-export function estimateAnthropicCost(usage: import("./types").NormalizedUsage): number {
+export function estimateAnthropicCost(
+  usage: import("./types").NormalizedUsage
+): number {
   return estimateModelCost(RESEARCH_MODELS["anthropic/claude-opus-4-8"], usage);
 }

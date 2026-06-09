@@ -24,7 +24,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.91.0",
+    "@anthropic-ai/sdk": "^0.104.0",
     "@repo/research-models": "workspace:*",
     "bcryptjs": "^3.0.3",
     "convex": "^1.35.1",
