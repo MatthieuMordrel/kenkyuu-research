@@ -24,7 +24,7 @@ export function useResearchJobs(options: UseResearchJobsOptions = {}) {
   const { status, stockId, promptId } = options;
   const { data } = useQuery(
     convexQuery(
-      api.researchJobs.listJobs,
+      api.research.queries.listJobs.listJobs,
       token
         ? {
             status: status || undefined,
@@ -41,7 +41,10 @@ export function useResearchJobs(options: UseResearchJobsOptions = {}) {
 export function useResearchJob(id: GenericId<"researchJobs">) {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.researchJobs.getJob, token ? { id, token } : "skip")
+    convexQuery(
+      api.research.queries.getJob.getJob,
+      token ? { id, token } : "skip"
+    )
   );
   return data;
 }
@@ -49,7 +52,10 @@ export function useResearchJob(id: GenericId<"researchJobs">) {
 export function useActiveJobs() {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.researchJobs.getActiveJobs, token ? { token } : "skip")
+    convexQuery(
+      api.research.queries.getActiveJobs.getActiveJobs,
+      token ? { token } : "skip"
+    )
   );
   return data;
 }
@@ -58,7 +64,9 @@ export function useActiveJobs() {
 
 export function useStartResearch() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.researchJobs.createAndStartResearch);
+  const mutation = useConvexMutation(
+    api.research.mutations.createAndStartResearch.createAndStartResearch
+  );
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
@@ -68,7 +76,9 @@ export function useStartResearch() {
 
 export function useCancelJob() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.researchJobs.cancelJob);
+  const mutation = useConvexMutation(
+    api.research.mutations.cancelJob.cancelJob
+  );
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
@@ -78,7 +88,7 @@ export function useCancelJob() {
 
 export function useRetryJob() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.researchJobs.retryJob);
+  const mutation = useConvexMutation(api.research.mutations.retryJob.retryJob);
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
@@ -88,7 +98,9 @@ export function useRetryJob() {
 
 export function useCheckJobHealth() {
   const token = useAuthToken();
-  const checkHealth = useConvexAction(api.researchActions.checkJobHealth);
+  const checkHealth = useConvexAction(
+    api.research.actions.checkJobHealth.checkJobHealth
+  );
   return useCallback(
     (args: { jobId: GenericId<"researchJobs"> }) =>
       checkHealth({ jobId: args.jobId, token: token ?? undefined }),
@@ -98,7 +110,9 @@ export function useCheckJobHealth() {
 
 export function useDeleteJob() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.researchJobs.deleteJob);
+  const mutation = useConvexMutation(
+    api.research.mutations.deleteJob.deleteJob
+  );
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),

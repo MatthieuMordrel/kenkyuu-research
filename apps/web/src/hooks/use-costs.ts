@@ -11,7 +11,7 @@ interface UseMonthlyCostOptions {
 export function useMonthlyCost(options: UseMonthlyCostOptions = {}) {
   const token = useAuthToken();
   return useQuery(
-    api.costTracking.getMonthlyCost,
+    api.costTracking.queries.getMonthlyCost.getMonthlyCost,
     token ? { monthTimestamp: options.monthTimestamp, token } : "skip"
   );
 }
@@ -23,7 +23,7 @@ interface UseCostHistoryOptions {
 export function useCostHistory(options: UseCostHistoryOptions = {}) {
   const token = useAuthToken();
   return useQuery(
-    api.costTracking.getCostHistory,
+    api.costTracking.queries.getCostHistory.getCostHistory,
     token ? { months: options.months, token } : "skip"
   );
 }
@@ -36,7 +36,7 @@ interface UseCostByProviderOptions {
 export function useCostByProvider(options: UseCostByProviderOptions = {}) {
   const token = useAuthToken();
   return useQuery(
-    api.costTracking.getCostByProvider,
+    api.costTracking.queries.getCostByProvider.getCostByProvider,
     token ? { from: options.from, to: options.to, token } : "skip"
   );
 }

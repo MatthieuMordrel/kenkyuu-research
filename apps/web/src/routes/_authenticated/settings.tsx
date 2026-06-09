@@ -240,8 +240,12 @@ function ApiKeysSection() {
 
 function TelegramSection() {
   const token = useAuthToken();
-  const sendTestTelegram = useAction(api.notifications.sendTestTelegram);
-  const detectChatId = useAction(api.notifications.detectTelegramChatId);
+  const sendTestTelegram = useAction(
+    api.notifications.actions.sendTestTelegram.sendTestTelegram
+  );
+  const detectChatId = useAction(
+    api.notifications.actions.detectTelegramChatId.detectTelegramChatId
+  );
   const updateSetting = useUpdateSetting();
   const chatIdValue = useSettings("telegram_chat_id");
   const [testing, setTesting] = useState(false);
@@ -386,7 +390,9 @@ function TelegramSection() {
 
 function EmailSection() {
   const token = useAuthToken();
-  const sendTestEmail = useAction(api.notifications.sendTestEmail);
+  const sendTestEmail = useAction(
+    api.notifications.actions.sendTestEmail.sendTestEmail
+  );
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
     type: "success" | "error";
@@ -532,7 +538,9 @@ function BudgetSection() {
 }
 
 function PasswordSection() {
-  const changePassword = useAction(api.auth.changePassword);
+  const changePassword = useAction(
+    api.auth.actions.changePassword.changePassword
+  );
   const token = useAuthToken();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");

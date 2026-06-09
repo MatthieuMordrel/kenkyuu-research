@@ -15,7 +15,7 @@ export const checkBudgetAlert = internalAction({
   handler: async (ctx, args): Promise<void> => {
     // Get the budget threshold from settings
     const thresholdStr: string | null = await ctx.runQuery(
-      internal.authHelpers.getSettingValue,
+      internal.auth.queries.getSettingValue.getSettingValue,
       { key: "budget_threshold" }
     );
 
@@ -26,7 +26,8 @@ export const checkBudgetAlert = internalAction({
 
     // Get the current month's total cost
     const monthlyCost = await ctx.runQuery(
-      internal.costTracking.getMonthlyCostInternal,
+      internal.costTracking.queries.getMonthlyCostInternal
+        .getMonthlyCostInternal,
       {}
     );
 
@@ -35,16 +36,19 @@ export const checkBudgetAlert = internalAction({
     // Check if we already sent an alert this month to avoid spamming
     const alertSentKey = `budget_alert_sent_${monthlyCost.monthStart}`;
     const alreadySent: string | null = await ctx.runQuery(
-      internal.authHelpers.getSettingValue,
+      internal.auth.queries.getSettingValue.getSettingValue,
       { key: alertSentKey }
     );
 
     if (alreadySent === "true") return;
 
     // Mark alert as sent for this month
-    await ctx.runMutation(internal.costTracking.markBudgetAlertSent, {
-      key: alertSentKey,
-    });
+    await ctx.runMutation(
+      internal.costTracking.mutations.markBudgetAlertSent.markBudgetAlertSent,
+      {
+        key: alertSentKey,
+      }
+    );
 
     // Build alert message
     const percentage = Math.round((monthlyCost.totalCost / threshold) * 100);
@@ -68,22 +72,25 @@ export const checkBudgetAlert = internalAction({
 
     // Check enabled channels and send
     const telegramEnabled: string | null = await ctx.runQuery(
-      internal.authHelpers.getSettingValue,
+      internal.auth.queries.getSettingValue.getSettingValue,
       { key: "notification_telegram_enabled" }
     );
     const emailEnabled: string | null = await ctx.runQuery(
-      internal.authHelpers.getSettingValue,
+      internal.auth.queries.getSettingValue.getSettingValue,
       { key: "notification_email_enabled" }
     );
 
     if (telegramEnabled === "true") {
-      await ctx.runAction(internal.notifications.sendTelegramMessage, {
-        text: telegramText,
-      });
+      await ctx.runAction(
+        internal.notifications.actions.sendTelegramMessage.sendTelegramMessage,
+        {
+          text: telegramText,
+        }
+      );
     }
 
     if (emailEnabled === "true") {
-      await ctx.runAction(internal.notifications.sendEmail, {
+      await ctx.runAction(internal.notifications.actions.sendEmail.sendEmail, {
         subject: `\u26a0\ufe0f Budget Alert: $${monthlyCost.totalCost.toFixed(2)} / $${threshold.toFixed(2)}`,
         html: htmlBody,
       });

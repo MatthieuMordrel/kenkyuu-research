@@ -9,7 +9,10 @@ import { useCallback } from "react";
 export function useSettings(key: string) {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.settings.getSetting, token ? { key, token } : "skip")
+    convexQuery(
+      api.settings.queries.getSetting.getSetting,
+      token ? { key, token } : "skip"
+    )
   );
   return data;
 }
@@ -18,7 +21,9 @@ export function useSettings(key: string) {
 
 export function useUpdateSetting() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.settings.upsertSetting);
+  const mutation = useConvexMutation(
+    api.settings.mutations.upsertSetting.upsertSetting
+  );
 
   return useCallback(
     async (args: { key: string; value: string }) => {

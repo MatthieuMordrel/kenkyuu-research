@@ -6,11 +6,11 @@ import { useAuthToken } from "@/lib/auth";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 export type SymbolSuggestion = FunctionReturnType<
-  typeof api.stockLookupActions.searchStockSymbols
+  typeof api.stocks.actions.searchStockSymbols.searchStockSymbols
 >["results"][number];
 
 export type ResolvedStockSymbol = FunctionReturnType<
-  typeof api.stockLookupActions.resolveStockSymbol
+  typeof api.stocks.actions.resolveStockSymbol.resolveStockSymbol
 >;
 
 const DEBOUNCE_MS = 300;
@@ -31,8 +31,12 @@ export function useStockSymbolLookup({
 }: UseStockSymbolLookupOptions) {
   const token = useAuthToken();
   const debouncedQuery = useDebouncedValue(query.trim(), DEBOUNCE_MS);
-  const searchAction = useAction(api.stockLookupActions.searchStockSymbols);
-  const resolveAction = useAction(api.stockLookupActions.resolveStockSymbol);
+  const searchAction = useAction(
+    api.stocks.actions.searchStockSymbols.searchStockSymbols
+  );
+  const resolveAction = useAction(
+    api.stocks.actions.resolveStockSymbol.resolveStockSymbol
+  );
 
   const searchQuery = useQuery({
     queryKey: ["stock-symbol-search", debouncedQuery],

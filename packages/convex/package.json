@@ -28,6 +28,7 @@
     "@repo/research-models": "workspace:*",
     "bcryptjs": "^3.0.3",
     "convex": "^1.35.1",
+    "convex-helpers": "^0.1.119",
     "openai": "^6.34.0"
   },
   "devDependencies": {

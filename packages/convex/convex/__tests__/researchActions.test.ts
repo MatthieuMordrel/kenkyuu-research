@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { estimateAnthropicCost } from "../providers/anthropic";
-import {
-  buildOpenAIResponseCreateParams,
-  estimateOpenAICost,
-  renderOpenAITextWithCitations,
-} from "../providers/openai";
+import { buildOpenAIResponseCreateParams } from "../providers/openai/buildOpenAIResponseCreateParams";
+import { estimateOpenAICost } from "../providers/openai/estimateOpenAICost";
+import { renderOutputTextWithCitations as renderOpenAITextWithCitations } from "../providers/openai/renderOutputTextWithCitations";
 import { RESEARCH_MODELS } from "@repo/research-models/models";
 
 describe("openai estimateCost", () => {

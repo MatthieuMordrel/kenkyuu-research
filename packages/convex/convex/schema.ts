@@ -1,8 +1,9 @@
 import { defineSchema, defineTable } from "convex/server";
+import { typedV } from "convex-helpers/validators";
 import { v } from "convex/values";
 import { providerValidator } from "./providers/constants";
 
-export default defineSchema({
+const schema = defineSchema({
   stocks: defineTable({
     ticker: v.string(),
     exchange: v.string(),
@@ -199,3 +200,8 @@ export default defineSchema({
     .index("by_timestamp", ["timestamp"])
     .index("by_action", ["action"]),
 });
+
+/** Schema-typed validator helper: `vv.id("table")` / `vv.doc("table")` (see validators-best-practices). */
+export const vv = typedV(schema);
+
+export default schema;

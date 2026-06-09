@@ -9,8 +9,10 @@ import {
   passesHeadingStructureGuard,
   MAX_FORMAT_ATTEMPTS,
 } from "../researchFormatCore";
-import { prepassResearchMarkdown } from "../researchFormatPrepass";
-import { prepassMarkdown } from "../researchFormat";
+import {
+  prepassResearchMarkdown,
+  prepassResearchMarkdown as prepassMarkdown,
+} from "../researchFormatPrepass";
 
 describe("prepassMarkdown", () => {
   it("strips thinking blocks and normalizes blank lines", () => {

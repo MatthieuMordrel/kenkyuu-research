@@ -12,7 +12,10 @@ import { useAuthToken } from "@/lib/auth";
 export function useRecentResearch() {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.dashboard.recentResearch, token ? { token } : "skip")
+    convexQuery(
+      api.dashboard.queries.recentResearch.recentResearch,
+      token ? { token } : "skip"
+    )
   );
   return data;
 }
@@ -21,7 +24,10 @@ export function useRecentResearch() {
 export function useUpcomingSchedules() {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.dashboard.upcomingSchedules, token ? { token } : "skip")
+    convexQuery(
+      api.dashboard.queries.upcomingSchedules.upcomingSchedules,
+      token ? { token } : "skip"
+    )
   );
   return data;
 }
@@ -30,7 +36,10 @@ export function useUpcomingSchedules() {
 export function useMonthlySpend() {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.dashboard.monthlySpend, token ? { token } : "skip")
+    convexQuery(
+      api.dashboard.queries.monthlySpend.monthlySpend,
+      token ? { token } : "skip"
+    )
   );
   return data;
 }
@@ -39,7 +48,10 @@ export function useMonthlySpend() {
 export function useActiveJobsCount() {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.dashboard.activeJobsCount, token ? { token } : "skip")
+    convexQuery(
+      api.dashboard.queries.activeJobsCount.activeJobsCount,
+      token ? { token } : "skip"
+    )
   );
   return data;
 }

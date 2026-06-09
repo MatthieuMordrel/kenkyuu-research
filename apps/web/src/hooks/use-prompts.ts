@@ -18,7 +18,7 @@ export function usePrompts(options: UsePromptsOptions = {}) {
   const { type } = options;
   const { data } = useQuery(
     convexQuery(
-      api.prompts.listPrompts,
+      api.prompts.queries.listPrompts.listPrompts,
       token ? { type: type || undefined, token } : "skip"
     )
   );
@@ -28,7 +28,10 @@ export function usePrompts(options: UsePromptsOptions = {}) {
 export function usePrompt(id: GenericId<"prompts">) {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.prompts.getPrompt, token ? { id, token } : "skip")
+    convexQuery(
+      api.prompts.queries.getPrompt.getPrompt,
+      token ? { id, token } : "skip"
+    )
   );
   return data;
 }
@@ -37,7 +40,9 @@ export function usePrompt(id: GenericId<"prompts">) {
 
 export function useCreatePrompt() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.prompts.createPrompt);
+  const mutation = useConvexMutation(
+    api.prompts.mutations.createPrompt.createPrompt
+  );
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
@@ -47,7 +52,9 @@ export function useCreatePrompt() {
 
 export function useUpdatePrompt() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.prompts.updatePrompt);
+  const mutation = useConvexMutation(
+    api.prompts.mutations.updatePrompt.updatePrompt
+  );
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
@@ -57,7 +64,9 @@ export function useUpdatePrompt() {
 
 export function useDeletePrompt() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.prompts.deletePrompt);
+  const mutation = useConvexMutation(
+    api.prompts.mutations.deletePrompt.deletePrompt
+  );
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),
@@ -67,7 +76,9 @@ export function useDeletePrompt() {
 
 export function useClonePrompt() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.prompts.clonePrompt);
+  const mutation = useConvexMutation(
+    api.prompts.mutations.clonePrompt.clonePrompt
+  );
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),

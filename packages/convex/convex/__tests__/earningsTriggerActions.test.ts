@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { addDays, getTodayInTimezone } from "../earningsTriggerActions";
+import { addDays } from "../earnings/shared/addDays";
+import { getTodayInTimezone } from "../earnings/shared/getTodayInTimezone";
 
 describe("addDays", () => {
   it("adds 0 days (identity)", () => {

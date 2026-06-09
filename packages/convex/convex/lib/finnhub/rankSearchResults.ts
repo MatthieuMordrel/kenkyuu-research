@@ -1,34 +1,8 @@
 import type { FinnhubSearchResult, SymbolSuggestion } from "./types";
+import { isEligibleType } from "./isEligibleType";
+import { sortRank } from "./sortRank";
 
 const MAX_SUGGESTIONS = 8;
-
-const EXCLUDED_TYPE_KEYWORDS = ["WARRANT", "RIGHT", "UNIT"];
-
-/**
- * Whether a Finnhub security type should appear in add-stock suggestions.
- */
-function isEligibleType(type: string): boolean {
-  const upper = type.toUpperCase();
-  return !EXCLUDED_TYPE_KEYWORDS.some((keyword) => upper.includes(keyword));
-}
-
-/**
- * Sort score: lower is better. Exact ticker matches rank first.
- */
-function sortRank(result: FinnhubSearchResult, query: string): number {
-  const q = query.trim().toUpperCase();
-  const display = result.displaySymbol.toUpperCase();
-  if (display === q) {
-    return 0;
-  }
-  if (display.startsWith(q)) {
-    return 1;
-  }
-  if (result.description.toUpperCase().includes(q)) {
-    return 2;
-  }
-  return 3;
-}
 
 /**
  * Filters and ranks Finnhub search hits for the add-stock combobox.

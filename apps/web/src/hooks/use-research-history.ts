@@ -34,7 +34,7 @@ export function useResearchHistory(options: UseResearchHistoryOptions = {}) {
 
   const { data } = useQuery(
     convexQuery(
-      api.researchJobs.listResults,
+      api.research.queries.listResults.listResults,
       token
         ? {
             status: status ?? undefined,
@@ -74,7 +74,7 @@ export function useSearchResults(searchTerm: string, limit = 100) {
   const trimmedSearchTerm = searchTerm.trim();
   const { data } = useQuery(
     convexQuery(
-      api.researchJobs.searchResults,
+      api.research.queries.searchResults.searchResults,
       token && trimmedSearchTerm.length > 0
         ? { searchTerm: trimmedSearchTerm, limit, token }
         : "skip"
@@ -86,7 +86,10 @@ export function useSearchResults(searchTerm: string, limit = 100) {
 export function useFavoriteResults() {
   const token = useAuthToken();
   const { data } = useQuery(
-    convexQuery(api.researchJobs.listFavorites, token ? { token } : "skip")
+    convexQuery(
+      api.research.queries.listFavorites.listFavorites,
+      token ? { token } : "skip"
+    )
   );
   return data;
 }
@@ -95,7 +98,9 @@ export function useFavoriteResults() {
 
 export function useToggleFavorite() {
   const token = useAuthToken();
-  const mutation = useConvexMutation(api.researchJobs.toggleFavorite);
+  const mutation = useConvexMutation(
+    api.research.mutations.toggleFavorite.toggleFavorite
+  );
   return useCallback(
     (args: Omit<Parameters<typeof mutation>[0], "token">) =>
       mutation({ ...args, token: token ?? undefined }),

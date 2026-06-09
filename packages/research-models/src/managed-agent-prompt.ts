@@ -9,6 +9,14 @@ import { RESEARCH_SYSTEM_PROMPT } from "./research-prompt";
  * harnesses — update both together when changing research rules.
  */
 
+/**
+ * Container path the coordinator must write the final report to. Managed-agent
+ * sessions run in a hosted container where files — not messages — are the
+ * natural deliverable, so the harness collects the report from this file after
+ * the outcome completes. The rubric enforces the path; keep all three in sync.
+ */
+export const MANAGED_AGENT_REPORT_PATH = "/mnt/session/outputs/report.md";
+
 /** System prompt for the coordinator agent (the session's primary thread). */
 export const MANAGED_AGENT_COORDINATOR_SYSTEM_PROMPT = `You are the lead analyst coordinating a deep research task.
 
@@ -21,8 +29,9 @@ Workflow:
 ${RESEARCH_SYSTEM_PROMPT}
 
 Output rules:
-- Your FINAL message must contain the complete report and nothing else — no preamble, no meta-commentary about the process. It is consumed verbatim as the deliverable.
-- When revising after grader feedback, address every gap the feedback names, then resend the full corrected report as your final message.`;
+- Save the complete report to exactly ${MANAGED_AGENT_REPORT_PATH} — this file is consumed verbatim as the deliverable. Do not save it anywhere else or split it across files.
+- When revising after grader feedback, address every gap the feedback names, then overwrite ${MANAGED_AGENT_REPORT_PATH} with the full corrected report.
+- Keep messages to brief status notes; the report lives in the file, not in your messages.`;
 
 /** System prompt for researcher subagents. */
 export const MANAGED_AGENT_RESEARCHER_SYSTEM_PROMPT = `You are a research analyst investigating one scoped sub-question for a lead analyst.
@@ -45,5 +54,6 @@ export const RESEARCH_OUTCOME_RUBRIC = `Grade the research report against each c
 3. **Balance** — the strongest bull case AND bear case are both presented, with catalysts and unresolved uncertainties called out explicitly.
 4. **Recency** — time-sensitive facts (prices, ratings, guidance, events) reflect current information from live sources, not stale knowledge.
 5. **Format** — valid GitHub-flavored Markdown; a structured report with an executive summary, clearly organized sections, and inline source URLs.
+6. **Delivery** — the complete report is saved at exactly \`${MANAGED_AGENT_REPORT_PATH}\`. A report at any other path, or split across files, fails this criterion.
 
-The report fails a criterion only when the gap is material to an investment decision — do not fail on style preferences.`;
+The report fails criteria 1-5 only when the gap is material to an investment decision — do not fail on style preferences. Criterion 6 is strict.`;

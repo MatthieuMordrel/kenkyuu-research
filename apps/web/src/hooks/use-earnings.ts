@@ -6,7 +6,7 @@ import { useAuthToken } from "@/lib/auth";
 export function useEarningsSummary() {
   const token = useAuthToken();
   return useQuery(
-    api.earnings.getEarningsSummaryAll,
+    api.earnings.queries.getEarningsSummaryAll.getEarningsSummaryAll,
     token ? { token } : "skip"
   );
 }
@@ -14,7 +14,7 @@ export function useEarningsSummary() {
 export function useStockEarnings(stockId: GenericId<"stocks">) {
   const token = useAuthToken();
   return useQuery(
-    api.earnings.getEarningsByStockId,
+    api.earnings.queries.getEarningsByStockId.getEarningsByStockId,
     token ? { stockId, token } : "skip"
   );
 }

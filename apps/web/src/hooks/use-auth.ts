@@ -15,12 +15,15 @@ export function useAuth() {
   const hasHydrated = useAuthHasHydrated();
   const { loggedIn, loggedOut } = useAuthActions();
 
-  const loginAction = useConvexAction(api.auth.login);
-  const logoutAction = useConvexAction(api.auth.logout);
+  const loginAction = useConvexAction(api.auth.actions.login.login);
+  const logoutAction = useConvexAction(api.auth.actions.logout.logout);
 
   // Validate session reactively via Convex query
   const { data: sessionValidation } = useQuery(
-    convexQuery(api.authHelpers.validateSession, token ? { token } : "skip")
+    convexQuery(
+      api.auth.queries.validateSession.validateSession,
+      token ? { token } : "skip"
+    )
   );
 
   // If we think we're authenticated but the server says invalid, log out

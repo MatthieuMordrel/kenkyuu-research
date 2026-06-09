@@ -133,7 +133,7 @@ export async function handleWebhookPayload(
   }
 
   const researchJob = await ctx.runQuery(
-    internal.researchJobs.getJobByExternalId,
+    internal.research.queries.getJobByExternalId.getJobByExternalId,
     {
       externalJobId: responseId,
     }
@@ -142,24 +142,28 @@ export async function handleWebhookPayload(
   if (researchJob) {
     await ctx.scheduler.runAfter(
       0,
-      internal.researchActions.processWebhookEvent,
+      internal.research.actions.processWebhookEvent.processWebhookEvent,
       { jobId: researchJob._id, eventType: event.type }
     );
     return new Response("OK", { status: 200 });
   }
 
   const formatJob = await ctx.runQuery(
-    internal.researchJobs.getJobByFormatExternalId,
+    internal.research.queries.getJobByFormatExternalId.getJobByFormatExternalId,
     { formatExternalId: responseId }
   );
 
   if (formatJob) {
     const mode = formatJob.status === "formatting" ? "pipeline" : "backfill";
-    await ctx.scheduler.runAfter(0, internal.researchFormatActions.pollFormat, {
-      jobId: formatJob._id,
-      mode,
-      nextDelayMs: FORMAT_POLL_INITIAL_DELAY_MS,
-    });
+    await ctx.scheduler.runAfter(
+      0,
+      internal.research.actions.pollFormat.pollFormat,
+      {
+        jobId: formatJob._id,
+        mode,
+        nextDelayMs: FORMAT_POLL_INITIAL_DELAY_MS,
+      }
+    );
     return new Response("OK", { status: 200 });
   }
 
