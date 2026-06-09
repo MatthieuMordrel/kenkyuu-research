@@ -14,6 +14,8 @@ describe("getResearchPromptView", () => {
     expect(view.systemPrompt).toContain("Research rules:");
     expect(view.systemPrompt).not.toContain("Formatting rules:");
     expect(view.providers).toHaveLength(2);
-    expect(view.builtInDiscoveryTemplate).toBe(BUILT_IN_DISCOVERY_PROMPT.template);
+    expect(view.builtInDiscoveryTemplate).toBe(
+      BUILT_IN_DISCOVERY_PROMPT.template
+    );
   });
 });

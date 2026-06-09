@@ -34,7 +34,9 @@ async function getFinnhubApiKey(ctx: ActionCtx): Promise<string | null> {
   return (
     (await ctx.runQuery(internal.authHelpers.getSettingValue, {
       key: "FINNHUB_API_KEY",
-    })) ?? process.env.FINNHUB_API_KEY ?? null
+    })) ??
+    process.env.FINNHUB_API_KEY ??
+    null
   );
 }
 
@@ -55,7 +57,10 @@ export const searchStockSymbols = action({
     token: v.string(),
     query: v.string(),
   },
-  handler: async (ctx, args): Promise<{
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
     configured: boolean;
     results: SymbolSuggestion[];
   }> => {

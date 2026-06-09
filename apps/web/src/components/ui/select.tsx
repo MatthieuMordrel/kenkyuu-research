@@ -8,6 +8,14 @@ import { cn } from "@/lib/utils";
 
 const Select = SelectPrimitive.Root;
 
+const selectTriggerIcon = (
+  <ChevronDownIcon className="text-muted-foreground size-4 pointer-events-none" />
+);
+
+const selectItemIndicatorContainer = (
+  <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
+);
+
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
     <SelectPrimitive.Group
@@ -47,11 +55,7 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon
-        render={
-          <ChevronDownIcon className="text-muted-foreground size-4 pointer-events-none" />
-        }
-      />
+      <SelectPrimitive.Icon render={selectTriggerIcon} />
     </SelectPrimitive.Trigger>
   );
 }
@@ -130,11 +134,7 @@ function SelectItem({
       <SelectPrimitive.ItemText className="flex flex-1 gap-2 shrink-0 whitespace-nowrap">
         {children}
       </SelectPrimitive.ItemText>
-      <SelectPrimitive.ItemIndicator
-        render={
-          <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
-        }
-      >
+      <SelectPrimitive.ItemIndicator render={selectItemIndicatorContainer}>
         <CheckIcon className="pointer-events-none" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>

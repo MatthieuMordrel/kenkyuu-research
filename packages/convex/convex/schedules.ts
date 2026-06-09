@@ -484,8 +484,10 @@ export const toggleGlobalPause = mutation({
         .query("schedules")
         .withIndex("by_enabled_nextRunAt", (q) => q.eq("enabled", true))
         .take(200);
-      for (const schedule of enabledSchedules) {
-        if (schedule.nextScheduledFunctionId) {
+      // Each schedule's cancel + patch is independent; run them in parallel.
+      await Promise.all(
+        enabledSchedules.map(async (schedule) => {
+          if (!schedule.nextScheduledFunctionId) return;
           try {
             await ctx.scheduler.cancel(
               schedule.nextScheduledFunctionId as never
@@ -497,8 +499,8 @@ export const toggleGlobalPause = mutation({
             nextRunAt: undefined,
             nextScheduledFunctionId: undefined,
           });
-        }
-      }
+        })
+      );
       // Earnings-type schedules: hourly cron checks global pause status, no action needed
     } else {
       // Unpausing: reschedule all enabled cron-type schedules
@@ -506,18 +508,20 @@ export const toggleGlobalPause = mutation({
         .query("schedules")
         .withIndex("by_enabled_nextRunAt", (q) => q.eq("enabled", true))
         .take(200);
-      for (const schedule of enabledSchedules) {
-        const isCronType = (schedule.triggerType ?? "cron") === "cron";
-        if (isCronType) {
-          await ctx.scheduler.runAfter(
-            0,
-            internal.scheduleActions.scheduleNextRun,
-            {
-              scheduleId: schedule._id,
-            }
-          );
-        }
-      }
+      // Rescheduling each cron-type schedule is independent; run in parallel.
+      await Promise.all(
+        enabledSchedules
+          .filter((schedule) => (schedule.triggerType ?? "cron") === "cron")
+          .map((schedule) =>
+            ctx.scheduler.runAfter(
+              0,
+              internal.scheduleActions.scheduleNextRun,
+              {
+                scheduleId: schedule._id,
+              }
+            )
+          )
+      );
     }
 
     return { paused: newValue };
@@ -705,13 +709,9 @@ export const createScheduledJob = internalMutation({
       searchText,
     });
 
-    await ctx.scheduler.runAfter(
-      0,
-      internal.researchActions.startResearch,
-      {
-        jobId,
-      }
-    );
+    await ctx.scheduler.runAfter(0, internal.researchActions.startResearch, {
+      jobId,
+    });
 
     return jobId;
   },

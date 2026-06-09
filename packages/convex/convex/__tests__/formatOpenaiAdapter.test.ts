@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FORMAT_MODEL_ID, resolveFormatModel } from "@repo/research-models/format-models";
+import {
+  DEFAULT_FORMAT_MODEL_ID,
+  resolveFormatModel,
+} from "@repo/research-models/format-models";
 import { FORMAT_SYSTEM_PROMPT } from "@repo/research-models/format-prompt";
 import { buildFormatResponseCreateParams } from "../providers/formatOpenaiAdapter";
 

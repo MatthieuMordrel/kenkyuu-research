@@ -37,13 +37,41 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
+const homeLink = <Link to="/" />;
+const researchLink = <Link to="/research" />;
+
 const navItems = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/stocks", label: "Stocks", icon: TrendingUp },
-  { to: "/prompts", label: "Prompts", icon: FileText },
-  { to: "/research", label: "Research", icon: FlaskConical },
-  { to: "/schedules", label: "Schedules", icon: Clock },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, link: homeLink },
+  {
+    to: "/stocks",
+    label: "Stocks",
+    icon: TrendingUp,
+    link: <Link to="/stocks" />,
+  },
+  {
+    to: "/prompts",
+    label: "Prompts",
+    icon: FileText,
+    link: <Link to="/prompts" />,
+  },
+  {
+    to: "/research",
+    label: "Research",
+    icon: FlaskConical,
+    link: researchLink,
+  },
+  {
+    to: "/schedules",
+    label: "Schedules",
+    icon: Clock,
+    link: <Link to="/schedules" />,
+  },
+  {
+    to: "/settings",
+    label: "Settings",
+    icon: Settings,
+    link: <Link to="/settings" />,
+  },
 ] as const;
 
 export function AppShell() {
@@ -81,7 +109,7 @@ function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link to="/" />}>
+            <SidebarMenuButton size="lg" render={homeLink}>
               <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 <FlaskConical className="size-4" />
               </div>
@@ -102,7 +130,7 @@ function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton
-                      render={<Link to={item.to} />}
+                      render={item.link}
                       isActive={isActive}
                       tooltip={item.label}
                     >
@@ -181,7 +209,7 @@ function SidebarActiveJobs() {
             return (
               <SidebarMenuItem key={job._id}>
                 <SidebarMenuButton
-                  render={<Link to="/research" />}
+                  render={researchLink}
                   tooltip={promptMap.get(job.promptId) ?? "Research Job"}
                 >
                   <div

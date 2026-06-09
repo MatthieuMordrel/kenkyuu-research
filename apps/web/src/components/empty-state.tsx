@@ -5,7 +5,7 @@ interface EmptyStateProps {
   icon: LucideIcon;
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }
 
@@ -13,7 +13,7 @@ export function EmptyState({
   icon: Icon,
   title,
   description,
-  action,
+  children,
   className,
 }: EmptyStateProps) {
   return (
@@ -34,7 +34,7 @@ export function EmptyState({
           </p>
         )}
       </div>
-      {action && <div className="mt-2">{action}</div>}
+      {children && <div className="mt-2">{children}</div>}
     </div>
   );
 }

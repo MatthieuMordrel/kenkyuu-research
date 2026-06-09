@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   useRecentResearch,
@@ -36,6 +37,14 @@ export const Route = createFileRoute("/_authenticated/")({
   component: DashboardPage,
 });
 
+function progressWidthStyle(percent: number): CSSProperties {
+  return { width: `${Math.min(percent, 100)}%` };
+}
+
+function jobLinkParams<T>(jobId: T) {
+  return { jobId };
+}
+
 function DashboardPage() {
   const quickActions = useQuickActions();
 
@@ -44,13 +53,12 @@ function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Overview of your research activity and costs"
-        actions={
-          <Button size="sm" onClick={quickActions.startNewResearch}>
-            <Plus className="mr-1.5 size-4" />
-            New Research
-          </Button>
-        }
-      />
+      >
+        <Button size="sm" onClick={quickActions.startNewResearch}>
+          <Plus className="mr-1.5 size-4" />
+          New Research
+        </Button>
+      </PageHeader>
       <div className="flex flex-col gap-6 px-4 pb-4 md:px-6">
         <OverviewCards />
         <QuickActions />
@@ -131,7 +139,7 @@ function OverviewCards() {
                         ? "bg-amber-500"
                         : "bg-primary"
                   }`}
-                  style={{ width: `${Math.min(percentUsed, 100)}%` }}
+                  style={progressWidthStyle(percentUsed)}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -162,8 +170,8 @@ function OverviewCards() {
             {activeJobs.formatting > 0
               ? `, ${activeJobs.formatting} formatting`
               : ""}
-            , {activeJobs.pending} queued · OpenAI {openai.active}/{openai.limit},
-            Anthropic {anthropic.active}/{anthropic.limit}
+            , {activeJobs.pending} queued · OpenAI {openai.active}/
+            {openai.limit}, Anthropic {anthropic.active}/{anthropic.limit}
           </p>
         </CardContent>
       </Card>
@@ -189,9 +197,7 @@ function OverviewCards() {
                       ? "bg-amber-500"
                       : "bg-primary"
                 }`}
-                style={{
-                  width: `${Math.min(capacityUsedPercent, 100)}%`,
-                }}
+                style={progressWidthStyle(capacityUsedPercent)}
               />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -297,7 +303,7 @@ function RecentResearchCard() {
               <Link
                 key={job._id}
                 to="/research/$jobId"
-                params={{ jobId: job._id }}
+                params={jobLinkParams(job._id)}
                 className="group relative flex items-center gap-3 rounded-xl p-2.5 transition-all hover:bg-accent"
               >
                 {/* Status indicator */}

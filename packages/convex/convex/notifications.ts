@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { logger } from "./lib/logger";
 
 // --- Telegram ---
 
@@ -22,7 +23,7 @@ export const sendTelegramMessage = internalAction({
     );
 
     if (!botToken || !chatId) {
-      console.warn("Telegram not configured, skipping notification");
+      logger.warn("Telegram not configured, skipping notification");
       return { sent: false, reason: "not_configured" };
     }
 
@@ -41,7 +42,7 @@ export const sendTelegramMessage = internalAction({
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Telegram API error (${response.status}): ${errorText}`);
+      logger.error(`Telegram API error (${response.status}): ${errorText}`);
       let description = `${response.status}`;
       try {
         const body = JSON.parse(errorText);
@@ -74,7 +75,7 @@ export const sendEmail = internalAction({
     );
 
     if (!apiKey || !toEmail) {
-      console.warn("Email not configured, skipping notification");
+      logger.warn("Email not configured, skipping notification");
       return { sent: false, reason: "not_configured" };
     }
 
@@ -95,7 +96,7 @@ export const sendEmail = internalAction({
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Resend API error (${response.status}): ${errorText}`);
+      logger.error(`Resend API error (${response.status}): ${errorText}`);
       return { sent: false, reason: `api_error: ${response.status}` };
     }
 

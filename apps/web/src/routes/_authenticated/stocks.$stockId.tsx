@@ -41,6 +41,8 @@ import { cn } from "@/lib/utils";
 import type { GenericId } from "convex/values";
 import type { Doc } from "@repo/convex/dataModel";
 
+const backToStocksLink = <Link to="/stocks" />;
+
 export const Route = createFileRoute("/_authenticated/stocks/$stockId")({
   component: StockDetailPage,
 });
@@ -76,7 +78,7 @@ function StockDetailPage() {
     return (
       <div className="flex flex-col gap-4">
         <div className="px-4 pt-4 md:px-6">
-          <Button variant="ghost" size="sm" render={<Link to="/stocks" />}>
+          <Button variant="ghost" size="sm" render={backToStocksLink}>
             <ArrowLeft className="size-4" />
             Back to Stocks
           </Button>
@@ -85,12 +87,11 @@ function StockDetailPage() {
           icon={TrendingUp}
           title="Stock not found"
           description="This stock may have been deleted."
-          action={
-            <Button size="sm" render={<Link to="/stocks" />}>
-              Back to Stocks
-            </Button>
-          }
-        />
+        >
+          <Button size="sm" render={backToStocksLink}>
+            Back to Stocks
+          </Button>
+        </EmptyState>
       </div>
     );
   }
@@ -111,7 +112,7 @@ function StockDetailPage() {
     <div className="flex flex-col gap-5 pb-8">
       {/* Back nav */}
       <div className="px-4 pt-4 md:px-6">
-        <Button variant="ghost" size="sm" render={<Link to="/stocks" />}>
+        <Button variant="ghost" size="sm" render={backToStocksLink}>
           <ArrowLeft className="size-4" />
           Back to Stocks
         </Button>
@@ -288,12 +289,12 @@ function SectionHeader({
   icon: Icon,
   title,
   color,
-  action,
+  children,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   color: keyof typeof COLOR_MAP;
-  action?: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between mb-4">
@@ -308,7 +309,7 @@ function SectionHeader({
         </div>
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
-      {action}
+      {children}
     </div>
   );
 }
@@ -487,24 +488,19 @@ function NotesEditor({ stock }: { stock: Doc<"stocks"> }) {
 
   return (
     <div className="rounded-xl border bg-card p-5">
-      <SectionHeader
-        icon={FileText}
-        title="Notes"
-        color="amber"
-        action={
-          !editing ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={startEditing}
-              className="h-7 text-xs"
-            >
-              <Pencil className="size-3" />
-              {stock.notes ? "Edit" : "Add"}
-            </Button>
-          ) : undefined
-        }
-      />
+      <SectionHeader icon={FileText} title="Notes" color="amber">
+        {!editing && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={startEditing}
+            className="h-7 text-xs"
+          >
+            <Pencil className="size-3" />
+            {stock.notes ? "Edit" : "Add"}
+          </Button>
+        )}
+      </SectionHeader>
 
       {editing ? (
         <div className="flex flex-col gap-3">

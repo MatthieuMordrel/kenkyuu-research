@@ -3,14 +3,14 @@ import { cn } from "@/lib/utils";
 interface PageHeaderProps {
   title: string;
   description?: string;
-  actions?: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }
 
 export function PageHeader({
   title,
   description,
-  actions,
+  children,
   className,
 }: PageHeaderProps) {
   return (
@@ -28,9 +28,9 @@ export function PageHeader({
           </p>
         )}
       </div>
-      {actions && (
+      {children && (
         <div className="flex flex-wrap items-center gap-2 mt-2 md:mt-0">
-          {actions}
+          {children}
         </div>
       )}
     </div>

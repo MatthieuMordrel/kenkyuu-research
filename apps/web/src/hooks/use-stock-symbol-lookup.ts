@@ -42,8 +42,7 @@ export function useStockSymbolLookup({
       }
       return searchAction({ token, query: debouncedQuery });
     },
-    enabled:
-      enabled && !!token && debouncedQuery.length >= MIN_QUERY_LENGTH,
+    enabled: enabled && !!token && debouncedQuery.length >= MIN_QUERY_LENGTH,
     staleTime: 60_000,
   });
 

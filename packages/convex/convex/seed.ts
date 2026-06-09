@@ -26,61 +26,65 @@ export const backfillCostLogs = internalMutation({
       .withIndex("by_status", (q) => q.eq("status", "completed"))
       .collect();
 
-    let inserted = 0;
-    let skipped = 0;
+    // Each job is independent, so check-then-insert runs in parallel.
+    // Convex mutations are transactional, so this stays consistent.
+    const outcomes = await Promise.all(
+      completedJobs.map(async (job) => {
+        if (job.costUsd === undefined) {
+          return "skipped" as const;
+        }
 
-    for (const job of completedJobs) {
-      if (job.costUsd === undefined) {
-        skipped++;
-        continue;
-      }
+        // Check if a cost log already exists for this job
+        const existing = await ctx.db
+          .query("costLogs")
+          .withIndex("by_jobId", (q) => q.eq("jobId", job._id))
+          .first();
 
-      // Check if a cost log already exists for this job
-      const existing = await ctx.db
-        .query("costLogs")
-        .withIndex("by_jobId", (q) => q.eq("jobId", job._id))
-        .first();
+        if (existing) {
+          return "skipped" as const;
+        }
 
-      if (existing) {
-        skipped++;
-        continue;
-      }
+        await ctx.db.insert("costLogs", {
+          jobId: job._id,
+          provider: "openai",
+          costUsd: job.costUsd,
+          timestamp: job.completedAt ?? job.createdAt,
+        });
+        return "inserted" as const;
+      })
+    );
 
-      await ctx.db.insert("costLogs", {
-        jobId: job._id,
-        provider: "openai",
-        costUsd: job.costUsd,
-        timestamp: job.completedAt ?? job.createdAt,
-      });
-      inserted++;
-    }
-
-    return { inserted, skipped };
+    const inserted = outcomes.filter((o) => o === "inserted").length;
+    return { inserted, skipped: outcomes.length - inserted };
   },
 });
 
 export const seedPrompts = internalMutation({
   args: {},
   handler: async (ctx) => {
-    let inserted = 0;
     const now = Date.now();
 
-    for (const prompt of BUILT_IN_PROMPTS) {
-      // Check existence by name using index instead of loading all prompts
-      const existingPrompt = await ctx.db
-        .query("prompts")
-        .withIndex("by_name", (q) => q.eq("name", prompt.name))
-        .first();
-      if (!existingPrompt) {
+    // Prompts have distinct names, so each check-then-insert is independent.
+    const insertedFlags = await Promise.all(
+      BUILT_IN_PROMPTS.map(async (prompt) => {
+        // Check existence by name using index instead of loading all prompts
+        const existingPrompt = await ctx.db
+          .query("prompts")
+          .withIndex("by_name", (q) => q.eq("name", prompt.name))
+          .first();
+        if (existingPrompt) {
+          return false;
+        }
         await ctx.db.insert("prompts", {
           ...prompt,
           createdAt: now,
           updatedAt: now,
         });
-        inserted++;
-      }
-    }
+        return true;
+      })
+    );
 
+    const inserted = insertedFlags.filter(Boolean).length;
     return { inserted, skipped: BUILT_IN_PROMPTS.length - inserted };
   },
 });

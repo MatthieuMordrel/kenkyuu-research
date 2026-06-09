@@ -5,6 +5,12 @@ import { cn } from "@/lib/utils";
 import type { PromptType } from "@/lib/schedule-validation";
 import { PROMPT_TYPE_CONFIG, type PromptStepProps } from "./constants";
 
+const SKELETON_PLACEHOLDER_IDS = [
+  "prompt-skeleton-1",
+  "prompt-skeleton-2",
+  "prompt-skeleton-3",
+];
+
 export function PromptStep({
   form,
   errors,
@@ -30,8 +36,8 @@ export function PromptStep({
     <div className="flex flex-col gap-3">
       {prompts === undefined ? (
         <div className="flex flex-col gap-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
+          {SKELETON_PLACEHOLDER_IDS.map((id) => (
+            <div key={id} className="h-16 animate-pulse rounded-lg bg-muted" />
           ))}
         </div>
       ) : prompts.length === 0 ? (

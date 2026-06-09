@@ -36,6 +36,8 @@ import {
 } from "@/lib/research-flow";
 import type { GenericId } from "convex/values";
 
+const backToResearchLink = <Link to="/research" />;
+
 export const Route = createFileRoute("/_authenticated/research/$jobId")({
   component: ResultDetailPage,
 });
@@ -81,12 +83,11 @@ function ResultDetailPage() {
         icon={FlaskConical}
         title="Result not found"
         description="This research result may have been deleted."
-        action={
-          <Button size="sm" render={<Link to="/research" />}>
-            Back to Research
-          </Button>
-        }
-      />
+      >
+        <Button size="sm" render={backToResearchLink}>
+          Back to Research
+        </Button>
+      </EmptyState>
     );
   }
 

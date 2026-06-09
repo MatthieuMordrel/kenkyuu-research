@@ -50,10 +50,14 @@ export const reformatResearchJob = internalAction({
     await ctx.runMutation(internal.researchJobs.beginBackfillFormat, {
       id: args.jobId,
     });
-    await ctx.scheduler.runAfter(0, internal.researchFormatActions.startFormat, {
-      jobId: args.jobId,
-      mode: "backfill",
-    });
+    await ctx.scheduler.runAfter(
+      0,
+      internal.researchFormatActions.startFormat,
+      {
+        jobId: args.jobId,
+        mode: "backfill",
+      }
+    );
     return { jobId: args.jobId, status: "format_started" };
   },
 });
@@ -73,11 +77,17 @@ export const reformatByTicker = internalAction({
         `No completed research job found for ticker ${args.ticker}`
       );
     }
-    await ctx.runMutation(internal.researchJobs.beginBackfillFormat, { id: jobId });
-    await ctx.scheduler.runAfter(0, internal.researchFormatActions.startFormat, {
-      jobId,
-      mode: "backfill",
+    await ctx.runMutation(internal.researchJobs.beginBackfillFormat, {
+      id: jobId,
     });
+    await ctx.scheduler.runAfter(
+      0,
+      internal.researchFormatActions.startFormat,
+      {
+        jobId,
+        mode: "backfill",
+      }
+    );
     return { jobId, status: "format_started" };
   },
 });

@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { logger } from "./lib/logger";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -260,24 +261,27 @@ export const executeRunNow = internalAction({
 
     try {
       if (isSingleStock && stockIds.length > 1) {
-        // Queue one job per stock for single-stock prompts
-        for (const stockId of stockIds) {
-          try {
-            await ctx.runMutation(internal.schedules.createScheduledJob, {
-              promptId: schedule.promptId,
-              stockIds: [stockId],
-              provider: schedule.provider,
-              modelId: schedule.modelId,
-              scheduleId: args.scheduleId,
-            });
-          } catch (error: unknown) {
-            const message =
-              error instanceof Error ? error.message : "Unknown error";
-            console.error(
-              `Run Now failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`
-            );
-          }
-        }
+        // Queue one job per stock for single-stock prompts.
+        // Jobs are independent; create them in parallel.
+        await Promise.all(
+          stockIds.map(async (stockId) => {
+            try {
+              await ctx.runMutation(internal.schedules.createScheduledJob, {
+                promptId: schedule.promptId,
+                stockIds: [stockId],
+                provider: schedule.provider,
+                modelId: schedule.modelId,
+                scheduleId: args.scheduleId,
+              });
+            } catch (error: unknown) {
+              const message =
+                error instanceof Error ? error.message : "Unknown error";
+              logger.error(
+                `Run Now failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`
+              );
+            }
+          })
+        );
       } else {
         await ctx.runMutation(internal.schedules.createScheduledJob, {
           promptId: schedule.promptId,
@@ -289,7 +293,7 @@ export const executeRunNow = internalAction({
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(
+      logger.error(
         `Run Now failed for schedule ${args.scheduleId}: ${message}`
       );
     }
@@ -435,24 +439,27 @@ export const executeScheduledRun = internalAction({
     // Create and start the research job(s)
     try {
       if (isSingleStock && stockIds.length > 1) {
-        // Queue one job per stock for single-stock prompts
-        for (const stockId of stockIds) {
-          try {
-            await ctx.runMutation(internal.schedules.createScheduledJob, {
-              promptId: schedule.promptId,
-              stockIds: [stockId],
-              provider: schedule.provider,
-              modelId: schedule.modelId,
-              scheduleId: args.scheduleId,
-            });
-          } catch (error: unknown) {
-            const message =
-              error instanceof Error ? error.message : "Unknown error";
-            console.error(
-              `Scheduled run failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`
-            );
-          }
-        }
+        // Queue one job per stock for single-stock prompts.
+        // Jobs are independent; create them in parallel.
+        await Promise.all(
+          stockIds.map(async (stockId) => {
+            try {
+              await ctx.runMutation(internal.schedules.createScheduledJob, {
+                promptId: schedule.promptId,
+                stockIds: [stockId],
+                provider: schedule.provider,
+                modelId: schedule.modelId,
+                scheduleId: args.scheduleId,
+              });
+            } catch (error: unknown) {
+              const message =
+                error instanceof Error ? error.message : "Unknown error";
+              logger.error(
+                `Scheduled run failed for stock ${stockId}, schedule ${args.scheduleId}: ${message}`
+              );
+            }
+          })
+        );
       } else {
         await ctx.runMutation(internal.schedules.createScheduledJob, {
           promptId: schedule.promptId,
@@ -464,7 +471,7 @@ export const executeScheduledRun = internalAction({
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(
+      logger.error(
         `Scheduled run failed for schedule ${args.scheduleId}: ${message}`
       );
     }

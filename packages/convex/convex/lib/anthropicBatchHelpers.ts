@@ -21,9 +21,14 @@ export async function findAnthropicBatchResult(
 }
 
 /** Concatenates text blocks from a Claude message into one string. */
-export function extractAnthropicMessageText(content: readonly unknown[]): string {
+export function extractAnthropicMessageText(
+  content: readonly unknown[]
+): string {
   return content
-    .filter((block): block is TextBlock => (block as { type?: string }).type === "text")
+    .filter(
+      (block): block is TextBlock =>
+        (block as { type?: string }).type === "text"
+    )
     .map((block) => block.text)
     .join("\n\n")
     .trim();

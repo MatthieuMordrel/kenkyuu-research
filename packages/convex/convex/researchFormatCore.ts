@@ -56,7 +56,10 @@ export function passesHeadingStructureGuard(
 /**
  * Returns true when formatted output is plausibly the same report as raw.
  */
-export function passesFormattingGuards(raw: string, formatted: string): boolean {
+export function passesFormattingGuards(
+  raw: string,
+  formatted: string
+): boolean {
   const trimmed = formatted.trim();
   if (trimmed.length === 0) return false;
 
@@ -98,7 +101,10 @@ export type FormatOutputDecision = "accept" | "retry" | "fallback";
  * Picks safe markdown when the formatter exhausted retries: prefer preprocessed raw
  * when the model flattened main `# Section` headings.
  */
-function fallbackFormattedText(preprocessed: string, formatted: string): string {
+function fallbackFormattedText(
+  preprocessed: string,
+  formatted: string
+): string {
   if (!passesHeadingStructureGuard(preprocessed, formatted)) {
     return postpassResearchMarkdown(preprocessed);
   }

@@ -16,7 +16,9 @@
     "typecheck": "bun run --filter '*' typecheck",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint .",
+    "lint": "oxlint .; OXLINT=$?; bun run lint:single-convex-export; SCE=$?; exit $((OXLINT || SCE))",
+    "lint:oxlint": "oxlint .",
+    "lint:single-convex-export": "bun run scripts/lint/rules/single-convex-export.ts",
     "lint:fix": "oxlint --fix .",
     "deps:check": "bun outdated --recursive",
     "deps:update": "bun update --filter '*'"

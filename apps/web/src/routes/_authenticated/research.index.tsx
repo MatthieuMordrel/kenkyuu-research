@@ -43,16 +43,15 @@ import { cn } from "@/lib/utils";
 import type { GenericId } from "convex/values";
 import type { Doc } from "@repo/convex/dataModel";
 
+function jobLinkParams<T>(jobId: T) {
+  return { jobId };
+}
+
 export const Route = createFileRoute("/_authenticated/research/")({
   component: ResearchPage,
 });
 
-type JobStatus =
-  | "pending"
-  | "running"
-  | "formatting"
-  | "completed"
-  | "failed";
+type JobStatus = "pending" | "running" | "formatting" | "completed" | "failed";
 
 const STATUS_OPTIONS: { value: JobStatus | undefined; label: string }[] = [
   { value: undefined, label: "All" },
@@ -150,13 +149,12 @@ function ResearchPage() {
       <PageHeader
         title="Research"
         description="Run AI-powered deep research on your stocks"
-        actions={
-          <Button size="sm" onClick={flow.open}>
-            <Plus className="size-4" />
-            New Research
-          </Button>
-        }
-      />
+      >
+        <Button size="sm" onClick={flow.open}>
+          <Plus className="size-4" />
+          New Research
+        </Button>
+      </PageHeader>
 
       <div className="flex flex-col gap-3 px-4 md:px-6 pb-4">
         {/* Search & filter bar */}
@@ -326,19 +324,18 @@ function ResearchPage() {
                 ? "Try adjusting your search or filters."
                 : "Start your first research to see results here."
             }
-            action={
-              hasActiveFilters ? (
-                <Button size="sm" variant="outline" onClick={clearFilters}>
-                  Clear filters
-                </Button>
-              ) : (
-                <Button size="sm" onClick={flow.open}>
-                  <Plus className="size-4" />
-                  New Research
-                </Button>
-              )
-            }
-          />
+          >
+            {hasActiveFilters ? (
+              <Button size="sm" variant="outline" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            ) : (
+              <Button size="sm" onClick={flow.open}>
+                <Plus className="size-4" />
+                New Research
+              </Button>
+            )}
+          </EmptyState>
         ) : (
           <div className="flex flex-col gap-2">
             {displayResults.map((job) => (
@@ -490,7 +487,7 @@ function ResultCard({
       <CardContent className="flex h-full min-w-0 items-center gap-3">
         <Link
           to="/research/$jobId"
-          params={{ jobId: job._id }}
+          params={jobLinkParams(job._id)}
           className="flex min-w-0 flex-1 flex-col justify-center gap-1.5"
         >
           {/* Row 1: Stocks + status */}

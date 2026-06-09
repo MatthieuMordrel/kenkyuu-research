@@ -2,6 +2,8 @@
 
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { mapSequentially } from "./lib/asyncIterators";
+import { logger } from "./lib/logger";
 
 function formatDate(date: Date): string {
   return date.toISOString().split("T")[0]!;
@@ -21,7 +23,7 @@ export const fetchAllEarnings = internalAction({
       })) ?? process.env.FINNHUB_API_KEY;
 
     if (!apiKey) {
-      console.error(
+      logger.error(
         "Finnhub API key not configured. Set 'FINNHUB_API_KEY' as an environment variable or in the settings table."
       );
       return;
@@ -33,7 +35,7 @@ export const fetchAllEarnings = internalAction({
     );
 
     if (stocks.length === 0) {
-      console.warn("No stocks found, skipping earnings fetch.");
+      logger.warn("No stocks found, skipping earnings fetch.");
       return;
     }
 
@@ -46,21 +48,23 @@ export const fetchAllEarnings = internalAction({
     const fromStr = formatDate(from);
     const toStr = formatDate(to);
 
-    console.info(
+    logger.info(
       `Fetching earnings for ${stocks.length} stocks from ${fromStr} to ${toStr}`
     );
 
-    for (const stock of stocks) {
+    // Finnhub free tier: ~60 req/min, so stocks are fetched strictly one at a
+    // time with a sleep between requests (~54 req/min).
+    for await (const _ of mapSequentially(stocks, async (stock) => {
       try {
         const url = `https://finnhub.io/api/v1/calendar/earnings?symbol=${encodeURIComponent(stock.ticker)}&from=${fromStr}&to=${toStr}&token=${apiKey}`;
         const response = await fetch(url);
 
         if (!response.ok) {
-          console.error(
+          logger.error(
             `Finnhub API error for ${stock.ticker}: ${response.status} ${response.statusText}`
           );
           await sleep(1100);
-          continue;
+          return;
         }
 
         const data = (await response.json()) as {
@@ -96,20 +100,22 @@ export const fetchAllEarnings = internalAction({
             symbol: stock.ticker,
             entries,
           });
-          console.info(
+          logger.info(
             `Upserted ${entries.length} earnings for ${stock.ticker}`
           );
         } else {
-          console.info(`No earnings found for ${stock.ticker}`);
+          logger.info(`No earnings found for ${stock.ticker}`);
         }
       } catch (error) {
-        console.error(`Error fetching earnings for ${stock.ticker}:`, error);
+        logger.error(`Error fetching earnings for ${stock.ticker}:`, error);
       }
 
       // Rate limit: ~54 requests/min to stay under 60/min
       await sleep(1100);
+    })) {
+      // Sequential iteration only; results are not used.
     }
 
-    console.info("Earnings fetch complete.");
+    logger.info("Earnings fetch complete.");
   },
 });

@@ -6,6 +6,7 @@ import type {
   ResponseCompletedWebhookEvent,
   ResponseFailedWebhookEvent,
 } from "openai/resources/webhooks";
+import { logger } from "./lib/logger";
 
 /** First scheduled poll after a format webhook (matches researchFormatActions). */
 const FORMAT_POLL_INITIAL_DELAY_MS = 30_000;
@@ -20,7 +21,7 @@ http.route({
     const body = await request.text();
 
     if (!webhookSecret) {
-      console.error("WEBHOOK_SECRET is not configured — rejecting webhook");
+      logger.error("WEBHOOK_SECRET is not configured — rejecting webhook");
       return new Response("Webhook verification not configured", {
         status: 500,
       });
@@ -131,9 +132,12 @@ export async function handleWebhookPayload(
     return new Response("Missing response ID in payload", { status: 400 });
   }
 
-  const researchJob = await ctx.runQuery(internal.researchJobs.getJobByExternalId, {
-    externalJobId: responseId,
-  });
+  const researchJob = await ctx.runQuery(
+    internal.researchJobs.getJobByExternalId,
+    {
+      externalJobId: responseId,
+    }
+  );
 
   if (researchJob) {
     await ctx.scheduler.runAfter(

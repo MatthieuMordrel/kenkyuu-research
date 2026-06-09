@@ -46,27 +46,25 @@ export const checkAlreadyTriggered = internalQuery({
 export const getStocksByIds = internalQuery({
   args: { stockIds: v.array(v.id("stocks")) },
   handler: async (ctx, args) => {
-    const results = [];
-    for (const stockId of args.stockIds) {
-      const stock = await ctx.db.get(stockId);
-      if (stock) results.push(stock);
-    }
-    return results;
+    const stocks = await Promise.all(
+      args.stockIds.map((stockId) => ctx.db.get(stockId))
+    );
+    return stocks.filter((stock) => stock !== null);
   },
 });
 
 export const getEarningsForStocks = internalQuery({
   args: { stockIds: v.array(v.id("stocks")) },
   handler: async (ctx, args) => {
-    const results = [];
-    for (const stockId of args.stockIds) {
-      const earnings = await ctx.db
-        .query("earnings")
-        .withIndex("by_stockId", (q) => q.eq("stockId", stockId))
-        .collect();
-      results.push(...earnings);
-    }
-    return results;
+    const perStock = await Promise.all(
+      args.stockIds.map((stockId) =>
+        ctx.db
+          .query("earnings")
+          .withIndex("by_stockId", (q) => q.eq("stockId", stockId))
+          .collect()
+      )
+    );
+    return perStock.flat();
   },
 });
 

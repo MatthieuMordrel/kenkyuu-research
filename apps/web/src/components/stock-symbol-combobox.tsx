@@ -100,7 +100,9 @@ export function StockSymbolCombobox({
   }
 
   const showList =
-    listOpen && query.trim().length >= 2 && (isLoading || suggestions.length > 0);
+    listOpen &&
+    query.trim().length >= 2 &&
+    (isLoading || suggestions.length > 0);
 
   return (
     <div ref={containerRef} className="flex flex-col gap-2">

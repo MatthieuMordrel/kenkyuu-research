@@ -5,6 +5,8 @@ import { internalAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id, Doc } from "./_generated/dataModel";
 import { getMarketTimezone } from "./lib/exchangeTimezones";
+import { mapSequentially } from "./lib/asyncIterators";
+import { logger } from "./lib/logger";
 
 // --- Helper: compute today's date string in a timezone ---
 
@@ -167,18 +169,21 @@ export const checkEarningsTriggers = internalAction({
       return;
     }
 
-    for (const schedule of schedules) {
-      const config = schedule.earningsConfig!;
-      const earningsMode = config.earningsMode ?? "each";
+    // Schedules are independent of each other; evaluate them in parallel.
+    await Promise.all(
+      schedules.map(async (schedule) => {
+        const config = schedule.earningsConfig!;
+        const earningsMode = config.earningsMode ?? "each";
 
-      if (earningsMode === "each") {
-        // --- "each" mode: trigger per stock using per-stock market timezone ---
-        await handleEachMode(ctx, schedule, config);
-      } else {
-        // --- "after_last" or "before_first" mode: aggregate trigger ---
-        await handleAggregateMode(ctx, schedule, config, earningsMode);
-      }
-    }
+        if (earningsMode === "each") {
+          // --- "each" mode: trigger per stock using per-stock market timezone ---
+          await handleEachMode(ctx, schedule, config);
+        } else {
+          // --- "after_last" or "before_first" mode: aggregate trigger ---
+          await handleAggregateMode(ctx, schedule, config, earningsMode);
+        }
+      })
+    );
   },
 });
 
@@ -203,72 +208,81 @@ async function handleEachMode(
     tzGroups.set(tz, group);
   }
 
-  let triggeredAny = false;
+  // Timezone groups (and earnings records within them) are independent,
+  // so all dedup checks and job creations run in parallel.
+  const groupTriggered = await Promise.all(
+    [...tzGroups].map(async ([tz, stocks]) => {
+      const today = getTodayInTimezone(tz);
+      const targetEarningsDate = addDays(today, -config.offsetDays);
 
-  for (const [tz, stocks] of tzGroups) {
-    const today = getTodayInTimezone(tz);
-    const targetEarningsDate = addDays(today, -config.offsetDays);
-
-    // Query earnings on this target date
-    const earningsRecords: Doc<"earnings">[] = await ctx.runQuery(
-      internal.earningsTriggers.getEarningsByDate,
-      { date: targetEarningsDate }
-    );
-    if (earningsRecords.length === 0) continue;
-
-    // Filter to only stocks in this timezone group
-    const stockIdSet = new Set(stocks.map((s) => s._id as string));
-    const eligible = earningsRecords.filter((e) =>
-      stockIdSet.has(e.stockId as string)
-    );
-
-    for (const earnings of eligible) {
-      if (
-        config.adjustForHour &&
-        config.offsetDays === 0 &&
-        earnings.hour === "amc"
-      )
-        continue;
-
-      const alreadyTriggered = await ctx.runQuery(
-        internal.earningsTriggers.checkAlreadyTriggered,
-        { scheduleId: schedule._id, earningsId: earnings._id }
+      // Query earnings on this target date
+      const earningsRecords: Doc<"earnings">[] = await ctx.runQuery(
+        internal.earningsTriggers.getEarningsByDate,
+        { date: targetEarningsDate }
       );
-      if (alreadyTriggered) continue;
+      if (earningsRecords.length === 0) return false;
 
-      try {
-        const jobId = await ctx.runMutation(
-          internal.schedules.createScheduledJob,
-          {
-            promptId: schedule.promptId,
-            stockIds: [earnings.stockId],
-            provider: schedule.provider,
-            modelId: schedule.modelId,
-            scheduleId: schedule._id,
+      // Filter to only stocks in this timezone group
+      const stockIdSet = new Set(stocks.map((s) => s._id as string));
+      const eligible = earningsRecords.filter((e) =>
+        stockIdSet.has(e.stockId as string)
+      );
+
+      const triggered = await Promise.all(
+        eligible.map(async (earnings) => {
+          if (
+            config.adjustForHour &&
+            config.offsetDays === 0 &&
+            earnings.hour === "amc"
+          )
+            return false;
+
+          const alreadyTriggered = await ctx.runQuery(
+            internal.earningsTriggers.checkAlreadyTriggered,
+            { scheduleId: schedule._id, earningsId: earnings._id }
+          );
+          if (alreadyTriggered) return false;
+
+          try {
+            const jobId = await ctx.runMutation(
+              internal.schedules.createScheduledJob,
+              {
+                promptId: schedule.promptId,
+                stockIds: [earnings.stockId],
+                provider: schedule.provider,
+                modelId: schedule.modelId,
+                scheduleId: schedule._id,
+              }
+            );
+            await ctx.runMutation(
+              internal.earningsTriggers.recordTriggeredRun,
+              {
+                scheduleId: schedule._id,
+                earningsId: earnings._id,
+                stockId: earnings.stockId,
+                earningsDate: earnings.date,
+                jobId: jobId as Id<"researchJobs">,
+              }
+            );
+            logger.info(
+              `Earnings trigger [each]: job for stock ${earnings.stockId} (${earnings.date}, tz=${tz}, schedule "${schedule.name}")`
+            );
+            return true;
+          } catch (error: unknown) {
+            const message =
+              error instanceof Error ? error.message : "Unknown error";
+            logger.error(
+              `Earnings trigger failed for stock ${earnings.stockId}, schedule "${schedule.name}": ${message}`
+            );
+            return false;
           }
-        );
-        await ctx.runMutation(internal.earningsTriggers.recordTriggeredRun, {
-          scheduleId: schedule._id,
-          earningsId: earnings._id,
-          stockId: earnings.stockId,
-          earningsDate: earnings.date,
-          jobId: jobId as Id<"researchJobs">,
-        });
-        triggeredAny = true;
-        console.log(
-          `Earnings trigger [each]: job for stock ${earnings.stockId} (${earnings.date}, tz=${tz}, schedule "${schedule.name}")`
-        );
-      } catch (error: unknown) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        console.error(
-          `Earnings trigger failed for stock ${earnings.stockId}, schedule "${schedule.name}": ${message}`
-        );
-      }
-    }
-  }
+        })
+      );
+      return triggered.some(Boolean);
+    })
+  );
 
-  if (triggeredAny) {
+  if (groupTriggered.some(Boolean)) {
     await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, {
       id: schedule._id,
     });
@@ -316,7 +330,7 @@ async function handleAggregateMode(
     tzCounts.set(tz, (tzCounts.get(tz) ?? 0) + 1);
   }
   const anchorTz =
-    [...tzCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+    [...tzCounts.entries()].toSorted((a, b) => b[1] - a[1])[0]?.[0] ??
     "America/New_York";
   const today = getTodayInTimezone(anchorTz);
 
@@ -380,23 +394,26 @@ async function handleAggregateMode(
     const anchorEarnings = reportedEarnings.find((e) => e.date === latestDate)!;
     try {
       if (isSingleStock) {
-        for (const stockId of selectedStockIds) {
-          try {
-            await ctx.runMutation(internal.schedules.createScheduledJob, {
-              promptId: schedule.promptId,
-              stockIds: [stockId],
-              provider: schedule.provider,
-              modelId: schedule.modelId,
-              scheduleId: schedule._id,
-            });
-          } catch (error: unknown) {
-            const message =
-              error instanceof Error ? error.message : "Unknown error";
-            console.error(
-              `Earnings trigger [after_last] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`
-            );
-          }
-        }
+        // Per-stock jobs are independent; create them in parallel.
+        await Promise.all(
+          selectedStockIds.map(async (stockId) => {
+            try {
+              await ctx.runMutation(internal.schedules.createScheduledJob, {
+                promptId: schedule.promptId,
+                stockIds: [stockId],
+                provider: schedule.provider,
+                modelId: schedule.modelId,
+                scheduleId: schedule._id,
+              });
+            } catch (error: unknown) {
+              const message =
+                error instanceof Error ? error.message : "Unknown error";
+              logger.error(
+                `Earnings trigger [after_last] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`
+              );
+            }
+          })
+        );
       } else {
         await ctx.runMutation(internal.schedules.createScheduledJob, {
           promptId: schedule.promptId,
@@ -414,7 +431,7 @@ async function handleAggregateMode(
         jobId: undefined,
         quarterKey: qKey,
       });
-      console.log(
+      logger.info(
         `Earnings trigger [after_last]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, tz=${anchorTz}, schedule "${schedule.name}")`
       );
       await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, {
@@ -422,7 +439,7 @@ async function handleAggregateMode(
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(
+      logger.error(
         `Earnings trigger [after_last] failed for schedule "${schedule.name}": ${message}`
       );
     }
@@ -443,23 +460,26 @@ async function handleAggregateMode(
     )!;
     try {
       if (isSingleStock) {
-        for (const stockId of selectedStockIds) {
-          try {
-            await ctx.runMutation(internal.schedules.createScheduledJob, {
-              promptId: schedule.promptId,
-              stockIds: [stockId],
-              provider: schedule.provider,
-              modelId: schedule.modelId,
-              scheduleId: schedule._id,
-            });
-          } catch (error: unknown) {
-            const message =
-              error instanceof Error ? error.message : "Unknown error";
-            console.error(
-              `Earnings trigger [before_first] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`
-            );
-          }
-        }
+        // Per-stock jobs are independent; create them in parallel.
+        await Promise.all(
+          selectedStockIds.map(async (stockId) => {
+            try {
+              await ctx.runMutation(internal.schedules.createScheduledJob, {
+                promptId: schedule.promptId,
+                stockIds: [stockId],
+                provider: schedule.provider,
+                modelId: schedule.modelId,
+                scheduleId: schedule._id,
+              });
+            } catch (error: unknown) {
+              const message =
+                error instanceof Error ? error.message : "Unknown error";
+              logger.error(
+                `Earnings trigger [before_first] failed for stock ${stockId}, schedule "${schedule.name}": ${message}`
+              );
+            }
+          })
+        );
       } else {
         await ctx.runMutation(internal.schedules.createScheduledJob, {
           promptId: schedule.promptId,
@@ -477,7 +497,7 @@ async function handleAggregateMode(
         jobId: undefined,
         quarterKey: qKey,
       });
-      console.log(
+      logger.info(
         `Earnings trigger [before_first]: ${isSingleStock ? "per-stock jobs" : "job"} for ${selectedStockIds.length} stocks (${qKey}, tz=${anchorTz}, schedule "${schedule.name}")`
       );
       await ctx.runMutation(internal.earningsTriggers.updateScheduleLastRunAt, {
@@ -485,7 +505,7 @@ async function handleAggregateMode(
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(
+      logger.error(
         `Earnings trigger [before_first] failed for schedule "${schedule.name}": ${message}`
       );
     }
@@ -524,7 +544,7 @@ export const testCheckEarningsTriggers = internalAction({
     const isDryRun = args.dryRun ?? true;
     const simulatedToday = args.overrideDate;
 
-    console.log(
+    logger.info(
       `[TEST] Simulating earnings triggers for date=${simulatedToday}, dryRun=${isDryRun}`
     );
 
@@ -534,11 +554,11 @@ export const testCheckEarningsTriggers = internalAction({
     );
 
     if (schedules.length === 0) {
-      console.log("[TEST] No enabled earnings-type schedules found.");
+      logger.info("[TEST] No enabled earnings-type schedules found.");
       return { schedulesChecked: 0, matchesFound: [] };
     }
 
-    console.log(`[TEST] Found ${schedules.length} earnings schedule(s)`);
+    logger.info(`[TEST] Found ${schedules.length} earnings schedule(s)`);
 
     const allMatches: Array<{
       scheduleName: string;
@@ -552,104 +572,113 @@ export const testCheckEarningsTriggers = internalAction({
       action: string;
     }> = [];
 
-    for (const schedule of schedules) {
-      const config = schedule.earningsConfig!;
-      const targetEarningsDate = addDays(simulatedToday, -config.offsetDays);
+    // Schedules are simulated one at a time so the [TEST] log output stays
+    // grouped per schedule and readable in the dashboard.
+    for await (const scheduleMatches of mapSequentially(
+      schedules,
+      async (schedule) => {
+        const config = schedule.earningsConfig!;
+        const targetEarningsDate = addDays(simulatedToday, -config.offsetDays);
 
-      console.log(
-        `[TEST] Schedule "${schedule.name}": offset=${config.offsetDays}d, target earnings date=${targetEarningsDate}`
-      );
-
-      const earningsRecords = await ctx.runQuery(
-        internal.earningsTriggers.getEarningsByDate,
-        { date: targetEarningsDate }
-      );
-
-      if (earningsRecords.length === 0) {
-        console.log(`[TEST]   No earnings found for ${targetEarningsDate}`);
-        continue;
-      }
-
-      console.log(
-        `[TEST]   Found ${earningsRecords.length} earnings record(s) on ${targetEarningsDate}`
-      );
-
-      const eligible = await resolveEligibleStocks(
-        ctx,
-        schedule,
-        earningsRecords
-      );
-
-      for (const { stockId, earningsId, earningsDate, hour } of eligible) {
-        const wouldSkipAmc =
-          config.adjustForHour && config.offsetDays === 0 && hour === "amc";
-
-        const alreadyTriggered = await ctx.runQuery(
-          internal.earningsTriggers.checkAlreadyTriggered,
-          { scheduleId: schedule._id, earningsId }
+        logger.info(
+          `[TEST] Schedule "${schedule.name}": offset=${config.offsetDays}d, target earnings date=${targetEarningsDate}`
         );
 
-        let action: string;
-        if (wouldSkipAmc) {
-          action = "SKIP (amc adjustment)";
-        } else if (alreadyTriggered) {
-          action = "SKIP (already triggered)";
-        } else if (isDryRun) {
-          action = "WOULD TRIGGER (dry run)";
-        } else {
-          action = "TRIGGERING";
-        }
-
-        const match = {
-          scheduleName: schedule.name,
-          offsetDays: config.offsetDays,
-          targetEarningsDate,
-          stockId: stockId as string,
-          earningsDate,
-          hour,
-          wouldSkipAmc,
-          alreadyTriggered,
-          action,
-        };
-        allMatches.push(match);
-
-        console.log(
-          `[TEST]   Stock ${stockId}: hour=${hour ?? "unknown"}, ${action}`
+        const earningsRecords = await ctx.runQuery(
+          internal.earningsTriggers.getEarningsByDate,
+          { date: targetEarningsDate }
         );
 
-        // Actually trigger if not dry run and not skipped
-        if (!isDryRun && !wouldSkipAmc && !alreadyTriggered) {
-          try {
-            const jobId = await ctx.runMutation(
-              internal.schedules.createScheduledJob,
-              {
-                promptId: schedule.promptId,
-                stockIds: [stockId],
-                provider: schedule.provider,
-                modelId: schedule.modelId,
-                scheduleId: schedule._id,
-              }
-            );
-            await ctx.runMutation(
-              internal.earningsTriggers.recordTriggeredRun,
-              {
-                scheduleId: schedule._id,
-                earningsId,
-                stockId,
-                earningsDate,
-                jobId: jobId as Id<"researchJobs">,
-              }
-            );
-          } catch (error: unknown) {
-            const message =
-              error instanceof Error ? error.message : "Unknown error";
-            console.error(`[TEST]   Error creating job: ${message}`);
-          }
+        if (earningsRecords.length === 0) {
+          logger.info(`[TEST]   No earnings found for ${targetEarningsDate}`);
+          return [];
         }
+
+        logger.info(
+          `[TEST]   Found ${earningsRecords.length} earnings record(s) on ${targetEarningsDate}`
+        );
+
+        const eligible = await resolveEligibleStocks(
+          ctx,
+          schedule,
+          earningsRecords
+        );
+
+        // Eligible stocks are independent; evaluate (and trigger) in parallel.
+        return await Promise.all(
+          eligible.map(async ({ stockId, earningsId, earningsDate, hour }) => {
+            const wouldSkipAmc =
+              config.adjustForHour && config.offsetDays === 0 && hour === "amc";
+
+            const alreadyTriggered = await ctx.runQuery(
+              internal.earningsTriggers.checkAlreadyTriggered,
+              { scheduleId: schedule._id, earningsId }
+            );
+
+            let action: string;
+            if (wouldSkipAmc) {
+              action = "SKIP (amc adjustment)";
+            } else if (alreadyTriggered) {
+              action = "SKIP (already triggered)";
+            } else if (isDryRun) {
+              action = "WOULD TRIGGER (dry run)";
+            } else {
+              action = "TRIGGERING";
+            }
+
+            logger.info(
+              `[TEST]   Stock ${stockId}: hour=${hour ?? "unknown"}, ${action}`
+            );
+
+            // Actually trigger if not dry run and not skipped
+            if (!isDryRun && !wouldSkipAmc && !alreadyTriggered) {
+              try {
+                const jobId = await ctx.runMutation(
+                  internal.schedules.createScheduledJob,
+                  {
+                    promptId: schedule.promptId,
+                    stockIds: [stockId],
+                    provider: schedule.provider,
+                    modelId: schedule.modelId,
+                    scheduleId: schedule._id,
+                  }
+                );
+                await ctx.runMutation(
+                  internal.earningsTriggers.recordTriggeredRun,
+                  {
+                    scheduleId: schedule._id,
+                    earningsId,
+                    stockId,
+                    earningsDate,
+                    jobId: jobId as Id<"researchJobs">,
+                  }
+                );
+              } catch (error: unknown) {
+                const message =
+                  error instanceof Error ? error.message : "Unknown error";
+                logger.error(`[TEST]   Error creating job: ${message}`);
+              }
+            }
+
+            return {
+              scheduleName: schedule.name,
+              offsetDays: config.offsetDays,
+              targetEarningsDate,
+              stockId: stockId as string,
+              earningsDate,
+              hour,
+              wouldSkipAmc,
+              alreadyTriggered,
+              action,
+            };
+          })
+        );
       }
+    )) {
+      allMatches.push(...scheduleMatches);
     }
 
-    console.log(
+    logger.info(
       `[TEST] Summary: ${schedules.length} schedule(s) checked, ${allMatches.length} match(es) found`
     );
 

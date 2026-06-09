@@ -5,6 +5,7 @@ import { action, internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { logger } from "./lib/logger";
 import {
   estimateModelCost,
   getHarnessAdapter,
@@ -362,7 +363,7 @@ export const pollJob = internalAction({
     try {
       result = await adapter.poll(model, job.externalJobId, apiKey);
     } catch (error) {
-      console.error(
+      logger.error(
         `pollJob: ${model.id} poll failed for ${args.jobId}:`,
         error instanceof Error ? error.message : error
       );
@@ -452,18 +453,21 @@ export const recoverStaleJobs = internalAction({
       { staleThresholdMs: STALE_JOB_THRESHOLD_MS }
     );
 
-    for (const job of staleJobs) {
-      try {
-        await ctx.runAction(internal.researchActions.pollJob, {
-          jobId: job._id,
-        });
-      } catch (error) {
-        console.error(
-          `recoverStaleJobs: pollJob failed for ${job._id}:`,
-          error instanceof Error ? error.message : error
-        );
-      }
-    }
+    // Stale jobs are independent; poll them in parallel.
+    await Promise.all(
+      staleJobs.map(async (job) => {
+        try {
+          await ctx.runAction(internal.researchActions.pollJob, {
+            jobId: job._id,
+          });
+        } catch (error) {
+          logger.error(
+            `recoverStaleJobs: pollJob failed for ${job._id}:`,
+            error instanceof Error ? error.message : error
+          );
+        }
+      })
+    );
   },
 });
 

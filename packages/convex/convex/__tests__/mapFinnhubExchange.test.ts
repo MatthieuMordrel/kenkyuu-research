@@ -3,9 +3,7 @@ import { mapFinnhubExchange } from "../lib/finnhub/mapExchange";
 
 describe("mapFinnhubExchange", () => {
   it("maps US exchanges", () => {
-    expect(
-      mapFinnhubExchange("NASDAQ NMS - GLOBAL MARKET")
-    ).toBe("NASDAQ");
+    expect(mapFinnhubExchange("NASDAQ NMS - GLOBAL MARKET")).toBe("NASDAQ");
     expect(mapFinnhubExchange("NEW YORK STOCK EXCHANGE, INC.")).toBe("NYSE");
   });
 

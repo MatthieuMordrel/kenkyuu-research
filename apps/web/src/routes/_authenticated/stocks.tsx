@@ -83,7 +83,7 @@ function StocksPage() {
 
   const sortedStocks = useMemo(() => {
     if (!stocks) return stocks;
-    return [...stocks].sort((a, b) => {
+    return stocks.toSorted((a, b) => {
       let cmp = 0;
       if (sortBy === "nextEarnings") {
         const aDate = earningsSummary?.[a._id]?.next?.date ?? "";
@@ -137,16 +137,12 @@ function StocksPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
-        title="Stocks"
-        description="Manage your stock watchlist"
-        actions={
-          <Button size="sm" onClick={openAdd}>
-            <Plus className="size-4" />
-            Add Stock
-          </Button>
-        }
-      />
+      <PageHeader title="Stocks" description="Manage your stock watchlist">
+        <Button size="sm" onClick={openAdd}>
+          <Plus className="size-4" />
+          Add Stock
+        </Button>
+      </PageHeader>
 
       <div className="flex flex-col gap-3 px-4 md:px-6">
         {/* Search */}
@@ -331,6 +327,10 @@ interface EarningsSummary {
   nextNext?: { date: string; hour?: string };
 }
 
+function stockLinkParams<T>(stockId: T) {
+  return { stockId };
+}
+
 function StockRow({
   stock,
   earnings,
@@ -345,7 +345,7 @@ function StockRow({
   return (
     <Link
       to="/stocks/$stockId"
-      params={{ stockId: stock._id }}
+      params={stockLinkParams(stock._id)}
       className="group flex h-16 items-center gap-3 rounded-xl px-3 transition-all hover:bg-accent"
     >
       {/* Ticker badge */}

@@ -8,10 +8,7 @@
  */
 /** Turns `Title.** body` into a bold lead-in (not a heading). */
 export function fixInlineSectionTitles(markdown: string): string {
-  return markdown.replace(
-    /^([A-Za-z][^\n*]{2,90}?)\.\*\*\s+/gm,
-    "**$1:** "
-  );
+  return markdown.replace(/^([A-Za-z][^\n*]{2,90}?)\.\*\*\s+/gm, "**$1:** ");
 }
 
 /** Demotes ### headings that are only dates/quarters to bold lines. */

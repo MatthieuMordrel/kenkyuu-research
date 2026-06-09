@@ -164,11 +164,9 @@ export const createAndStartResearch = mutation({
       searchText,
     });
 
-    await ctx.scheduler.runAfter(
-      0,
-      internal.researchActions.startResearch,
-      { jobId }
-    );
+    await ctx.scheduler.runAfter(0, internal.researchActions.startResearch, {
+      jobId,
+    });
 
     return jobId;
   },
@@ -544,9 +542,8 @@ export const deleteJob = mutation({
       .withIndex("by_jobId", (q) => q.eq("jobId", args.id))
       .collect();
 
-    for (const log of costLogs) {
-      await ctx.db.delete(log._id);
-    }
+    // Deletes are independent per row; run them in parallel.
+    await Promise.all(costLogs.map((log) => ctx.db.delete(log._id)));
 
     // Delete the job itself
     await ctx.db.delete(args.id);
@@ -783,7 +780,7 @@ export const searchResults = query({
       .withSearchIndex("search_metadata", (q) => q.search("searchText", term))
       .take(maxResults);
 
-    return matches.sort((a, b) => b.createdAt - a.createdAt);
+    return matches.toSorted((a, b) => b.createdAt - a.createdAt);
   },
 });
 
@@ -866,7 +863,7 @@ export const drainProviderQueue = internalMutation({
       .filter(
         (job) => job.provider === args.provider && job.status === "pending"
       )
-      .sort((left, right) => left.createdAt - right.createdAt);
+      .toSorted((left, right) => left.createdAt - right.createdAt);
 
     const nextJob = pendingJobs[0];
     if (!nextJob) {
@@ -949,6 +946,14 @@ export const summarizeResearchResultSizes = internalQuery({
   },
 });
 
+/** Counts `##` headings in a markdown string. */
+const countH2 = (text: string | undefined) =>
+  text?.match(/^## /gm)?.length ?? 0;
+
+/** Counts `###` headings in a markdown string. */
+const countH3 = (text: string | undefined) =>
+  text?.match(/^### /gm)?.length ?? 0;
+
 /** Ops: compare raw vs formatted snippets for a job (e.g. verify backfill). */
 export const debugJobFormatting = internalQuery({
   args: { jobId: v.id("researchJobs") },
@@ -956,7 +961,11 @@ export const debugJobFormatting = internalQuery({
     const job = await ctx.db.get(args.jobId);
     if (!job) return null;
 
-    const needles = ["Model mechanics", "Pricing power", "sold out of capacity"];
+    const needles = [
+      "Model mechanics",
+      "Pricing power",
+      "sold out of capacity",
+    ];
     const snippet = (text: string | undefined) => {
       if (!text) return null;
       for (const needle of needles) {
@@ -966,10 +975,6 @@ export const debugJobFormatting = internalQuery({
       return null;
     };
 
-    const countH2 = (text: string | undefined) =>
-      text?.match(/^## /gm)?.length ?? 0;
-    const countH3 = (text: string | undefined) =>
-      text?.match(/^### /gm)?.length ?? 0;
     const h2Titles =
       job.result?.match(/^## (.+)$/gm)?.map((line) => line.slice(3)) ?? [];
 

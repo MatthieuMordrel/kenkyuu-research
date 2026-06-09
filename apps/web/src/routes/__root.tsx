@@ -22,20 +22,21 @@ const ReactQueryDevtoolsLazy = lazy(() =>
   }))
 );
 
+const devtoolsConfig = { position: "bottom-right" as const };
+
+const devtoolsPlugins = [
+  {
+    name: "Tanstack Router",
+    render: <RouterDevtoolsPanelLazy />,
+  },
+];
+
 function Devtools() {
   if (!import.meta.env.DEV) return null;
 
   return (
     <Suspense>
-      <DevtoolsLazy
-        config={{ position: "bottom-right" as const }}
-        plugins={[
-          {
-            name: "Tanstack Router",
-            render: <RouterDevtoolsPanelLazy />,
-          },
-        ]}
-      />
+      <DevtoolsLazy config={devtoolsConfig} plugins={devtoolsPlugins} />
       <ReactQueryDevtoolsLazy initialIsOpen={false} />
     </Suspense>
   );

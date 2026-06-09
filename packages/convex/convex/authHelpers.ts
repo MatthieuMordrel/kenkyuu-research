@@ -235,8 +235,7 @@ export const recordLoginAttempt = internalMutation({
       )
       .collect();
 
-    for (const attempt of oldAttempts) {
-      await ctx.db.delete(attempt._id);
-    }
+    // Deletes are independent per row; run them in parallel.
+    await Promise.all(oldAttempts.map((attempt) => ctx.db.delete(attempt._id)));
   },
 });

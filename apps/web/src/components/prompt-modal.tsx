@@ -53,6 +53,8 @@ interface PromptFormErrors {
   template?: string;
 }
 
+const remarkPlugins = [remarkGfm];
+
 const INITIAL_FORM: PromptFormData = {
   name: "",
   description: "",
@@ -298,7 +300,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
 
             {showPreview ? (
               <div className="max-h-64 overflow-y-auto rounded-md border bg-muted/30 p-4">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown remarkPlugins={remarkPlugins}>
                   {previewText}
                 </ReactMarkdown>
               </div>
@@ -320,7 +322,9 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
               {availableVariables.map((v) => (
                 <Badge
                   key={v.name}
-                  variant={usedVariables.includes(v.name) ? "default" : "outline"}
+                  variant={
+                    usedVariables.includes(v.name) ? "default" : "outline"
+                  }
                   className="text-[10px]"
                 >
                   {`{{${v.name}}}`}

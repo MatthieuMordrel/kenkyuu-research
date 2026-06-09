@@ -145,6 +145,21 @@ export function ActiveJobsPanel() {
   );
 }
 
+const healthStatusContainer = (
+  <div className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1" />
+);
+
+function renderHealthCheckButton(onClick: () => void, disabled: boolean) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      onClick={onClick}
+      disabled={disabled}
+    />
+  );
+}
+
 function HealthStatusIndicator({ result }: { result: HealthCheckResult }) {
   const isHealthy =
     result.providerStatus === "running" ||
@@ -165,11 +180,7 @@ function HealthStatusIndicator({ result }: { result: HealthCheckResult }) {
 
   return (
     <Tooltip>
-      <TooltipTrigger
-        render={
-          <div className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1" />
-        }
-      >
+      <TooltipTrigger render={healthStatusContainer}>
         <Icon className={cn("size-3", colorClass)} />
         <span className="text-[10px] font-medium">
           {PROVIDER_LABEL[result.provider]}:{" "}
@@ -207,8 +218,7 @@ function JobCard({
 
   const config = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = config.icon;
-  const isInProgress =
-    job.status === "running" || job.status === "formatting";
+  const isInProgress = job.status === "running" || job.status === "formatting";
   const canCancel =
     job.status === "pending" ||
     job.status === "running" ||
@@ -314,14 +324,7 @@ function JobCard({
             {canCheck && (
               <Tooltip>
                 <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={handleCheckHealth}
-                      disabled={checking}
-                    />
-                  }
+                  render={renderHealthCheckButton(handleCheckHealth, checking)}
                 >
                   {checking ? (
                     <Loader2 className="size-3.5 animate-spin" />

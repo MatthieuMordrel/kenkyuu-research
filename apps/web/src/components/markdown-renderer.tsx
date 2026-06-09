@@ -47,10 +47,7 @@ function createHeadingComponent(level: 1 | 2 | 3 | 4 | 5 | 6) {
   }: HTMLAttributes<HTMLHeadingElement>) {
     return (
       <Tag
-        className={cn(
-          headingStyles[level],
-          headingSpacing[level]
-        )}
+        className={cn(headingStyles[level], headingSpacing[level])}
         {...props}
       >
         {children}
@@ -180,6 +177,11 @@ const markdownComponents: Components = {
 
 const remarkPlugins = [remarkGfm];
 
+/** Renders section titles inline (no paragraph wrapper) inside collapsible headers. */
+const titleMarkdownComponents: Components = {
+  p: ({ children }) => <>{children}</>,
+};
+
 // --- Fix malformed markdown tables ---
 // AI models (especially OpenAI deep research) sometimes output tables with
 // mismatched column counts between the header, separator, and data rows.
@@ -300,6 +302,8 @@ function repairTable(tableLines: string[]): string[] {
 // --- Section parsing (hierarchical) ---
 
 interface Section {
+  /** Stable id derived from the title and its occurrence order at parse time. */
+  id: string;
   level: number;
   displayLevel: number;
   title: string;
@@ -381,6 +385,7 @@ function parseSections(markdown: string): ParsedMarkdown {
     while (i < items.length) {
       const item = items[i];
       const section: Section = {
+        id: "",
         level: item.level,
         displayLevel: item.displayLevel,
         title: item.title,
@@ -405,10 +410,29 @@ function parseSections(markdown: string): ParsedMarkdown {
     return result;
   }
 
+  const sections = flattenThinSections(buildTree(flat));
+  assignSectionIds(sections, new Map());
+
   return {
     preamble: preamble.trim(),
-    sections: flattenThinSections(buildTree(flat)),
+    sections,
   };
+}
+
+/**
+ * Assigns each section a stable id from its title and occurrence count so
+ * React keys survive re-parses of the same markdown.
+ */
+function assignSectionIds(
+  sections: Section[],
+  occurrences: Map<string, number>
+): void {
+  for (const section of sections) {
+    const count = (occurrences.get(section.title) ?? 0) + 1;
+    occurrences.set(section.title, count);
+    section.id = `${section.title}#${count}`;
+    assignSectionIds(section.children, occurrences);
+  }
 }
 
 /** Minimum body length (chars) for a ## section to be collapsible on its own. */
@@ -517,7 +541,7 @@ function CollapsibleSection({
         >
           <ReactMarkdown
             remarkPlugins={remarkPlugins}
-            components={{ p: ({ children }) => <>{children}</> }}
+            components={titleMarkdownComponents}
           >
             {section.title}
           </ReactMarkdown>
@@ -537,7 +561,7 @@ function CollapsibleSection({
             <div className="flex flex-col">
               {section.children.map((child, i) => (
                 <CollapsibleSection
-                  key={i}
+                  key={child.id}
                   section={child}
                   openSet={openSet}
                   pathKey={`${pathKey}.${i}`}
@@ -563,6 +587,11 @@ interface OutlineDepthControlsProps {
   canExpandOneLevel: boolean;
   /** Whether another level can be collapsed */
   canCollapseOneLevel: boolean;
+}
+
+/** Builds the outline controls element outside of JSX attribute position. */
+function renderOutlineControls(props: OutlineDepthControlsProps) {
+  return <OutlineDepthControls {...props} />;
 }
 
 /**
@@ -634,7 +663,11 @@ function MarkdownRendererHeader({
   return (
     <>
       {sticky ? (
-        <div ref={sentinelRef} className="pointer-events-none h-px" aria-hidden />
+        <div
+          ref={sentinelRef}
+          className="pointer-events-none h-px"
+          aria-hidden
+        />
       ) : null}
       <div
         className={cn(
@@ -726,9 +759,7 @@ export function MarkdownRenderer({
 
   const maxTreeDepth = useMemo(
     () =>
-      allKeys.length === 0
-        ? -1
-        : Math.max(...allKeys.map(sectionKeyDepth)),
+      allKeys.length === 0 ? -1 : Math.max(...allKeys.map(sectionKeyDepth)),
     [allKeys]
   );
 
@@ -769,14 +800,14 @@ export function MarkdownRenderer({
     );
   }, [allKeys, maxOpenDepth, openSet.size]);
 
-  const outlineControls = hasCollapsibleSections ? (
-    <OutlineDepthControls
-      onExpandOneLevel={expandOneLevel}
-      onCollapseOneLevel={collapseOneLevel}
-      canExpandOneLevel={canExpandOneLevel}
-      canCollapseOneLevel={canCollapseOneLevel}
-    />
-  ) : undefined;
+  const outlineControls = hasCollapsibleSections
+    ? renderOutlineControls({
+        onExpandOneLevel: expandOneLevel,
+        onCollapseOneLevel: collapseOneLevel,
+        canExpandOneLevel,
+        canCollapseOneLevel,
+      })
+    : undefined;
 
   const shouldStickHeader = headerSticky && !!headerTitle;
 
@@ -843,7 +874,7 @@ export function MarkdownRenderer({
         <div className="flex flex-col">
           {sections.map((section, i) => (
             <CollapsibleSection
-              key={i}
+              key={section.id}
               section={section}
               openSet={openSet}
               pathKey={`${i}`}

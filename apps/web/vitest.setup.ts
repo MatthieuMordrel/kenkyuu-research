@@ -1,4 +1,8 @@
-import "@testing-library/jest-dom/vitest";
+// Matcher type augmentation is loaded via tsconfig "types" ("@testing-library/jest-dom/vitest")
+import * as jestDomMatchers from "@testing-library/jest-dom/matchers";
+import { expect } from "vitest";
+
+expect.extend(jestDomMatchers);
 
 // Mock window.matchMedia for components that use it (useIsMobile, useTheme)
 Object.defineProperty(window, "matchMedia", {

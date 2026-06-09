@@ -14,7 +14,8 @@ import { prepassMarkdown } from "../researchFormat";
 
 describe("prepassMarkdown", () => {
   it("strips thinking blocks and normalizes blank lines", () => {
-    const input = "Hello\r\n\r\n<thinking>secret</thinking>\r\n\r\n\r\n\r\n\r\nWorld";
+    const input =
+      "Hello\r\n\r\n<thinking>secret</thinking>\r\n\r\n\r\n\r\n\r\nWorld";
     expect(prepassMarkdown(input)).toBe("Hello\n\nWorld");
   });
 
@@ -73,7 +74,8 @@ describe("heading structure helpers", () => {
 
 describe("passesFormattingGuards", () => {
   it("accepts well-formed output with similar length and links", () => {
-    const raw = "# Title\n\nClaim [1](https://x.com).\n\n## Sources\n1. [X](https://x.com)";
+    const raw =
+      "# Title\n\nClaim [1](https://x.com).\n\n## Sources\n1. [X](https://x.com)";
     const formatted =
       "# Title\n\nClaim [1](https://x.com).\n\n## Sources\n\n1. [X](https://x.com)";
     expect(passesFormattingGuards(raw, formatted)).toBe(true);
@@ -124,7 +126,7 @@ describe("evaluateFormattedOutput", () => {
   });
 
   it("falls back to preprocessed outline when formatter flattens main sections", () => {
-    const preprocessed =
+    const outlinePreprocessed =
       "# ZETA Deep Research\n\n**Bottom line:** Hold.\n\n" +
       "# Section 1 — Business\n\n## Model mechanics\n\n" +
       "Revenue is usage-based.\n\n".repeat(80);
@@ -133,7 +135,7 @@ describe("evaluateFormattedOutput", () => {
       "## Model mechanics\n\nRevenue is usage-based.\n\n".repeat(80);
 
     const result = evaluateFormattedOutput({
-      preprocessed,
+      preprocessed: outlinePreprocessed,
       formatted: flattened,
       formatAttempts: MAX_FORMAT_ATTEMPTS - 1,
     });

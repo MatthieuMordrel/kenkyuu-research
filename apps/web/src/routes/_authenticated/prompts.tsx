@@ -119,13 +119,12 @@ function PromptsPage() {
       <PageHeader
         title="Prompts"
         description="Manage research prompt templates"
-        actions={
-          <Button size="sm" onClick={openAdd}>
-            <Plus className="size-4" />
-            New Prompt
-          </Button>
-        }
-      />
+      >
+        <Button size="sm" onClick={openAdd}>
+          <Plus className="size-4" />
+          New Prompt
+        </Button>
+      </PageHeader>
 
       <div className="flex flex-col gap-3 px-4 md:px-6">
         {/* Type filter tabs */}

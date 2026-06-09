@@ -40,9 +40,7 @@ export const FORMAT_MODELS: Record<FormatModelId, FormatModelDefinition> = {
 /**
  * Resolves a formatter model id, falling back to the default OpenAI entry.
  */
-export function resolveFormatModel(
-  modelId?: string
-): FormatModelDefinition {
+export function resolveFormatModel(modelId?: string): FormatModelDefinition {
   if (modelId && modelId in FORMAT_MODELS) {
     return FORMAT_MODELS[modelId as FormatModelId];
   }

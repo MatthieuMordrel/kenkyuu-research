@@ -15,11 +15,13 @@ export const DEFAULT_RESEARCH_MODEL_ID: ResearchModelId =
  * Maps legacy `provider`-only records to their default model.
  * Used while migrating stored documents that predate modelId.
  */
-export const LEGACY_PROVIDER_DEFAULT_MODEL: Record<ProviderId, ResearchModelId> =
-  {
-    anthropic: "anthropic/claude-opus-4-8",
-    openai: "openai/gpt-5.5",
-  };
+export const LEGACY_PROVIDER_DEFAULT_MODEL: Record<
+  ProviderId,
+  ResearchModelId
+> = {
+  anthropic: "anthropic/claude-opus-4-8",
+  openai: "openai/gpt-5.5",
+};
 
 /**
  * Look up a model by registry id. Throws if unknown.
@@ -132,6 +134,7 @@ export function getSettingsKeyForProvider(providerId: ProviderId): string {
 export function isProviderActive(providerId: ProviderId): boolean {
   return RESEARCH_MODEL_IDS.some(
     (id) =>
-      RESEARCH_MODELS[id].providerId === providerId && RESEARCH_MODELS[id].active
+      RESEARCH_MODELS[id].providerId === providerId &&
+      RESEARCH_MODELS[id].active
   );
 }

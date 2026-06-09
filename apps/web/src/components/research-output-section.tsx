@@ -51,11 +51,14 @@ function ResearchOutputViewToggle({
   view: ResearchOutputView;
   onViewChange: (view: ResearchOutputView) => void;
 }) {
-  const options: { value: ResearchOutputView; label: string; icon: typeof Sparkles }[] =
-    [
-      { value: "formatted", label: "Formatted", icon: Sparkles },
-      { value: "raw", label: "Raw", icon: FileText },
-    ];
+  const options: {
+    value: ResearchOutputView;
+    label: string;
+    icon: typeof Sparkles;
+  }[] = [
+    { value: "formatted", label: "Formatted", icon: Sparkles },
+    { value: "raw", label: "Raw", icon: FileText },
+  ];
 
   return (
     <div
@@ -88,6 +91,20 @@ function ResearchOutputViewToggle({
   );
 }
 
+const formattingBadge = (
+  <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+    Formatting…
+  </span>
+);
+
+/** Builds the header-trailing element for the markdown viewer outside of JSX attribute position. */
+function renderViewToggle(
+  view: ResearchOutputView,
+  onViewChange: (view: ResearchOutputView) => void
+) {
+  return <ResearchOutputViewToggle view={view} onViewChange={onViewChange} />;
+}
+
 /**
  * Renders research job output with an optional raw vs formatted toggle in the markdown header.
  */
@@ -111,7 +128,9 @@ export function ResearchOutputSection({ job }: ResearchOutputSectionProps) {
 
   const activeView = canToggle ? view : defaultView;
   const content =
-    canToggle && activeView === "raw" && raw ? raw : (formatted ?? raw ?? displayContent);
+    canToggle && activeView === "raw" && raw
+      ? raw
+      : (formatted ?? raw ?? displayContent);
 
   const headerTitle =
     activeView === "raw" ? "Research Output (raw)" : "Research Output";
@@ -126,13 +145,11 @@ export function ResearchOutputSection({ job }: ResearchOutputSectionProps) {
         headerTitle={headerTitle}
         headerIcon={FlaskConical}
         headerTrailing={
-          canToggle ? (
-            <ResearchOutputViewToggle view={activeView} onViewChange={setView} />
-          ) : isFormatting ? (
-            <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-              Formatting…
-            </span>
-          ) : undefined
+          canToggle
+            ? renderViewToggle(activeView, setView)
+            : isFormatting
+              ? formattingBadge
+              : undefined
         }
         outlineControlsStickyTopClassName="top-14 md:top-0"
         className="overflow-x-auto"

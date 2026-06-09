@@ -28,30 +28,34 @@ export const upsertEarnings = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    for (const entry of args.entries) {
-      const existing = await ctx.db
-        .query("earnings")
-        .withIndex("by_symbol_date", (q) =>
-          q.eq("symbol", args.symbol).eq("date", entry.date)
-        )
-        .unique();
+    // Entries are keyed by distinct (symbol, date) pairs, so each upsert is
+    // independent and can run in parallel within the mutation transaction.
+    await Promise.all(
+      args.entries.map(async (entry) => {
+        const existing = await ctx.db
+          .query("earnings")
+          .withIndex("by_symbol_date", (q) =>
+            q.eq("symbol", args.symbol).eq("date", entry.date)
+          )
+          .unique();
 
-      if (existing) {
-        await ctx.db.patch(existing._id, {
-          ...entry,
-          stockId: args.stockId,
-          symbol: args.symbol,
-          updatedAt: now,
-        });
-      } else {
-        await ctx.db.insert("earnings", {
-          stockId: args.stockId,
-          symbol: args.symbol,
-          ...entry,
-          updatedAt: now,
-        });
-      }
-    }
+        if (existing) {
+          await ctx.db.patch(existing._id, {
+            ...entry,
+            stockId: args.stockId,
+            symbol: args.symbol,
+            updatedAt: now,
+          });
+        } else {
+          await ctx.db.insert("earnings", {
+            stockId: args.stockId,
+            symbol: args.symbol,
+            ...entry,
+            updatedAt: now,
+          });
+        }
+      })
+    );
   },
 });
 
@@ -92,7 +96,7 @@ export const getEarningsSummaryAll = query({
     }
 
     for (const [stockId, entries] of Object.entries(grouped)) {
-      const sorted = entries.sort((a, b) => a.date.localeCompare(b.date));
+      const sorted = entries.toSorted((a, b) => a.date.localeCompare(b.date));
       const past = sorted.filter((e) => e.date < today);
       const future = sorted.filter((e) => e.date >= today);
 
@@ -128,6 +132,6 @@ export const getEarningsByStockId = query({
       .query("earnings")
       .withIndex("by_stockId", (q) => q.eq("stockId", args.stockId))
       .collect();
-    return earnings.sort((a, b) => a.date.localeCompare(b.date));
+    return earnings.toSorted((a, b) => a.date.localeCompare(b.date));
   },
 });

@@ -116,7 +116,10 @@ describe("buildOpenAIResponseCreateParams", () => {
 describe("renderOpenAITextWithCitations", () => {
   it("preserves plain text when no citations are present", () => {
     expect(
-      renderOpenAITextWithCitations({ text: "Plain report body", annotations: [] })
+      renderOpenAITextWithCitations({
+        text: "Plain report body",
+        annotations: [],
+      })
     ).toBe("Plain report body");
   });
 
@@ -138,7 +141,9 @@ describe("renderOpenAITextWithCitations", () => {
       "accelerated meaningfully [1](https://example.com/filing) in 2025."
     );
     expect(rendered).toContain("## Sources");
-    expect(rendered).toContain("1. [Company Filing](https://example.com/filing)");
+    expect(rendered).toContain(
+      "1. [Company Filing](https://example.com/filing)"
+    );
   });
 
   it("deduplicates repeated sources in the appendix", () => {

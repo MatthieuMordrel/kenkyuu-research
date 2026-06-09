@@ -5,6 +5,7 @@ import { internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { logger } from "./lib/logger";
 import {
   DEFAULT_FORMAT_MODEL_ID,
   estimateFormatCost,
@@ -41,7 +42,9 @@ async function loadJob(
   ctx: ActionCtx,
   jobId: Id<"researchJobs">
 ): Promise<Doc<"researchJobs"> | null> {
-  return await ctx.runQuery(internal.researchJobs.getJobInternal, { id: jobId });
+  return await ctx.runQuery(internal.researchJobs.getJobInternal, {
+    id: jobId,
+  });
 }
 
 function isPipelineJob(job: Doc<"researchJobs">): boolean {
@@ -64,11 +67,15 @@ async function schedulePoll(
   mode: "pipeline" | "backfill",
   nextDelayMs: number
 ) {
-  await ctx.scheduler.runAfter(nextDelayMs, internal.researchFormatActions.pollFormat, {
-    jobId,
-    mode,
+  await ctx.scheduler.runAfter(
     nextDelayMs,
-  });
+    internal.researchFormatActions.pollFormat,
+    {
+      jobId,
+      mode,
+      nextDelayMs,
+    }
+  );
 }
 
 async function scheduleStart(
@@ -87,9 +94,13 @@ async function dispatchPostCompleteSideEffects(
   jobId: Id<"researchJobs">,
   totalCostUsd: number
 ) {
-  await ctx.scheduler.runAfter(0, internal.notifications.dispatchJobNotification, {
-    jobId,
-  });
+  await ctx.scheduler.runAfter(
+    0,
+    internal.notifications.dispatchJobNotification,
+    {
+      jobId,
+    }
+  );
   await ctx.scheduler.runAfter(0, internal.budgetAlert.checkBudgetAlert, {
     currentCostUsd: totalCostUsd,
   });
@@ -164,7 +175,12 @@ export const startFormat = internalAction({
     if (args.mode === "backfill" && job.status !== "completed") return;
 
     if (job.formatExternalId) {
-      await schedulePoll(ctx, args.jobId, args.mode, FORMAT_POLL_INITIAL_DELAY_MS);
+      await schedulePoll(
+        ctx,
+        args.jobId,
+        args.mode,
+        FORMAT_POLL_INITIAL_DELAY_MS
+      );
       return;
     }
 
@@ -194,9 +210,14 @@ export const startFormat = internalAction({
         id: args.jobId,
         formatExternalId: externalId,
       });
-      await schedulePoll(ctx, args.jobId, args.mode, FORMAT_POLL_INITIAL_DELAY_MS);
+      await schedulePoll(
+        ctx,
+        args.jobId,
+        args.mode,
+        FORMAT_POLL_INITIAL_DELAY_MS
+      );
     } catch (error) {
-      console.error(
+      logger.error(
         `startFormat: OpenAI submit failed for ${args.jobId}:`,
         error instanceof Error ? error.message : error
       );
@@ -311,7 +332,7 @@ export const pollFormat = internalAction({
     try {
       pollResult = await pollFormatResponse(apiKey, job.formatExternalId);
     } catch (error) {
-      console.error(
+      logger.error(
         `pollFormat: poll failed for ${args.jobId}:`,
         error instanceof Error ? error.message : error
       );
@@ -337,7 +358,7 @@ export const pollFormat = internalAction({
         return;
       case "failed":
       case "cancelled": {
-        console.error(
+        logger.error(
           `pollFormat: response ${pollResult.status} for ${args.jobId}:`,
           pollResult.status === "failed" ? pollResult.error : "cancelled"
         );
@@ -359,28 +380,31 @@ export const recoverStaleFormatting = internalAction({
       { staleThresholdMs: FORMAT_STALE_THRESHOLD_MS }
     );
 
-    for (const job of staleJobs) {
-      const mode = "pipeline" as const;
-      try {
-        if (job.formatExternalId) {
-          await ctx.runAction(internal.researchFormatActions.pollFormat, {
-            jobId: job._id,
-            mode,
-            nextDelayMs: FORMAT_POLL_INITIAL_DELAY_MS,
-          });
-        } else {
-          await ctx.runAction(internal.researchFormatActions.startFormat, {
-            jobId: job._id,
-            mode,
-          });
+    // Stale jobs are independent; recover them in parallel.
+    await Promise.all(
+      staleJobs.map(async (job) => {
+        const mode = "pipeline" as const;
+        try {
+          if (job.formatExternalId) {
+            await ctx.runAction(internal.researchFormatActions.pollFormat, {
+              jobId: job._id,
+              mode,
+              nextDelayMs: FORMAT_POLL_INITIAL_DELAY_MS,
+            });
+          } else {
+            await ctx.runAction(internal.researchFormatActions.startFormat, {
+              jobId: job._id,
+              mode,
+            });
+          }
+        } catch (error) {
+          logger.error(
+            `recoverStaleFormatting: failed for ${job._id}:`,
+            error instanceof Error ? error.message : error
+          );
         }
-      } catch (error) {
-        console.error(
-          `recoverStaleFormatting: failed for ${job._id}:`,
-          error instanceof Error ? error.message : error
-        );
-      }
-    }
+      })
+    );
   },
 });
 

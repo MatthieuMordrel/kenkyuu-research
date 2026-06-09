@@ -160,33 +160,32 @@ function SchedulesPage() {
       <PageHeader
         title="Schedules"
         description="Manage automated research schedules"
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant={globalPaused ? "destructive" : "outline"}
-              onClick={() => toggleGlobalPause()}
-              disabled={isLoading}
-            >
-              {globalPaused ? (
-                <>
-                  <Play className="size-4" />
-                  Resume All
-                </>
-              ) : (
-                <>
-                  <Pause className="size-4" />
-                  Pause All
-                </>
-              )}
-            </Button>
-            <Button size="sm" onClick={openAdd}>
-              <Plus className="size-4" />
-              New Schedule
-            </Button>
-          </div>
-        }
-      />
+      >
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={globalPaused ? "destructive" : "outline"}
+            onClick={() => toggleGlobalPause()}
+            disabled={isLoading}
+          >
+            {globalPaused ? (
+              <>
+                <Play className="size-4" />
+                Resume All
+              </>
+            ) : (
+              <>
+                <Pause className="size-4" />
+                Pause All
+              </>
+            )}
+          </Button>
+          <Button size="sm" onClick={openAdd}>
+            <Plus className="size-4" />
+            New Schedule
+          </Button>
+        </div>
+      </PageHeader>
 
       {/* Global pause banner */}
       {globalPaused && (
@@ -231,13 +230,12 @@ function SchedulesPage() {
             icon={Clock}
             title="No schedules yet"
             description="Create a schedule to automate your research runs."
-            action={
-              <Button size="sm" onClick={openAdd}>
-                <Plus className="size-4" />
-                New Schedule
-              </Button>
-            }
-          />
+          >
+            <Button size="sm" onClick={openAdd}>
+              <Plus className="size-4" />
+              New Schedule
+            </Button>
+          </EmptyState>
         ) : (
           <div className="flex flex-col gap-2">
             {schedules.map((schedule) => (

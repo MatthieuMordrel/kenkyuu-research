@@ -75,7 +75,10 @@ export function ResearchPromptSection() {
         <CardDescription>
           When you run research, every provider receives the same system prompt
           plus a prompt template you choose on the{" "}
-          <Link to="/prompts" className="font-medium text-primary underline-offset-4 hover:underline">
+          <Link
+            to="/prompts"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
             Prompts
           </Link>{" "}
           page.
@@ -112,8 +115,9 @@ export function ResearchPromptSection() {
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium">Built-in prompt template</p>
           <p className="text-xs text-muted-foreground">
-            Each job uses the template from the prompt you select. Custom prompts
-            are managed on the Prompts page; this is the default seeded template.
+            Each job uses the template from the prompt you select. Custom
+            prompts are managed on the Prompts page; this is the default seeded
+            template.
           </p>
           <PromptViewRow
             title={researchPromptView.builtInDiscoveryName}

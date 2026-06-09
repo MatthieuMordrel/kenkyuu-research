@@ -91,7 +91,10 @@ export const updatePrompt = mutation({
       patch.description = updates.description;
     if (updates.type !== undefined) patch.type = updates.type;
     if (updates.template !== undefined) patch.template = updates.template;
-    if (updates.defaultModelId !== undefined || updates.defaultProvider !== undefined) {
+    if (
+      updates.defaultModelId !== undefined ||
+      updates.defaultProvider !== undefined
+    ) {
       const resolvedModelId = resolveMutationModelId({
         modelId: updates.defaultModelId ?? existing.defaultModelId,
         provider: updates.defaultProvider ?? existing.defaultProvider,

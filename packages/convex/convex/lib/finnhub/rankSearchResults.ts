@@ -42,7 +42,7 @@ export function rankSearchResults(
 ): SymbolSuggestion[] {
   const eligible = results.filter((row) => isEligibleType(row.type));
 
-  const sorted = [...eligible].sort((a, b) => {
+  const sorted = eligible.toSorted((a, b) => {
     const rankDiff = sortRank(a, query) - sortRank(b, query);
     if (rankDiff !== 0) {
       return rankDiff;

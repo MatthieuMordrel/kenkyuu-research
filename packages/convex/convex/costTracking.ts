@@ -260,7 +260,7 @@ export const getCostHistory = query({
     }
 
     return Object.values(monthlyData)
-      .sort((a, b) => a.timestamp - b.timestamp)
+      .toSorted((a, b) => a.timestamp - b.timestamp)
       .map((entry) => ({
         month: entry.month,
         totalCost: Math.round(entry.totalCost * 100) / 100,
