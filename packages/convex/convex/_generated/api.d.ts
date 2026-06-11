@@ -40,6 +40,7 @@ import type * as costTracking_shared_computeMonthlyCost from "../costTracking/sh
 import type * as costTracking_shared_getBudgetThreshold from "../costTracking/shared/getBudgetThreshold.js";
 import type * as costTracking_shared_isMonthlyBudgetReached from "../costTracking/shared/isMonthlyBudgetReached.js";
 import type * as crons from "../crons.js";
+import type * as customFields from "../customFields.js";
 import type * as dashboard_queries_activeJobsCount from "../dashboard/queries/activeJobsCount.js";
 import type * as dashboard_queries_monthlySpend from "../dashboard/queries/monthlySpend.js";
 import type * as dashboard_queries_recentResearch from "../dashboard/queries/recentResearch.js";
@@ -295,6 +296,7 @@ declare const fullApi: ApiFromModules<{
   "costTracking/shared/getBudgetThreshold": typeof costTracking_shared_getBudgetThreshold;
   "costTracking/shared/isMonthlyBudgetReached": typeof costTracking_shared_isMonthlyBudgetReached;
   crons: typeof crons;
+  customFields: typeof customFields;
   "dashboard/queries/activeJobsCount": typeof dashboard_queries_activeJobsCount;
   "dashboard/queries/monthlySpend": typeof dashboard_queries_monthlySpend;
   "dashboard/queries/recentResearch": typeof dashboard_queries_recentResearch;
