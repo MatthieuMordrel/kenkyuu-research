@@ -1,6 +1,10 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { providerValidator } from "./providers/constants";
+import {
+  customFieldDefinitionValidator,
+  customFieldValueValidator,
+} from "./customFields";
 
 export default defineSchema({
   stocks: defineTable({
@@ -27,6 +31,8 @@ export default defineSchema({
     template: v.string(),
     defaultProvider: providerValidator,
     defaultModelId: v.optional(v.string()),
+    /** User-defined structured fields the agent fills for every run of this prompt. */
+    customFields: v.optional(v.array(customFieldDefinitionValidator)),
     isBuiltIn: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -37,6 +43,10 @@ export default defineSchema({
   researchJobs: defineTable({
     promptId: v.id("prompts"),
     promptSnapshot: v.string(),
+    /** Custom field definitions copied from the prompt when the job was created. */
+    customFields: v.optional(v.array(customFieldDefinitionValidator)),
+    /** Custom field values the agent produced for this job (null = unavailable). */
+    customFieldValues: v.optional(v.array(customFieldValueValidator)),
     resolvedPrompt: v.optional(v.string()),
     stockIds: v.array(v.id("stocks")),
     provider: providerValidator,

@@ -5,6 +5,7 @@ import { useToggleFavorite } from "@/hooks/use-research-history";
 import { EmptyState } from "@/components/empty-state";
 import { PageSkeleton } from "@/components/loading-skeleton";
 import { ResearchOutputSection } from "@/components/research-output-section";
+import { CustomFieldsCard } from "@/components/custom-fields-card";
 import { PromptPreviewDialog } from "@/components/prompt-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -212,6 +213,11 @@ function ResultDetailPage() {
               </p>
             </CardContent>
           </Card>
+        )}
+
+        {/* Agent-filled custom fields, when the prompt declared any */}
+        {job.customFieldValues && job.customFieldValues.length > 0 && (
+          <CustomFieldsCard values={job.customFieldValues} />
         )}
 
         {/* Research result content (raw and/or formatted) */}

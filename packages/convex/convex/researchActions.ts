@@ -15,6 +15,11 @@ import {
   type ProviderName,
 } from "./providers";
 import type { ResearchModelDefinition } from "@repo/research-models/types";
+import {
+  buildCustomFieldsPromptSection,
+  extractCustomFieldValues,
+  type CustomFieldValue,
+} from "@repo/research-models/custom-fields";
 import { BUDGET_REACHED_MESSAGE } from "./costTracking";
 import {
   countSubmittedJobs,
@@ -69,11 +74,23 @@ async function applyCompletedResult(
 ) {
   const costUsd = estimateModelCost(model, result.usage);
   const durationMs = Date.now() - job.createdAt;
-  const toolCallCount = result.usage.toolCalls ?? result.usage.webSearchRequests;
+  const toolCallCount =
+    result.usage.toolCalls ?? result.usage.webSearchRequests;
+
+  // Pull the agent's structured-field block out of the report before formatting,
+  // so the machine-readable block never reaches the formatter or the raw view.
+  let rawResult = result.text;
+  let customFieldValues: CustomFieldValue[] | undefined;
+  if (job.customFields && job.customFields.length > 0) {
+    const extracted = extractCustomFieldValues(result.text, job.customFields);
+    rawResult = extracted.markdown;
+    customFieldValues = extracted.values;
+  }
 
   await ctx.runMutation(internal.researchJobs.beginFormattingPhase, {
     id: job._id,
-    rawResult: result.text,
+    rawResult,
+    customFieldValues,
     costUsd,
     durationMs,
     toolCallCount,
@@ -256,16 +273,21 @@ async function resolvePrompt(
   const valid = stocks.filter((s): s is NonNullable<typeof s> => s !== null);
   const first = valid[0];
 
-  return job.promptSnapshot
+  const resolved = job.promptSnapshot
     .replaceAll(
       "{{STOCKS}}",
-      valid.map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`).join(", ")
+      valid
+        .map((s) => `${s.ticker} (${s.companyName}, ${s.exchange})`)
+        .join(", ")
     )
     .replaceAll(
       "{{TICKER}}",
       first ? `${first.ticker} (${first.companyName}, ${first.exchange})` : ""
     )
     .replaceAll("{{DATE}}", new Date().toISOString().split("T")[0]!);
+
+  // Append the structured-output contract when the prompt declares custom fields.
+  return resolved + buildCustomFieldsPromptSection(job.customFields ?? []);
 }
 
 async function handleStartError(
@@ -403,11 +425,10 @@ async function maybeTimeoutOrReschedule(
     Math.round(currentDelayMs * POLL_BACKOFF),
     POLL_MAX_DELAY_MS
   );
-  await ctx.scheduler.runAfter(
+  await ctx.scheduler.runAfter(nextDelayMs, internal.researchActions.pollJob, {
+    jobId: job._id,
     nextDelayMs,
-    internal.researchActions.pollJob,
-    { jobId: job._id, nextDelayMs }
-  );
+  });
 }
 
 // ---------------------------------------------------------------------------

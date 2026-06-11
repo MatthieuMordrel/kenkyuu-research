@@ -24,6 +24,7 @@ import {
   MAX_ACTIVE_JOBS_SCAN,
 } from "./researchConcurrency";
 import { buildSearchTextForJob } from "./researchJobSearchMetadata";
+import { customFieldValueValidator } from "./customFields";
 
 const jobStatus = v.union(
   v.literal("pending"),
@@ -111,6 +112,7 @@ export const createResearchJob = mutation({
     return await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
+      customFields: prompt.customFields,
       stockIds: args.stockIds,
       modelId,
       provider,
@@ -154,6 +156,7 @@ export const createAndStartResearch = mutation({
     const jobId = await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
+      customFields: prompt.customFields,
       stockIds: args.stockIds,
       modelId,
       provider,
@@ -164,11 +167,9 @@ export const createAndStartResearch = mutation({
       searchText,
     });
 
-    await ctx.scheduler.runAfter(
-      0,
-      internal.researchActions.startResearch,
-      { jobId }
-    );
+    await ctx.scheduler.runAfter(0, internal.researchActions.startResearch, {
+      jobId,
+    });
 
     return jobId;
   },
@@ -237,6 +238,7 @@ export const beginFormattingPhase = internalMutation({
   args: {
     id: v.id("researchJobs"),
     rawResult: v.string(),
+    customFieldValues: v.optional(v.array(customFieldValueValidator)),
     costUsd: v.number(),
     durationMs: v.number(),
     toolCallCount: v.optional(v.number()),
@@ -250,6 +252,7 @@ export const beginFormattingPhase = internalMutation({
     await ctx.db.patch(args.id, {
       status: "formatting",
       rawResult: truncateResult(args.rawResult),
+      customFieldValues: args.customFieldValues,
       costUsd: args.costUsd,
       durationMs: args.durationMs,
       toolCallCount: args.toolCallCount,
@@ -956,7 +959,11 @@ export const debugJobFormatting = internalQuery({
     const job = await ctx.db.get(args.jobId);
     if (!job) return null;
 
-    const needles = ["Model mechanics", "Pricing power", "sold out of capacity"];
+    const needles = [
+      "Model mechanics",
+      "Pricing power",
+      "sold out of capacity",
+    ];
     const snippet = (text: string | undefined) => {
       if (!text) return null;
       for (const needle of needles) {

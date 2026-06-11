@@ -3,6 +3,12 @@
  * Enforces length limits and character restrictions on user-provided strings.
  */
 
+import {
+  CUSTOM_FIELD_LIMITS,
+  CUSTOM_FIELD_TYPES,
+  type CustomFieldDefinition,
+} from "@repo/research-models/custom-fields";
+
 // --- Length Limits ---
 
 const MAX_TICKER_LENGTH = 10;
@@ -112,6 +118,58 @@ export function validatePromptInput(args: {
       "Prompt template",
       MAX_PROMPT_TEMPLATE_LENGTH
     );
+}
+
+// --- Custom Field Validation ---
+
+/**
+ * Validates a prompt's custom output field definitions: bounded count, required
+ * non-empty titles within length, descriptions within length, known types, and
+ * unique non-empty ids.
+ */
+export function validateCustomFields(
+  fields: CustomFieldDefinition[] | undefined
+): void {
+  if (fields === undefined) return;
+
+  if (fields.length > CUSTOM_FIELD_LIMITS.maxFields) {
+    throw new Error(
+      `Maximum of ${CUSTOM_FIELD_LIMITS.maxFields} custom fields allowed`
+    );
+  }
+
+  const seenIds = new Set<string>();
+  for (const field of fields) {
+    if (!field.id.trim()) {
+      throw new Error("Custom field id is required");
+    }
+    if (seenIds.has(field.id)) {
+      throw new Error("Custom field ids must be unique");
+    }
+    seenIds.add(field.id);
+
+    if (!field.title.trim()) {
+      throw new Error("Custom field title is required");
+    }
+    validateStringLength(
+      field.title,
+      "Custom field title",
+      CUSTOM_FIELD_LIMITS.maxTitleLength
+    );
+
+    if (!field.description.trim()) {
+      throw new Error("Custom field description is required");
+    }
+    validateStringLength(
+      field.description,
+      "Custom field description",
+      CUSTOM_FIELD_LIMITS.maxDescriptionLength
+    );
+
+    if (!CUSTOM_FIELD_TYPES.includes(field.type)) {
+      throw new Error(`Unknown custom field type: ${field.type}`);
+    }
+  }
 }
 
 // --- Schedule Validation ---
