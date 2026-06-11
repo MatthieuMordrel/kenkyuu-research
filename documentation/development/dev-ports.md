@@ -26,7 +26,7 @@ When clicking a `localhost:5173` link in the terminal, Cursor may open `localhos
 
 When you `Ctrl+C` to stop the dev server, sometimes processes don't terminate properly.
 
-**Solution:** Run `pnpm run kill-ports` before starting, or use `pnpm run dev` which will kill any zombie processes when starting the dev server.
+**Solution:** Run `bun run kill-ports` before starting. This is the only script that kills processes on the dev ports — `bun run dev` does not kill anything automatically.
 
 ---
 
@@ -103,13 +103,13 @@ All services:
 ### Kill zombie processes (WSL)
 
 ```bash
-pnpm run kill-ports
+bun run kill-ports
 ```
 
 ### Start fresh (kill + dev)
 
 ```bash
-pnpm run dev
+bun run kill-ports && bun run dev
 ```
 
 ### Full reset (if ports are really stuck)
@@ -117,4 +117,4 @@ pnpm run dev
 1. Stop all dev servers
 2. Clear VS Code Ports panel (remove all entries)
 3. In PowerShell (Windows): `wsl --shutdown`
-4. Reopen terminal and run `pnpm run dev`
+4. Reopen terminal and run `bun run dev`
