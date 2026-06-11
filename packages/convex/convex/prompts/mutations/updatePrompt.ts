@@ -2,8 +2,9 @@ import { v } from "convex/values";
 import { mutation } from "../../_generated/server";
 import { vv } from "../../schema";
 import { requireAuth } from "../../auth/shared/requireAuth";
-import { validatePromptInput } from "../../validation";
+import { validateCustomFields, validatePromptInput } from "../../validation";
 import { logAuditEvent } from "../../auditLog";
+import { customFieldDefinitionValidator } from "../../customFields";
 import {
   assertModelActive,
   jobFieldsForModel,
@@ -21,6 +22,7 @@ export const updatePrompt = mutation({
     description: v.optional(v.string()),
     type: v.optional(promptType),
     template: v.optional(v.string()),
+    customFields: v.optional(v.array(customFieldDefinitionValidator)),
     defaultModelId: v.optional(modelIdValidator),
     defaultProvider: v.optional(providerValidator),
     token: v.optional(v.string()),
@@ -28,6 +30,7 @@ export const updatePrompt = mutation({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
     validatePromptInput(args);
+    validateCustomFields(args.customFields);
 
     const { id, token: _token, ...updates } = args;
 
@@ -42,6 +45,8 @@ export const updatePrompt = mutation({
       patch.description = updates.description;
     if (updates.type !== undefined) patch.type = updates.type;
     if (updates.template !== undefined) patch.template = updates.template;
+    if (updates.customFields !== undefined)
+      patch.customFields = updates.customFields;
     if (
       updates.defaultModelId !== undefined ||
       updates.defaultProvider !== undefined

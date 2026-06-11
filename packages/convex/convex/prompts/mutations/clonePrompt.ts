@@ -20,6 +20,7 @@ export const clonePrompt = mutation({
       description: existing.description,
       type: existing.type,
       template: existing.template,
+      customFields: existing.customFields,
       defaultProvider: existing.defaultProvider,
       isBuiltIn: false,
       createdAt: now,

@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import { mutation } from "../../_generated/server";
 import { requireAuth } from "../../auth/shared/requireAuth";
-import { validatePromptInput } from "../../validation";
+import { validateCustomFields, validatePromptInput } from "../../validation";
 import { logAuditEvent } from "../../auditLog";
+import { customFieldDefinitionValidator } from "../../customFields";
 import {
   assertModelActive,
   jobFieldsForModel,
@@ -19,6 +20,7 @@ export const createPrompt = mutation({
     description: v.string(),
     type: promptType,
     template: v.string(),
+    customFields: v.optional(v.array(customFieldDefinitionValidator)),
     defaultModelId: v.optional(modelIdValidator),
     defaultProvider: v.optional(providerValidator),
     isBuiltIn: v.optional(v.boolean()),
@@ -27,6 +29,7 @@ export const createPrompt = mutation({
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.token);
     validatePromptInput(args);
+    validateCustomFields(args.customFields);
 
     const resolvedModelId = resolveMutationModelId({
       modelId: args.defaultModelId,
@@ -41,6 +44,7 @@ export const createPrompt = mutation({
       description: args.description,
       type: args.type,
       template: args.template,
+      customFields: args.customFields,
       defaultModelId: modelId,
       defaultProvider: provider,
       isBuiltIn: args.isBuiltIn ?? false,

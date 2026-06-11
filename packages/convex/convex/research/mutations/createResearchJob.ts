@@ -41,6 +41,7 @@ export const createResearchJob = mutation({
     return await ctx.db.insert("researchJobs", {
       promptId: args.promptId,
       promptSnapshot: prompt.template,
+      customFields: prompt.customFields,
       stockIds: args.stockIds,
       modelId,
       provider,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,8 @@ import {
   type ResearchModelId,
 } from "@/lib/research-flow";
 import { ResearchModelPicker } from "@/components/research-model-picker";
+import { CustomFieldsEditor } from "@/components/custom-fields-editor";
+import type { CustomFieldDefinition } from "@repo/research-models/custom-fields";
 import type { Doc } from "@repo/convex/dataModel";
 
 type PromptType = "single-stock" | "multi-stock" | "discovery";
@@ -44,6 +46,7 @@ interface PromptFormData {
   description: string;
   type: PromptType;
   template: string;
+  customFields: CustomFieldDefinition[];
   defaultModelId: ResearchModelId;
 }
 
@@ -60,6 +63,7 @@ const INITIAL_FORM: PromptFormData = {
   description: "",
   type: "single-stock",
   template: "",
+  customFields: [],
   defaultModelId: DEFAULT_MODEL_ID,
 };
 
@@ -107,6 +111,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const selectPortalContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -116,6 +121,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: prompt.description,
           type: prompt.type,
           template: prompt.template,
+          customFields: prompt.customFields ?? [],
           defaultModelId: resolvePromptModelId({
             defaultModelId: prompt.defaultModelId,
             defaultProvider: prompt.defaultProvider,
@@ -160,6 +166,19 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
     setErrors(validationErrors);
     if (hasErrors(validationErrors)) return;
 
+    const customFields = form.customFields.map((field) => ({
+      ...field,
+      title: field.title.trim(),
+      description: field.description.trim(),
+    }));
+    const incompleteField = customFields.find(
+      (field) => !field.title || !field.description
+    );
+    if (incompleteField) {
+      setSubmitError("Each custom field needs both a title and a description.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (isEditing && prompt) {
@@ -169,6 +188,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: form.description.trim(),
           type: form.type,
           template: form.template,
+          customFields,
           defaultModelId: form.defaultModelId,
         });
       } else {
@@ -177,6 +197,7 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
           description: form.description.trim(),
           type: form.type,
           template: form.template,
+          customFields,
           defaultModelId: form.defaultModelId,
         });
       }
@@ -332,6 +353,15 @@ export function PromptModal({ open, onOpenChange, prompt }: PromptModalProps) {
               ))}
             </div>
           </div>
+
+          <CustomFieldsEditor
+            fields={form.customFields}
+            onChange={(customFields) =>
+              updateField("customFields", customFields)
+            }
+            portalContainer={selectPortalContainerRef}
+          />
+          <div ref={selectPortalContainerRef} />
 
           {submitError && (
             <p className="text-sm text-destructive">{submitError}</p>

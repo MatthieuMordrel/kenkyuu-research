@@ -47,6 +47,10 @@
     "./managed-agent-prompt": {
       "types": "./src/managed-agent-prompt.ts",
       "import": "./src/managed-agent-prompt.ts"
+    },
+    "./custom-fields": {
+      "types": "./src/custom-fields.ts",
+      "import": "./src/custom-fields.ts"
     }
   },
   "scripts": {
