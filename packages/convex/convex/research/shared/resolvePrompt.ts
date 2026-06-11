@@ -1,12 +1,18 @@
 import type { ActionCtx } from "../../_generated/server";
 import type { Doc } from "../../_generated/dataModel";
 import { internal } from "../../_generated/api";
-import { buildCustomFieldsPromptSection } from "@repo/research-models/custom-fields";
+import type { ResearchModelDefinition } from "@repo/research-models/types";
+import {
+  buildCustomFieldsPromptSection,
+  type CustomFieldsDelivery,
+} from "@repo/research-models/custom-fields";
+import { MANAGED_AGENT_REPORT_PATH } from "@repo/research-models/managed-agent-prompt";
 
 /** Resolve {{STOCKS}} / {{TICKER}} / {{DATE}} variables in the job's template. */
 export async function resolvePrompt(
   ctx: ActionCtx,
-  job: Doc<"researchJobs">
+  job: Doc<"researchJobs">,
+  model: ResearchModelDefinition
 ): Promise<string> {
   const stocks = await Promise.all(
     job.stockIds.map((id) =>
@@ -35,5 +41,16 @@ export async function resolvePrompt(
     .replaceAll("{{DATE}}", new Date().toISOString().split("T")[0]!);
 
   // Append the structured-output contract when the prompt declares custom fields.
-  return resolved + buildCustomFieldsPromptSection(job.customFields ?? []);
+  // The Managed Agents harness delivers a report file (its messages are only
+  // status notes), so the block must be written into that file; chat harnesses
+  // emit it in the reply. extractCustomFieldValues reads whichever text the
+  // harness ultimately collects, so the delivery target must match the harness.
+  const delivery: CustomFieldsDelivery =
+    model.harnessId === "anthropic-managed-agents"
+      ? { location: "file", filePath: MANAGED_AGENT_REPORT_PATH }
+      : { location: "message" };
+
+  return (
+    resolved + buildCustomFieldsPromptSection(job.customFields ?? [], delivery)
+  );
 }

@@ -129,7 +129,7 @@ export const internalStartResearch = internalAction({
       return;
     }
 
-    const resolvedPrompt = await resolvePrompt(ctx, job);
+    const resolvedPrompt = await resolvePrompt(ctx, job, model);
 
     try {
       const { externalId, submittedPrompt } = await adapter.start(

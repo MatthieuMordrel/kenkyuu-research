@@ -76,11 +76,29 @@ function escapeRegExp(input: string): string {
 }
 
 /**
+ * Where the agent must place the machine-readable fields block.
+ *
+ * Chat harnesses (Anthropic Messages, OpenAI Responses) return the report as
+ * the model's reply, so the block goes at the end of that reply. The Managed
+ * Agents harness instead delivers a report *file* that is consumed verbatim —
+ * its coordinator is told to keep chat messages to brief status notes — so the
+ * block must live at the end of that file, or extraction never sees it.
+ */
+export type CustomFieldsDelivery =
+  | { location: "message" }
+  | { location: "file"; filePath: string };
+
+/**
  * Builds the prompt section appended to a research template when the prompt
  * declares custom fields. Returns an empty string when there are none.
+ *
+ * `delivery` decides where the agent is told to emit the block so it lands in
+ * the same text {@link extractCustomFieldValues} later parses (the reply for
+ * chat harnesses, the report file for the Managed Agents harness).
  */
 export function buildCustomFieldsPromptSection(
-  fields: CustomFieldDefinition[]
+  fields: CustomFieldDefinition[],
+  delivery: CustomFieldsDelivery = { location: "message" }
 ): string {
   if (fields.length === 0) return "";
 
@@ -93,6 +111,11 @@ export function buildCustomFieldsPromptSection(
 
   const jsonTemplate = `{${fields.map((f) => `"${f.id}": <value>`).join(", ")}}`;
 
+  const appendInstruction =
+    delivery.location === "file"
+      ? `After the complete report, append the following machine-readable block to the very end of the report file at \`${delivery.filePath}\` (after all report content), exactly once and nowhere else. It must live inside that file — not in a chat message:`
+      : `After the complete report, append the following machine-readable block as the very last content of your response, exactly once and nowhere else:`;
+
   return `
 
 ---
@@ -103,7 +126,7 @@ Beyond the report, determine a value for each field below, based strictly on you
 
 ${fieldLines}
 
-After the complete report, append the following machine-readable block as the very last content of your response, exactly once and nowhere else:
+${appendInstruction}
 
 <!--${BLOCK_LABEL}
 ${jsonTemplate}

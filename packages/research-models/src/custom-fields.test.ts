@@ -33,6 +33,26 @@ describe("buildCustomFieldsPromptSection", () => {
     expect(section).toContain('"cagr": <value>');
     expect(section).toContain("KENKYUU_FIELDS");
   });
+
+  it("defaults to message delivery (block in the reply)", () => {
+    const section = buildCustomFieldsPromptSection(FIELDS);
+    expect(section).toContain("last content of your response");
+    expect(section).not.toContain("report file at");
+  });
+
+  it("directs the block into the report file for file delivery", () => {
+    const section = buildCustomFieldsPromptSection(FIELDS, {
+      location: "file",
+      filePath: "/mnt/session/outputs/report.md",
+    });
+    expect(section).toContain(
+      "report file at `/mnt/session/outputs/report.md`"
+    );
+    expect(section).toContain("not in a chat message");
+    // Same machine-readable contract regardless of where it is written.
+    expect(section).toContain("KENKYUU_FIELDS");
+    expect(section).toContain('"cagr": <value>');
+  });
 });
 
 describe("extractCustomFieldValues", () => {
