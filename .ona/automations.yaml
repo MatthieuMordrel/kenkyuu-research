@@ -1,0 +1,63 @@
+tasks:
+  install:
+    name: Install dependencies
+    command: |
+      export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+      export PATH="$BUN_INSTALL/bin:$PATH"
+
+      if ! command -v bun >/dev/null 2>&1; then
+        npm install --global bun@1
+      fi
+
+      if [ -f apps/web/.env.example ] && [ ! -f apps/web/.env ]; then
+        cp apps/web/.env.example apps/web/.env
+      fi
+
+      bun install --frozen-lockfile
+    triggeredBy:
+      - manual
+      - postDevcontainerStart
+      - prebuild
+
+  build-web:
+    name: Build web app
+    command: bun run build:web
+    dependsOn:
+      - install
+    triggeredBy:
+      - manual
+
+services:
+  dev:
+    name: Development servers
+    commands:
+      start: |
+        export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+        export PATH="$BUN_INSTALL/bin:$PATH"
+
+        if ! command -v bun >/dev/null 2>&1; then
+          npm install --global bun@1
+        fi
+
+        if [ ! -d node_modules ]; then
+          bun install --frozen-lockfile
+        fi
+
+        if [ -f apps/web/.env.example ] && [ ! -f apps/web/.env ]; then
+          cp apps/web/.env.example apps/web/.env
+        fi
+
+        gitpod environment port open 3000 --dont-wait --admission creator_only --name "Development servers" --protocol http
+        gitpod environment port open 3210 --dont-wait --admission creator_only --name "Development servers" --protocol http
+        WEB_HOST="$(gitpod environment port get 3000 -f URL 2>/dev/null | sed -E 's#^https?://##' || true)"
+        if [ -n "$WEB_HOST" ]; then
+          export __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS="$WEB_HOST"
+        fi
+
+        bunx concurrently --kill-others-on-fail --names "WEB,CONVEX" --prefix-colors "blue,magenta" \
+          "bun run --filter @repo/web dev -- --host 0.0.0.0 --port 3000" \
+          "bun run --filter @repo/convex dev"
+      ready: curl -sf http://localhost:3000
+    triggeredBy:
+      - manual
+      - postEnvironmentStart
