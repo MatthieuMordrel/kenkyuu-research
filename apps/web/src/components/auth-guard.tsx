@@ -3,6 +3,7 @@ import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useSettings, useUpdateSetting } from "@/hooks/use-settings";
 import { AppShell } from "@/components/app-shell";
+import { AppLoadingPage } from "@/components/app-loading-page";
 
 /** Keeps the `app_url` setting in sync with the current origin (used for email links). */
 function useSyncAppUrl() {
@@ -27,11 +28,7 @@ export function AuthGuard() {
   useSyncAppUrl();
 
   if (isLoading) {
-    return (
-      <div className="flex h-svh items-center justify-center">
-        <div className="text-muted-foreground text-sm">Loading...</div>
-      </div>
-    );
+    return <AppLoadingPage />;
   }
 
   if (!isAuthenticated) {

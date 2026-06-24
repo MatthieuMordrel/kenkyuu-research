@@ -9,6 +9,7 @@ import reportWebVitals from "./reportWebVitals.ts";
 import "./styles.css";
 
 import { ConvexProvider } from "convex/react";
+import { AppLoadingPage } from "./components/app-loading-page";
 import { convex } from "./lib/convex";
 
 // Create a new router instance
@@ -21,6 +22,7 @@ const router = createRouter({
   defaultPreloadStaleTime: 0,
   defaultPendingMs: 100,
   defaultPendingMinMs: 200,
+  defaultPendingComponent: AppLoadingPage,
 });
 
 // Register the router instance for type safety
