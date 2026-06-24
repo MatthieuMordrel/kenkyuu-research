@@ -1,0 +1,8 @@
+{
+  "name": "Kenkyuu Research",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "features": {
+    "ghcr.io/devcontainers/features/git-lfs": {}
+  },
+  "forwardPorts": [3000, 3210]
+}
